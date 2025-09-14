@@ -1,0 +1,30 @@
+# 增强版股票分析器依赖项
+
+# 基础数据科学库
+pandas>=1.3.0
+numpy>=1.21.0
+
+# 技术分析库
+TA-Lib>=0.4.24
+talib>=0.4.0
+
+# 数据源库
+akshare>=1.9.0
+yfinance>=0.2.0
+tushare>=1.2.89
+
+# 网络请求
+requests>=2.25.0
+
+# 日志
+logging
+
+# 其他工具
+scipy>=1.7.0
+
+# 可选的机器学习库（用于更高级的分析）
+scikit-learn>=1.0.0
+
+# 可视化（可选）
+matplotlib>=3.5.0
+seaborn>=0.11.0
