@@ -39,6 +39,117 @@ class AStockHeatAnalyzer:
         }
         logger.info("A股市场火热程度分析器初始化完成")
 
+    # =====================
+    # 内部工具与健壮性处理
+    # =====================
+    @staticmethod
+    def _to_numeric_series(series: pd.Series) -> pd.Series:
+        """尽可能把字符串数值(%、逗号、单位等)转换为float。"""
+        if series is None:
+            return pd.Series(dtype=float)
+        s = series.astype(str)
+        # 统一去掉常见符号
+        s = (
+            s.str.replace('%', '', regex=False)
+            .str.replace(',', '', regex=False)
+            .str.replace('亿', 'e8', regex=False)
+            .str.replace('万', 'e4', regex=False)
+            .str.replace('千', 'e3', regex=False)
+        )
+        # 将如 "1.23e8" 转为浮点
+        return pd.to_numeric(s, errors='coerce')
+
+    @staticmethod
+    def _safe_first(df: Optional[pd.DataFrame]) -> Optional[pd.Series]:
+        """安全地返回DataFrame第一行，失败返回None。"""
+        try:
+            if df is not None and not df.empty:
+                return df.iloc[0]
+        except Exception:
+            return None
+        return None
+
+    @staticmethod
+    def _latest_trading_day_str(max_days_back: int = 10) -> Optional[str]:
+        """返回最近的交易日(YYYYMMDD字符串)，通过回退日期探测。"""
+        today = datetime.now().date()
+        for i in range(max_days_back + 1):
+            d = today - timedelta(days=i)
+            # 非周末优先尝试，但也允许尝试周末，交给接口验证
+            ds = d.strftime('%Y%m%d')
+            try:
+                # 用涨停池作为探测器
+                tmp = ak.stock_zt_pool_em(date=ds)
+                if tmp is not None and not tmp.empty:
+                    return ds
+                # 若没有涨停但有跌停也算
+                tmp2 = ak.stock_dt_pool_em(date=ds)
+                if tmp2 is not None and not tmp2.empty:
+                    return ds
+            except Exception:
+                # 网络或非交易日，继续回退
+                continue
+        return None
+
+    @staticmethod
+    def _parse_pct_value(val) -> float:
+        """把可能带%的涨跌幅转换为小数(百分比数值/100)。失败返回0."""
+        try:
+            s = str(val).replace('%', '').replace(',', '')
+            f = float(s)
+            return f / 100.0
+        except Exception:
+            return 0.0
+
+    def _index_turnover_spot_sum(self, sz_df: Optional[pd.DataFrame], szc_df: Optional[pd.DataFrame], cyb_df: Optional[pd.DataFrame]) -> Optional[float]:
+        """从指数现货数据中抽取三大指数的成交额并求和。单位按源数据解析。失败返回None。"""
+        total = 0.0
+        got = False
+        for df in (sz_df, szc_df, cyb_df):
+            row = self._safe_first(df)
+            if row is None:
+                continue
+            # 常见字段名："成交额"，也可能为"amount"
+            amount = None
+            for key in ["成交额", "amount"]:
+                if key in row.index:
+                    amount = row[key]
+                    break
+            if amount is None:
+                continue
+            num = self._to_numeric_series(pd.Series([amount])).iloc[0]
+            if pd.notna(num):
+                total += float(num)
+                got = True
+        return total if got else None
+
+    def _index_turnover_daily_avg(self, symbols: Tuple[str, str, str] = ("000001", "399001", "399006"), window: int = 20) -> Optional[float]:
+        """使用指数日线数据估计三大指数成交额的近N日平均和。失败返回None。"""
+        sums = []
+        for sym in symbols:
+            try:
+                df = ak.stock_zh_index_daily_em(symbol=sym)
+                if df is None or df.empty:
+                    continue
+                # 兼容中英文字段
+                col = None
+                for k in ["成交额", "amount"]:
+                    if k in df.columns:
+                        col = k
+                        break
+                if col is None:
+                    continue
+                # 取最近window个交易日的成交额均值
+                vals = self._to_numeric_series(df[col].tail(window))
+                if vals.notna().any():
+                    sums.append(vals.mean())
+            except Exception:
+                continue
+        if not sums:
+            return None
+        # 将三个指数的平均成交额求和
+        return float(np.nansum(sums))
+
     def get_market_data(self) -> Optional[Dict]:
         """获取市场基础数据"""
         try:
@@ -56,9 +167,29 @@ class AStockHeatAnalyzer:
             # 获取市场概况
             market_summary = ak.stock_zh_a_spot_em()
 
-            # 获取涨跌停数据
-            limit_up = ak.stock_zt_pool_em(date=datetime.now().strftime("%Y%m%d"))
-            limit_down = ak.stock_dt_pool_em(date=datetime.now().strftime("%Y%m%d"))
+            # 获取涨跌停数据：优先今天，否则回退至最近交易日
+            day_str = datetime.now().strftime("%Y%m%d")
+            try:
+                limit_up = ak.stock_zt_pool_em(date=day_str)
+                limit_down = ak.stock_dt_pool_em(date=day_str)
+                if (limit_up is None or limit_up.empty) and (limit_down is None or limit_down.empty):
+                    raise ValueError("No limit pools for today, fallback")
+            except Exception:
+                fallback_day = self._latest_trading_day_str(max_days_back=10)
+                if fallback_day:
+                    logger.info(f"非交易日或数据为空，回退至最近交易日: {fallback_day}")
+                    try:
+                        limit_up = ak.stock_zt_pool_em(date=fallback_day)
+                    except Exception:
+                        limit_up = pd.DataFrame()
+                    try:
+                        limit_down = ak.stock_dt_pool_em(date=fallback_day)
+                    except Exception:
+                        limit_down = pd.DataFrame()
+                else:
+                    logger.warning("无法确定最近交易日，涨跌停池设为空")
+                    limit_up = pd.DataFrame()
+                    limit_down = pd.DataFrame()
 
             data = {
                 "sz_index": sz_index,
@@ -80,23 +211,25 @@ class AStockHeatAnalyzer:
     def calculate_volume_ratio(self, market_data: Dict) -> float:
         """计算成交量比率指标"""
         try:
-            market_summary = market_data["market_summary"]
+            # 用三大指数的成交额衡量市场整体成交活跃度：
+            # 当前成交额(现货) / 近N日日均成交额
+            sz_df = market_data.get("sz_index")
+            szc_df = market_data.get("sz_component")
+            cyb_df = market_data.get("cyb_index")
 
-            # 计算当日总成交量与均值的比率
-            total_volume = market_summary["成交量"].sum()
-            avg_volume = market_summary["成交量"].mean()
+            spot_turnover = self._index_turnover_spot_sum(sz_df, szc_df, cyb_df)
+            hist_avg_turnover = self._index_turnover_daily_avg(window=20)
 
-            volume_ratio = (
-                total_volume / (avg_volume * len(market_summary))
-                if avg_volume > 0
-                else 1.0
-            )
+            if spot_turnover is None or hist_avg_turnover is None or hist_avg_turnover <= 0:
+                logger.warning("成交量比率：数据不足，返回1.0")
+                return 1.0
 
+            volume_ratio = float(spot_turnover) / float(hist_avg_turnover)
             logger.info(f"成交量比率计算完成: {volume_ratio:.2f}")
-            return min(volume_ratio, 3.0)  # 限制最大值避免异常
+            return float(np.clip(volume_ratio, 0.0, 3.0))  # 限制最大值避免异常
 
         except Exception as e:
-            logger.warn(f"成交量比率计算失败: {str(e)}")
+            logger.warning(f"成交量比率计算失败: {str(e)}")
             return 1.0
 
     def calculate_price_momentum(self, market_data: Dict) -> float:
@@ -107,18 +240,32 @@ class AStockHeatAnalyzer:
             cyb_data = market_data["cyb_index"]
 
             # 提取涨跌幅
-            sz_change = float(str(sz_data.iloc[0]["涨跌幅"]).replace("%", ""))
-            szc_change = float(str(sz_component_data.iloc[0]["涨跌幅"]).replace("%", ""))
-            cyb_change = float(str(cyb_data.iloc[0]["涨跌幅"]).replace("%", ""))
+            sz_row = self._safe_first(sz_data)
+            szc_row = self._safe_first(sz_component_data)
+            cyb_row = self._safe_first(cyb_data)
+
+            def extract_pct(row) -> float:
+                if row is None:
+                    return 0.0
+                val = None
+                for k in ["涨跌幅", "pct_chg", "涨幅"]:
+                    if k in row.index:
+                        val = row[k]
+                        break
+                return self._parse_pct_value(val)
+
+            sz_change = extract_pct(sz_row)
+            szc_change = extract_pct(szc_row)
+            cyb_change = extract_pct(cyb_row)
 
             # 加权平均动量
-            momentum = (sz_change * 0.4 + szc_change * 0.3 + cyb_change * 0.3) / 100
+            momentum = (sz_change * 0.4 + szc_change * 0.3 + cyb_change * 0.3)
 
             logger.info(f"价格动量计算完成: {momentum:.4f}")
             return momentum
 
         except Exception as e:
-            logger.warn(f"价格动量计算失败: {str(e)}")
+            logger.warning(f"价格动量计算失败: {str(e)}")
             return 0.0
 
     def calculate_market_breadth(self, market_data: Dict) -> float:
@@ -129,8 +276,9 @@ class AStockHeatAnalyzer:
             limit_down = market_data["limit_down"]
 
             # 计算涨跌个股比例
-            up_stocks = len(market_summary[market_summary["涨跌幅"] > 0])
-            down_stocks = len(market_summary[market_summary["涨跌幅"] < 0])
+            chg = self._to_numeric_series(market_summary["涨跌幅"])  # 百分比数值
+            up_stocks = int((chg > 0).sum())
+            down_stocks = int((chg < 0).sum())
             total_stocks = len(market_summary)
 
             # 涨跌停个股数量
@@ -151,7 +299,7 @@ class AStockHeatAnalyzer:
             return breadth
 
         except Exception as e:
-            logger.warn(f"市场广度计算失败: {str(e)}")
+            logger.warning(f"市场广度计算失败: {str(e)}")
             return 0.0
 
     def calculate_volatility(self, market_data: Dict) -> float:
@@ -160,16 +308,14 @@ class AStockHeatAnalyzer:
             market_summary = market_data["market_summary"]
 
             # 计算市场平均波动率
-            changes = (
-                market_summary["涨跌幅"].astype(str).str.replace("%", "").astype(float)
-            )
+            changes = self._to_numeric_series(market_summary["涨跌幅"])  # 百分比数值
             volatility = changes.std() / 100
 
             logger.info(f"市场波动率计算完成: {volatility:.4f}")
             return volatility
 
         except Exception as e:
-            logger.warn(f"波动率计算失败: {str(e)}")
+            logger.warning(f"波动率计算失败: {str(e)}")
             return 0.02  # 默认2%波动率
 
     def calculate_sentiment_indicator(self, market_data: Dict) -> float:
@@ -183,18 +329,9 @@ class AStockHeatAnalyzer:
             limit_down_count = len(limit_down) if not limit_down.empty else 0
 
             # 大涨大跌股票比例
-            big_up = len(
-                market_summary[
-                    market_summary["涨跌幅"].astype(str).str.replace("%", "").astype(float)
-                    > 5
-                ]
-            )
-            big_down = len(
-                market_summary[
-                    market_summary["涨跌幅"].astype(str).str.replace("%", "").astype(float)
-                    < -5
-                ]
-            )
+            chg_pct = self._to_numeric_series(market_summary["涨跌幅"])  # 百分比数值
+            big_up = int((chg_pct > 5).sum())
+            big_down = int((chg_pct < -5).sum())
 
             # 情绪指标综合计算
             sentiment = (limit_up_count - limit_down_count + big_up - big_down) / 100
@@ -203,7 +340,7 @@ class AStockHeatAnalyzer:
             return sentiment
 
         except Exception as e:
-            logger.warn(f"情绪指标计算失败: {str(e)}")
+            logger.warning(f"情绪指标计算失败: {str(e)}")
             return 0.0
 
     def calculate_heat_score(self, market_data: Dict) -> Tuple[float, Dict]:
@@ -307,7 +444,11 @@ class AStockHeatAnalyzer:
                 "position_suggestion": position_suggestion,
                 "indicators": indicators,
                 "market_data_summary": {
-                    "sz_index_change": market_data["sz_index"].iloc[0]["涨跌幅"],
+                    "sz_index_change": (
+                        self._safe_first(market_data["sz_index"])["涨跌幅"]
+                        if self._safe_first(market_data["sz_index"]) is not None and "涨跌幅" in self._safe_first(market_data["sz_index"]).index
+                        else None
+                    ),
                     "limit_up_count": len(market_data["limit_up"])
                     if not market_data["limit_up"].empty
                     else 0,
