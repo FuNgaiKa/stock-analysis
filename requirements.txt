@@ -12,6 +12,7 @@ talib>=0.4.0
 akshare>=1.9.0
 yfinance>=0.2.0
 tushare>=1.2.89
+# Ashare: 轻量级A股数据源 (单文件集成，无需pip安装)
 
 # 网络请求
 requests>=2.25.0

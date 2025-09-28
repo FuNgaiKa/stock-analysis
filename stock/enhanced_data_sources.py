@@ -16,6 +16,8 @@ from typing import Dict, List, Optional, Tuple
 import akshare as ak
 import yfinance as yf
 from concurrent.futures import ThreadPoolExecutor, as_completed
+# 导入Ashare数据源
+from .Ashare import get_price
 
 logger = logging.getLogger(__name__)
 
@@ -25,11 +27,12 @@ class MultiSourceDataProvider:
     
     def __init__(self):
         self.sources = {
-            'akshare': self._get_akshare_data,
-            'sina': self._get_sina_data,
-            'netease': self._get_netease_data,
-            'yfinance': self._get_yfinance_data,
-            'tushare_free': self._get_tushare_free_data
+            'ashare': self._get_ashare_data,        # 主力数据源 - 最稳定
+            'akshare': self._get_akshare_data,      # 备用1 - 原有数据源
+            'sina': self._get_sina_data,            # 备用2 - 传统接口
+            'netease': self._get_netease_data,      # 备用3 - 网易接口
+            'yfinance': self._get_yfinance_data,    # 备用4 - 国际市场
+            'tushare_free': self._get_tushare_free_data  # 备用5 - Tushare
         }
         self.cache = {}
         
@@ -57,6 +60,49 @@ class MultiSourceDataProvider:
         
         logger.error("所有数据源都失败")
         return None
+
+    def _get_ashare_data(self, date: str) -> Optional[Dict]:
+        """Ashare数据源 - 主力数据源"""
+        data = {}
+
+        try:
+            # 获取主要指数数据
+            indices = {
+                'sz_index': 'sh000001',     # 上证指数
+                'cyb_index': 'sz399006',    # 创业板指
+                'sz_component': 'sz399001'  # 深证成指
+            }
+
+            for name, code in indices.items():
+                try:
+                    # 使用Ashare获取最近5天数据来计算涨跌幅
+                    index_data = get_price(code, frequency='1d', count=5)
+                    if index_data is not None and not index_data.empty:
+                        latest_price = index_data['close'].iloc[-1]
+                        prev_price = index_data['close'].iloc[-2] if len(index_data) > 1 else latest_price
+                        change_pct = (latest_price - prev_price) / prev_price * 100
+
+                        data[name] = pd.DataFrame({
+                            '收盘': [latest_price],
+                            '涨跌幅': [change_pct],
+                            '成交量': [index_data['volume'].iloc[-1]]
+                        })
+                    else:
+                        data[name] = None
+                except Exception as e:
+                    logger.warning(f"Ashare获取指数 {name} 失败: {str(e)}")
+                    data[name] = None
+
+            # Ashare主要提供价格数据，涨跌停数据使用其他源
+            # 这里先设置为空，由其他数据源补充
+            data['limit_up'] = pd.DataFrame()
+            data['limit_down'] = pd.DataFrame()
+
+            return data
+
+        except Exception as e:
+            logger.warning(f"Ashare数据源失败: {str(e)}")
+            return None
     
     def _get_akshare_data(self, date: str) -> Optional[Dict]:
         """akshare数据源"""
