@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Tuple, Optional, List
 import talib
 import requests
-from enhanced_data_sources import MultiSourceDataProvider
+from .enhanced_data_sources import MultiSourceDataProvider
 
 logger = logging.getLogger(__name__)
 
@@ -494,6 +494,10 @@ def main():
         print(f"- 多空比率: {summary['bull_bear_ratio']:.3f}")
     else:
         print("分析失败!")
+
+
+# 为了兼容性，提供别名
+EnhancedStockAnalyzer = EnhancedAStockAnalyzer
 
 
 if __name__ == "__main__":

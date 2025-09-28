@@ -195,5 +195,25 @@ def main():
     except Exception as e:
         print(f"发生错误: {e}")
 
+class CompoundCalculator:
+    """复合收益计算器类"""
+
+    def calculate(self, principal, annual_rate, years):
+        """计算复合收益"""
+        return calculate_compound_interest(principal, annual_rate, years)
+
+    def generate_growth_data(self, principal, annual_rate, years):
+        """生成增长数据"""
+        return generate_growth_data(principal, annual_rate, years)
+
+    def save_result(self, principal, annual_rate, years):
+        """保存计算结果到文件"""
+        final_amount = self.calculate(principal, annual_rate, years)
+        years_list, amounts_list = self.generate_growth_data(principal, annual_rate, years)
+        million_intervals = calculate_million_intervals(principal, annual_rate, years)
+        save_calculation_result(principal, annual_rate, years, final_amount, million_intervals)
+        return final_amount
+
+
 if __name__ == "__main__":
     main()

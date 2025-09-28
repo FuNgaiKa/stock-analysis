@@ -631,5 +631,10 @@ def main():
         print("   python stock/stock.py             # 多数据源模式 (默认)")
 
 
+# 为了兼容性，提供别名
+MarketHeatAnalyzer = AStockHeatAnalyzer
+StockAnalyzer = AStockHeatAnalyzer
+
+
 if __name__ == "__main__":
     main()
