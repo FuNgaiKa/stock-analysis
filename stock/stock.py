@@ -10,9 +10,11 @@ import pandas as pd
 import numpy as np
 import logging
 import warnings
+import requests
 from datetime import datetime, timedelta
 from typing import Dict, Tuple, Optional
 import time
+from functools import wraps
 
 warnings.filterwarnings("ignore")
 
@@ -25,11 +27,36 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def retry_on_network_error(max_retries=3, delay=2, backoff=2):
+    """网络错误重试装饰器"""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except (requests.exceptions.ConnectionError,
+                       requests.exceptions.Timeout,
+                       Exception) as e:
+                    if attempt == max_retries - 1:
+                        logger.error(f"函数 {func.__name__} 在 {max_retries} 次重试后仍然失败: {str(e)}")
+                        raise e
+
+                    wait_time = delay * (backoff ** attempt)
+                    logger.warning(f"函数 {func.__name__} 第 {attempt + 1} 次尝试失败，{wait_time} 秒后重试: {str(e)}")
+                    time.sleep(wait_time)
+
+            return None
+        return wrapper
+    return decorator
+
+
 class AStockHeatAnalyzer:
     """A股市场火热程度分析器"""
 
-    def __init__(self):
+    def __init__(self, use_multi_source=True):
         self.indicators = {}
+        self.use_multi_source = use_multi_source
         self.weights = {
             "volume_ratio": 0.25,  # 成交量比率权重
             "price_momentum": 0.20,  # 价格动量权重
@@ -37,7 +64,25 @@ class AStockHeatAnalyzer:
             "volatility": 0.15,  # 波动率权重
             "sentiment": 0.20,  # 情绪指标权重
         }
-        logger.info("A股市场火热程度分析器初始化完成")
+
+        # 初始化多数据源提供器
+        if use_multi_source:
+            try:
+                import sys
+                import os
+                sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+                from enhanced_data_sources import MultiSourceDataProvider
+                self.multi_source = MultiSourceDataProvider()
+                logger.info("A股市场火热程度分析器初始化完成 (多数据源模式)")
+            except ImportError as e:
+                logger.warning(f"多数据源模块不可用: {str(e)}, 使用单一数据源模式")
+                self.multi_source = None
+                self.use_multi_source = False
+        else:
+            self.multi_source = None
+
+        if not use_multi_source:
+            logger.info("A股市场火热程度分析器初始化完成 (单一数据源模式)")
 
     # =====================
     # 内部工具与健壮性处理
@@ -150,27 +195,77 @@ class AStockHeatAnalyzer:
         # 将三个指数的平均成交额求和
         return float(np.nansum(sums))
 
+    @retry_on_network_error(max_retries=3, delay=3, backoff=2)
     def get_market_data(self) -> Optional[Dict]:
+        """获取市场基础数据 - 支持多数据源"""
+        if self.use_multi_source and self.multi_source:
+            return self._get_market_data_multi_source()
+        else:
+            return self._get_market_data_single_source()
+
+    def _get_market_data_multi_source(self) -> Optional[Dict]:
+        """使用多数据源获取市场数据"""
+        try:
+            logger.info("开始获取市场数据 (多数据源模式)...")
+
+            # 使用多数据源提供器
+            multi_data = self.multi_source.get_market_data()
+            if not multi_data:
+                logger.warning("多数据源获取失败，回退到单一数据源")
+                return self._get_market_data_single_source()
+
+            # 转换为标准格式
+            data = {
+                "sz_index": multi_data.get("sz_index"),
+                "sz_component": multi_data.get("sz_component"),
+                "cyb_index": multi_data.get("cyb_index"),
+                "market_summary": None,  # 由单独方法获取
+                "limit_up": multi_data.get("limit_up", pd.DataFrame()),
+                "limit_down": multi_data.get("limit_down", pd.DataFrame()),
+                "timestamp": datetime.now(),
+            }
+
+            # 尝试获取市场概况
+            try:
+                data["market_summary"] = ak.stock_zh_a_spot_em()
+                time.sleep(1)
+            except Exception as e:
+                logger.warning(f"获取市场概况失败: {str(e)}")
+                data["market_summary"] = pd.DataFrame()
+
+            logger.info(f"市场数据获取成功 (多数据源)，时间戳: {data['timestamp']}")
+            return data
+
+        except Exception as e:
+            logger.error(f"多数据源获取市场数据失败: {str(e)}")
+            return self._get_market_data_single_source()
+
+    def _get_market_data_single_source(self) -> Optional[Dict]:
         """获取市场基础数据"""
         try:
             logger.info("开始获取市场数据...")
 
-            # 获取上证指数实时数据
-            sz_index = ak.stock_zh_index_spot_em(symbol="000001")
+            # 获取上证指数最新数据
+            sz_index = ak.stock_zh_index_daily_em(symbol="sh000001").tail(1)
+            time.sleep(1)  # 避免请求过于频繁
 
-            # 获取深证成指实时数据
-            sz_component = ak.stock_zh_index_spot_em(symbol="399001")
+            # 获取深证成指最新数据
+            sz_component = ak.stock_zh_index_daily_em(symbol="sz399001").tail(1)
+            time.sleep(1)
 
             # 获取创业板指数据
-            cyb_index = ak.stock_zh_index_spot_em(symbol="399006")
+            cyb_index = ak.stock_zh_index_daily_em(symbol="sz399006").tail(1)
+            time.sleep(1)
 
             # 获取市场概况
             market_summary = ak.stock_zh_a_spot_em()
+            time.sleep(1)
 
             # 获取涨跌停数据：优先今天，否则回退至最近交易日
             day_str = datetime.now().strftime("%Y%m%d")
             try:
                 limit_up = ak.stock_zt_pool_em(date=day_str)
+                time.sleep(1)
                 limit_down = ak.stock_dt_pool_em(date=day_str)
                 if (limit_up is None or limit_up.empty) and (limit_down is None or limit_down.empty):
                     raise ValueError("No limit pools for today, fallback")
@@ -180,10 +275,12 @@ class AStockHeatAnalyzer:
                     logger.info(f"非交易日或数据为空，回退至最近交易日: {fallback_day}")
                     try:
                         limit_up = ak.stock_zt_pool_em(date=fallback_day)
+                        time.sleep(1)
                     except Exception:
                         limit_up = pd.DataFrame()
                     try:
                         limit_down = ak.stock_dt_pool_em(date=fallback_day)
+                        time.sleep(1)
                     except Exception:
                         limit_down = pd.DataFrame()
                 else:
@@ -471,10 +568,41 @@ class AStockHeatAnalyzer:
 
 def main():
     """主函数 - 执行市场分析"""
-    analyzer = AStockHeatAnalyzer()
+    import sys
 
-    # 执行分析
-    result = analyzer.analyze_market_heat()
+    # 解析命令行参数
+    test_mode = len(sys.argv) > 1 and '--test' in sys.argv
+    single_source = len(sys.argv) > 1 and '--single' in sys.argv
+
+    # 创建分析器 (默认使用多数据源)
+    analyzer = AStockHeatAnalyzer(use_multi_source=not single_source)
+
+    if test_mode:
+        print("🔧 测试模式 - 使用模拟数据")
+        print("由于当前网络环境访问数据源受限，正在使用模拟数据进行演示...")
+
+        # 模拟分析结果
+        result = {
+            'timestamp': datetime.now(),
+            'heat_score': 0.45,
+            'risk_level': '中等风险',
+            'position_suggestion': '建议保持6-7成仓位，适度参与',
+            'indicators': {
+                'volume_ratio': 1.2,
+                'price_momentum': 0.0023,
+                'market_breadth': -0.05,
+                'volatility': 0.032,
+                'sentiment': 0.15
+            },
+            'market_data_summary': {
+                'sz_index_change': '+0.25%',
+                'limit_up_count': 35,
+                'limit_down_count': 2
+            }
+        }
+    else:
+        # 执行真实分析
+        result = analyzer.analyze_market_heat()
 
     if result:
         print(f"\n{'=' * 60}")
@@ -497,6 +625,10 @@ def main():
         print(f"{'=' * 60}")
     else:
         print("分析失败，请检查网络连接和数据源")
+        print("\n💡 使用提示：")
+        print("   python stock/stock.py --test      # 测试模式 (模拟数据)")
+        print("   python stock/stock.py --single    # 单数据源模式")
+        print("   python stock/stock.py             # 多数据源模式 (默认)")
 
 
 if __name__ == "__main__":

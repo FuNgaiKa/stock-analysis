@@ -17,7 +17,13 @@ import akshare as ak
 import yfinance as yf
 from concurrent.futures import ThreadPoolExecutor, as_completed
 # 导入Ashare数据源
-from .Ashare import get_price
+try:
+    from Ashare import get_price
+except ImportError:
+    try:
+        from .Ashare import get_price
+    except ImportError:
+        get_price = None
 
 logger = logging.getLogger(__name__)
 
@@ -27,12 +33,14 @@ class MultiSourceDataProvider:
     
     def __init__(self):
         self.sources = {
-            'ashare': self._get_ashare_data,        # 主力数据源 - 最稳定
-            'akshare': self._get_akshare_data,      # 备用1 - 原有数据源
-            'sina': self._get_sina_data,            # 备用2 - 传统接口
-            'netease': self._get_netease_data,      # 备用3 - 网易接口
-            'yfinance': self._get_yfinance_data,    # 备用4 - 国际市场
-            'tushare_free': self._get_tushare_free_data  # 备用5 - Tushare
+            'akshare_optimized': self._get_akshare_optimized_data,  # 🥇 主力数据源 - akshare优化版
+            'tencent': self._get_tencent_data,      # 🥈 备用1 - 腾讯财经 (快速指数)
+            'ashare': self._get_ashare_data,        # 🥉 备用2 - 轻量级价格数据
+            'sina': self._get_sina_data,            # 备用3 - 传统稳定接口
+            'yfinance': self._get_yfinance_data,    # 备用4 - 国际市场数据
+            'akshare': self._get_akshare_data,      # 备用5 - 原有数据源(不稳定)
+            'netease': self._get_netease_data,      # 备用6 - 网易接口
+            'tushare_free': self._get_tushare_free_data  # 备用7 - Tushare(需积分)
         }
         self.cache = {}
         
@@ -278,8 +286,60 @@ class MultiSourceDataProvider:
         except Exception as e:
             logger.warning(f"Tushare失败: {str(e)}")
             return None
-        
+
         return data
+
+    def _get_tencent_data(self, date: str) -> Optional[Dict]:
+        """腾讯财经数据源 - 最佳免费选择"""
+        try:
+            from tencent_source import TencentDataSource
+
+            tencent = TencentDataSource()
+            summary = tencent.get_market_summary()
+
+            # 转换为标准格式
+            data = {
+                'sz_index': summary.get('sz_index'),
+                'sz_component': summary.get('sz_component'),
+                'cyb_index': summary.get('cyb_index'),
+                'limit_up': pd.DataFrame(),  # 腾讯API不提供涨跌停，由其他源补充
+                'limit_down': pd.DataFrame(),
+                'timestamp': summary.get('timestamp', datetime.now())
+            }
+
+            return data
+
+        except Exception as e:
+            logger.warning(f"腾讯数据源失败: {str(e)}")
+            return None
+
+    def _get_akshare_optimized_data(self, date: str) -> Optional[Dict]:
+        """akshare 优化数据源 - 使用稳定接口"""
+        try:
+            from akshare_optimized import OptimizedAkshareSource
+
+            optimized_source = OptimizedAkshareSource()
+            market_data = optimized_source.get_market_data()
+
+            if market_data:
+                # 转换为标准格式
+                data = {
+                    'sz_index': market_data.get('sz_index'),
+                    'sz_component': market_data.get('sz_component'),
+                    'cyb_index': market_data.get('cyb_index'),
+                    'limit_up': market_data.get('limit_up', pd.DataFrame()),
+                    'limit_down': market_data.get('limit_down', pd.DataFrame()),
+                    'market_summary': market_data.get('market_summary'),
+                    'timestamp': market_data.get('timestamp', datetime.now())
+                }
+
+                return data
+            else:
+                return None
+
+        except Exception as e:
+            logger.warning(f"akshare 优化数据源失败: {str(e)}")
+            return None
     
     def _validate_data(self, data: Dict) -> bool:
         """验证数据有效性"""
