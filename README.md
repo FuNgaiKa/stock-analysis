@@ -5,10 +5,10 @@
 ## 🎯 项目特色
 
 ### 🥇 多数据源智能架构
-- **akshare 优化版**（主力）- 免费稳定，完整市场数据
-- **baostock (证券宝)**（推荐）- 免费开源，历史数据完整
 - **efinance (东方财富)**（推荐）- 免费实时，响应速度快
+- **baostock (证券宝)**（推荐）- 免费开源，历史数据完整
 - **腾讯财经**（备用）- 0.2秒快速指数数据
+- **akshare** - 免费稳定，完整市场数据
 - **Ashare**（备用）- 轻量级价格数据
 - **新浪财经** - 传统稳定接口
 - **yfinance** - 国际市场支持
@@ -57,6 +57,23 @@ brew install ta-lib
 ```
 
 ### 2. 立即运行
+
+#### 方式1: 快速启动（推荐）
+```bash
+# 快速分析（自动选择最佳数据源）
+python quick_start.py
+
+# 交互式选择数据源
+python quick_start.py --interactive
+```
+
+#### 方式2: 完整主程序
+```bash
+# 运行主程序（包含分析和复合收益计算）
+python main.py
+```
+
+#### 方式3: 命令行模式
 ```bash
 # 🥇 推荐：交互式选择数据源
 python stock/stock.py --interactive
@@ -100,10 +117,10 @@ A股市场火热程度分析报告
 ### 数据源性能对比
 | 数据源 | 响应时间 | 数据量 | 稳定性 | 费用 | 推荐场景 |
 |--------|----------|--------|--------|------|----------|
-| **baostock** | ~5-10s | 全市场 | ⭐⭐⭐⭐ | 免费 | 历史数据回测 |
 | **efinance** | ~1-2s | 实时+历史 | ⭐⭐⭐⭐ | 免费 | 实时行情监控 |
-| **akshare优化版** | 49s | 5434只股票 | ⭐⭐⭐⭐⭐ | 免费 | 全市场分析 |
+| **baostock** | ~5-10s | 全市场 | ⭐⭐⭐⭐ | 免费 | 历史数据回测 |
 | **腾讯财经** | 0.2s | 3大指数 | ⭐⭐⭐⭐⭐ | 免费 | 快速指数查询 |
+| **akshare** | ~30-60s | 5000+股票 | ⭐⭐⭐⭐⭐ | 免费 | 全市场分析 |
 | **Ashare** | 0.7s | 价格数据 | ⭐⭐⭐⭐ | 免费 | 轻量级场景 |
 | **tushare** | 需积分 | 专业数据 | ⭐⭐⭐⭐⭐ | 积分制 | 专业量化 |
 
@@ -151,8 +168,8 @@ python stock/stock.py --interactive
    历史数据完整 (~5-10s)
    推荐场景: 历史回测
 
-3. akshare优化版
-   全市场数据 (~49s)
+3. akshare
+   全市场数据 (~30-60s)
    推荐场景: 全市场分析
 
 4. 腾讯财经
@@ -199,7 +216,7 @@ source = selector.get_quick_recommendation('backtest')  # 返回 'baostock'
 analyzer = AStockHeatAnalyzer(data_source=source)
 
 # 全市场分析场景
-source = selector.get_quick_recommendation('analysis')  # 返回 'akshare_optimized'
+source = selector.get_quick_recommendation('analysis')  # 返回 'akshare'
 analyzer = AStockHeatAnalyzer(data_source=source)
 ```
 
@@ -231,11 +248,6 @@ data = efinance.get_realtime_data()
 from stock.tencent_source import TencentDataSource
 tencent = TencentDataSource()
 data = tencent.get_market_summary()
-
-# 测试akshare优化版
-from stock.akshare_optimized import OptimizedAkshareSource
-akshare = OptimizedAkshareSource()
-market_data = akshare.get_market_data()
 ```
 
 ## ⚡ 性能优化

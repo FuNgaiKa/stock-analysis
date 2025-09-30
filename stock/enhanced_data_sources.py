@@ -35,14 +35,13 @@ class MultiSourceDataProvider:
         self.sources = {
             'efinance': self._get_efinance_data,    # 🥇 主力数据源 - 东方财富 (快速实时)
             'baostock': self._get_baostock_data,    # 🥈 备用1 - 证券宝 (历史完整)
-            'akshare_optimized': self._get_akshare_optimized_data,  # 🥉 备用2 - akshare优化版
-            'tencent': self._get_tencent_data,      # 备用3 - 腾讯财经 (快速指数)
-            'ashare': self._get_ashare_data,        # 备用4 - 轻量级价格数据
-            'sina': self._get_sina_data,            # 备用5 - 传统稳定接口
-            'yfinance': self._get_yfinance_data,    # 备用6 - 国际市场数据
-            'akshare': self._get_akshare_data,      # 备用7 - 原有数据源(不稳定)
-            'netease': self._get_netease_data,      # 备用8 - 网易接口
-            'tushare_free': self._get_tushare_free_data  # 备用9 - Tushare(需积分)
+            'tencent': self._get_tencent_data,      # 🥉 备用2 - 腾讯财经 (快速指数)
+            'ashare': self._get_ashare_data,        # 备用3 - 轻量级价格数据
+            'sina': self._get_sina_data,            # 备用4 - 传统稳定接口
+            'yfinance': self._get_yfinance_data,    # 备用5 - 国际市场数据
+            'akshare': self._get_akshare_data,      # 备用6 - 原有数据源
+            'netease': self._get_netease_data,      # 备用7 - 网易接口
+            'tushare_free': self._get_tushare_free_data  # 备用8 - Tushare(需积分)
         }
         self.cache = {}
         
@@ -313,34 +312,6 @@ class MultiSourceDataProvider:
 
         except Exception as e:
             logger.warning(f"腾讯数据源失败: {str(e)}")
-            return None
-
-    def _get_akshare_optimized_data(self, date: str) -> Optional[Dict]:
-        """akshare 优化数据源 - 使用稳定接口"""
-        try:
-            from akshare_optimized import OptimizedAkshareSource
-
-            optimized_source = OptimizedAkshareSource()
-            market_data = optimized_source.get_market_data()
-
-            if market_data:
-                # 转换为标准格式
-                data = {
-                    'sz_index': market_data.get('sz_index'),
-                    'sz_component': market_data.get('sz_component'),
-                    'cyb_index': market_data.get('cyb_index'),
-                    'limit_up': market_data.get('limit_up', pd.DataFrame()),
-                    'limit_down': market_data.get('limit_down', pd.DataFrame()),
-                    'market_summary': market_data.get('market_summary'),
-                    'timestamp': market_data.get('timestamp', datetime.now())
-                }
-
-                return data
-            else:
-                return None
-
-        except Exception as e:
-            logger.warning(f"akshare 优化数据源失败: {str(e)}")
             return None
 
     def _get_baostock_data(self, date: str) -> Optional[Dict]:

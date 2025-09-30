@@ -31,10 +31,10 @@ class DataSourceSelector:
                 'recommended': '历史回测'
             },
             '3': {
-                'name': 'akshare优化版',
-                'code': 'akshare_optimized',
-                'description': '全市场数据 (~49s)',
-                'features': ['5434只股票', '涨跌停数据', '市场全貌'],
+                'name': 'akshare',
+                'code': 'akshare',
+                'description': '全市场数据 (~30-60s)',
+                'features': ['全市场股票', '涨跌停数据', '指数数据'],
                 'recommended': '全市场分析'
             },
             '4': {
@@ -117,9 +117,13 @@ class DataSourceSelector:
                 from baostock_source import BaostockDataSource
                 return BaostockDataSource()
 
-            elif source_code == 'akshare_optimized':
-                from akshare_optimized import OptimizedAkshareSource
-                return OptimizedAkshareSource()
+            elif source_code == 'akshare':
+                # 使用原生 akshare，通过多数据源管理器
+                from enhanced_data_sources import MultiSourceDataProvider
+                provider = MultiSourceDataProvider()
+                # 返回一个只使用 akshare 的实例
+                provider.sources = {'akshare': provider._get_akshare_data}
+                return provider
 
             elif source_code == 'tencent':
                 from tencent_source import TencentDataSource
@@ -153,7 +157,7 @@ class DataSourceSelector:
         recommendations = {
             'realtime': 'efinance',      # 实时监控
             'backtest': 'baostock',      # 历史回测
-            'analysis': 'akshare_optimized',  # 全市场分析
+            'analysis': 'akshare',       # 全市场分析
             'quick': 'tencent',          # 快速查看
             'default': 'multi_source'    # 默认
         }
