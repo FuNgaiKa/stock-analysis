@@ -54,9 +54,10 @@ def retry_on_network_error(max_retries=3, delay=2, backoff=2):
 class AStockHeatAnalyzer:
     """A股市场火热程度分析器"""
 
-    def __init__(self, use_multi_source=True):
+    def __init__(self, use_multi_source=True, data_source=None):
         self.indicators = {}
         self.use_multi_source = use_multi_source
+        self.data_source = data_source  # 用户指定的数据源
         self.weights = {
             "volume_ratio": 0.25,  # 成交量比率权重
             "price_momentum": 0.20,  # 价格动量权重
@@ -65,8 +66,22 @@ class AStockHeatAnalyzer:
             "sentiment": 0.20,  # 情绪指标权重
         }
 
-        # 初始化多数据源提供器
-        if use_multi_source:
+        # 初始化数据源
+        if data_source:
+            # 使用用户指定的数据源
+            try:
+                import sys
+                import os
+                sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+                from data_source_selector import DataSourceSelector
+                selector = DataSourceSelector()
+                self.multi_source = selector.get_source_instance(data_source)
+                logger.info(f"A股市场火热程度分析器初始化完成 (数据源: {data_source})")
+            except Exception as e:
+                logger.warning(f"指定数据源不可用: {str(e)}, 使用多数据源模式")
+                from enhanced_data_sources import MultiSourceDataProvider
+                self.multi_source = MultiSourceDataProvider()
+        elif use_multi_source:
             try:
                 import sys
                 import os
@@ -81,7 +96,7 @@ class AStockHeatAnalyzer:
         else:
             self.multi_source = None
 
-        if not use_multi_source:
+        if not use_multi_source and not data_source:
             logger.info("A股市场火热程度分析器初始化完成 (单一数据源模式)")
 
     # =====================
@@ -573,9 +588,25 @@ def main():
     # 解析命令行参数
     test_mode = len(sys.argv) > 1 and '--test' in sys.argv
     single_source = len(sys.argv) > 1 and '--single' in sys.argv
+    interactive = len(sys.argv) > 1 and '--interactive' in sys.argv
 
-    # 创建分析器 (默认使用多数据源)
-    analyzer = AStockHeatAnalyzer(use_multi_source=not single_source)
+    # 交互式选择数据源
+    data_source = None
+    if interactive:
+        try:
+            import os
+            sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+            from data_source_selector import DataSourceSelector
+            selector = DataSourceSelector()
+            data_source = selector.select_source()
+        except Exception as e:
+            logger.warning(f"交互式选择失败: {str(e)}, 使用默认多数据源")
+
+    # 创建分析器
+    if data_source:
+        analyzer = AStockHeatAnalyzer(data_source=data_source)
+    else:
+        analyzer = AStockHeatAnalyzer(use_multi_source=not single_source)
 
     if test_mode:
         print("🔧 测试模式 - 使用模拟数据")
@@ -626,9 +657,10 @@ def main():
     else:
         print("分析失败，请检查网络连接和数据源")
         print("\n💡 使用提示：")
-        print("   python stock/stock.py --test      # 测试模式 (模拟数据)")
-        print("   python stock/stock.py --single    # 单数据源模式")
-        print("   python stock/stock.py             # 多数据源模式 (默认)")
+        print("   python stock/stock.py                 # 多数据源模式 (默认)")
+        print("   python stock/stock.py --interactive   # 交互式选择数据源")
+        print("   python stock/stock.py --test          # 测试模式 (模拟数据)")
+        print("   python stock/stock.py --single        # 单数据源模式")
 
 
 # 为了兼容性，提供别名

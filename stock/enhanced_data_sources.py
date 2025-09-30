@@ -33,14 +33,16 @@ class MultiSourceDataProvider:
     
     def __init__(self):
         self.sources = {
-            'akshare_optimized': self._get_akshare_optimized_data,  # 🥇 主力数据源 - akshare优化版
-            'tencent': self._get_tencent_data,      # 🥈 备用1 - 腾讯财经 (快速指数)
-            'ashare': self._get_ashare_data,        # 🥉 备用2 - 轻量级价格数据
-            'sina': self._get_sina_data,            # 备用3 - 传统稳定接口
-            'yfinance': self._get_yfinance_data,    # 备用4 - 国际市场数据
-            'akshare': self._get_akshare_data,      # 备用5 - 原有数据源(不稳定)
-            'netease': self._get_netease_data,      # 备用6 - 网易接口
-            'tushare_free': self._get_tushare_free_data  # 备用7 - Tushare(需积分)
+            'efinance': self._get_efinance_data,    # 🥇 主力数据源 - 东方财富 (快速实时)
+            'baostock': self._get_baostock_data,    # 🥈 备用1 - 证券宝 (历史完整)
+            'akshare_optimized': self._get_akshare_optimized_data,  # 🥉 备用2 - akshare优化版
+            'tencent': self._get_tencent_data,      # 备用3 - 腾讯财经 (快速指数)
+            'ashare': self._get_ashare_data,        # 备用4 - 轻量级价格数据
+            'sina': self._get_sina_data,            # 备用5 - 传统稳定接口
+            'yfinance': self._get_yfinance_data,    # 备用6 - 国际市场数据
+            'akshare': self._get_akshare_data,      # 备用7 - 原有数据源(不稳定)
+            'netease': self._get_netease_data,      # 备用8 - 网易接口
+            'tushare_free': self._get_tushare_free_data  # 备用9 - Tushare(需积分)
         }
         self.cache = {}
         
@@ -340,7 +342,61 @@ class MultiSourceDataProvider:
         except Exception as e:
             logger.warning(f"akshare 优化数据源失败: {str(e)}")
             return None
-    
+
+    def _get_baostock_data(self, date: str) -> Optional[Dict]:
+        """baostock 数据源 - 历史数据完整"""
+        try:
+            from baostock_source import BaostockDataSource
+
+            baostock = BaostockDataSource()
+            market_data = baostock.get_market_data(date)
+
+            if market_data:
+                # 转换为标准格式
+                data = {
+                    'sz_index': market_data.get('sz_index'),
+                    'sz_component': market_data.get('sz_component'),
+                    'cyb_index': market_data.get('cyb_index'),
+                    'limit_up': market_data.get('limit_up', pd.DataFrame()),
+                    'limit_down': market_data.get('limit_down', pd.DataFrame()),
+                    'timestamp': market_data.get('timestamp', datetime.now())
+                }
+
+                return data
+            else:
+                return None
+
+        except Exception as e:
+            logger.warning(f"baostock 数据源失败: {str(e)}")
+            return None
+
+    def _get_efinance_data(self, date: str) -> Optional[Dict]:
+        """efinance 数据源 - 实时数据快速"""
+        try:
+            from efinance_source import EfinanceDataSource
+
+            efinance = EfinanceDataSource()
+            market_data = efinance.get_realtime_data()
+
+            if market_data:
+                # 转换为标准格式
+                data = {
+                    'sz_index': market_data.get('sz_index'),
+                    'sz_component': market_data.get('sz_component'),
+                    'cyb_index': market_data.get('cyb_index'),
+                    'limit_up': market_data.get('limit_up', pd.DataFrame()),
+                    'limit_down': market_data.get('limit_down', pd.DataFrame()),
+                    'timestamp': market_data.get('timestamp', datetime.now())
+                }
+
+                return data
+            else:
+                return None
+
+        except Exception as e:
+            logger.warning(f"efinance 数据源失败: {str(e)}")
+            return None
+
     def _validate_data(self, data: Dict) -> bool:
         """验证数据有效性"""
         if not data:

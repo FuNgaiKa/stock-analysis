@@ -6,6 +6,8 @@
 
 ### 🥇 多数据源智能架构
 - **akshare 优化版**（主力）- 免费稳定，完整市场数据
+- **baostock (证券宝)**（推荐）- 免费开源，历史数据完整
+- **efinance (东方财富)**（推荐）- 免费实时，响应速度快
 - **腾讯财经**（备用）- 0.2秒快速指数数据
 - **Ashare**（备用）- 轻量级价格数据
 - **新浪财经** - 传统稳定接口
@@ -56,7 +58,10 @@ brew install ta-lib
 
 ### 2. 立即运行
 ```bash
-# 🥇 推荐：多数据源模式 (akshare优化版主导)
+# 🥇 推荐：交互式选择数据源
+python stock/stock.py --interactive
+
+# 🚀 多数据源自动切换模式 (默认)
 python stock/stock.py
 
 # 🧪 演示模式：查看完整功能
@@ -93,12 +98,14 @@ A股市场火热程度分析报告
 ## 🛠️ 核心技术
 
 ### 数据源性能对比
-| 数据源 | 响应时间 | 数据量 | 稳定性 | 费用 |
-|--------|----------|--------|--------|------|
-| **akshare优化版** | 49s | 5434只股票 | ⭐⭐⭐⭐⭐ | 免费 |
-| **腾讯财经** | 0.2s | 3大指数 | ⭐⭐⭐⭐⭐ | 免费 |
-| **Ashare** | 0.7s | 价格数据 | ⭐⭐⭐⭐ | 免费 |
-| **tushare** | 需积分 | 专业数据 | ⭐⭐⭐⭐⭐ | 积分制 |
+| 数据源 | 响应时间 | 数据量 | 稳定性 | 费用 | 推荐场景 |
+|--------|----------|--------|--------|------|----------|
+| **baostock** | ~5-10s | 全市场 | ⭐⭐⭐⭐ | 免费 | 历史数据回测 |
+| **efinance** | ~1-2s | 实时+历史 | ⭐⭐⭐⭐ | 免费 | 实时行情监控 |
+| **akshare优化版** | 49s | 5434只股票 | ⭐⭐⭐⭐⭐ | 免费 | 全市场分析 |
+| **腾讯财经** | 0.2s | 3大指数 | ⭐⭐⭐⭐⭐ | 免费 | 快速指数查询 |
+| **Ashare** | 0.7s | 价格数据 | ⭐⭐⭐⭐ | 免费 | 轻量级场景 |
+| **tushare** | 需积分 | 专业数据 | ⭐⭐⭐⭐⭐ | 积分制 | 专业量化 |
 
 ### 量化指标体系
 - **成交量比率** (25%) - 市场活跃度
@@ -110,6 +117,8 @@ A股市场火热程度分析报告
 ## 📋 数据源配置
 
 ### 免费数据源 (无需配置)
+- ✅ **baostock (证券宝)** - 完全免费，无需注册，历史数据完整
+- ✅ **efinance (东方财富)** - 完全免费，实时行情，响应快速
 - ✅ **akshare** - 完全免费，5434只股票数据
 - ✅ **腾讯财经** - 实时指数，响应极快
 - ✅ **新浪财经** - 传统稳定接口
@@ -123,17 +132,75 @@ ts.set_token('your_token_here')  # 注册获取: https://tushare.pro
 
 ## 💡 使用示例
 
+### 交互式选择数据源
+```bash
+# 运行时交互式选择数据源
+python stock/stock.py --interactive
+```
+
+运行后会显示数据源选择菜单：
+```
+请选择数据源：
+======================================================================
+
+1. efinance (东方财富)
+   实时数据，响应快速 (~1-2s)
+   推荐场景: 实时监控
+
+2. baostock (证券宝)
+   历史数据完整 (~5-10s)
+   推荐场景: 历史回测
+
+3. akshare优化版
+   全市场数据 (~49s)
+   推荐场景: 全市场分析
+
+4. 腾讯财经
+   快速指数查询 (~0.2s)
+   推荐场景: 快速查看
+
+5. 多源自动切换
+   智能选择最佳数据源
+   推荐场景: 日常使用
+```
+
 ### 基础分析
 ```python
 from stock.stock import AStockHeatAnalyzer
 
-# 创建分析器
+# 使用默认多数据源
 analyzer = AStockHeatAnalyzer()
-
-# 执行分析
 result = analyzer.analyze_market_heat()
+
+# 指定数据源 - efinance (快速实时)
+analyzer = AStockHeatAnalyzer(data_source='efinance')
+result = analyzer.analyze_market_heat()
+
+# 指定数据源 - baostock (历史完整)
+analyzer = AStockHeatAnalyzer(data_source='baostock')
+result = analyzer.analyze_market_heat()
+
 print(f"火热程度: {result['heat_score']:.3f}")
 print(f"风险等级: {result['risk_level']}")
+```
+
+### 场景化使用
+```python
+from stock.data_source_selector import DataSourceSelector
+
+selector = DataSourceSelector()
+
+# 实时监控场景
+source = selector.get_quick_recommendation('realtime')  # 返回 'efinance'
+analyzer = AStockHeatAnalyzer(data_source=source)
+
+# 历史回测场景
+source = selector.get_quick_recommendation('backtest')  # 返回 'baostock'
+analyzer = AStockHeatAnalyzer(data_source=source)
+
+# 全市场分析场景
+source = selector.get_quick_recommendation('analysis')  # 返回 'akshare_optimized'
+analyzer = AStockHeatAnalyzer(data_source=source)
 ```
 
 ### 多数据源测试
@@ -150,6 +217,16 @@ print("成功获取数据，来源：第一优先级数据源")
 
 ### 单独测试数据源
 ```python
+# 测试 baostock
+from stock.baostock_source import BaostockDataSource
+baostock = BaostockDataSource()
+data = baostock.get_market_data()
+
+# 测试 efinance
+from stock.efinance_source import EfinanceDataSource
+efinance = EfinanceDataSource()
+data = efinance.get_realtime_data()
+
 # 测试腾讯财经
 from stock.tencent_source import TencentDataSource
 tencent = TencentDataSource()
