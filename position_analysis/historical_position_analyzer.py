@@ -166,6 +166,87 @@ class HistoricalPositionAnalyzer:
 
         return similar
 
+    def find_similar_periods_enhanced(
+        self,
+        index_code: str,
+        current_price: float = None,
+        current_volume: float = None,
+        price_tolerance: float = 0.05,
+        volume_tolerance: float = 0.3,
+        use_volume_filter: bool = True,
+        min_gap_days: int = 5
+    ) -> pd.DataFrame:
+        """
+        增强版相似点位查找（价格+成交量双重匹配）
+
+        Args:
+            index_code: 指数代码
+            current_price: 当前价格
+            current_volume: 当前成交量
+            price_tolerance: 价格容差
+            volume_tolerance: 成交量容差（相对于均量的偏差）
+            use_volume_filter: 是否启用成交量过滤
+            min_gap_days: 最小间隔天数
+
+        Returns:
+            增强匹配的相似时期DataFrame
+        """
+        df = self.get_index_data(index_code)
+
+        if current_price is None:
+            current_price = df['close'].iloc[-1]
+        if current_volume is None:
+            current_volume = df['volume'].iloc[-1]
+
+        # 价格相似区间
+        price_lower = current_price * (1 - price_tolerance)
+        price_upper = current_price * (1 + price_tolerance)
+
+        # 基础价格过滤
+        similar = df[
+            (df['close'] >= price_lower) &
+            (df['close'] <= price_upper)
+        ].copy()
+
+        # 成交量增强过滤
+        if use_volume_filter and len(similar) > 0:
+            # 计算移动平均量
+            df['volume_ma20'] = df['volume'].rolling(20).mean()
+
+            # 当前相对量比
+            current_volume_ratio = current_volume / df['volume_ma20'].iloc[-1] if df['volume_ma20'].iloc[-1] > 0 else 1.0
+
+            # 筛选成交量相似的时期
+            similar = similar[similar.index.isin(df.index)].copy()
+            similar['volume_ma20'] = df.loc[similar.index, 'volume_ma20']
+            similar['volume_ratio'] = similar['volume'] / similar['volume_ma20']
+
+            # 成交量相似：量比在当前量比的 ±volume_tolerance 范围内
+            volume_ratio_lower = current_volume_ratio * (1 - volume_tolerance)
+            volume_ratio_upper = current_volume_ratio * (1 + volume_tolerance)
+
+            similar = similar[
+                (similar['volume_ratio'] >= volume_ratio_lower) &
+                (similar['volume_ratio'] <= volume_ratio_upper)
+            ]
+
+            logger.info(
+                f"  [增强匹配] 当前量比: {current_volume_ratio:.2f}, "
+                f"筛选后剩余: {len(similar)} 个时期"
+            )
+
+        # 过滤最近数据
+        cutoff_date = df.index[-1] - timedelta(days=min_gap_days)
+        similar = similar[similar.index <= cutoff_date]
+
+        logger.info(
+            f"{SUPPORTED_INDICES[index_code].name} 增强匹配 "
+            f"(价格±{price_tolerance:.0%}, 量比±{volume_tolerance:.0%}): "
+            f"共 {len(similar)} 个时期"
+        )
+
+        return similar
+
     def calculate_future_returns(
         self,
         index_code: str,
