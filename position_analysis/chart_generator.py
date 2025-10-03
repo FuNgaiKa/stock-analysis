@@ -97,7 +97,8 @@ class ChartGenerator:
     @staticmethod
     def create_probability_chart(
         prob_data: Dict[str, Dict],
-        periods: List[int] = [5, 10, 20, 60]
+        periods: List[int] = [5, 10, 20, 60],
+        index_name: str = None
     ) -> str:
         """
         创建概率柱状图
@@ -105,6 +106,7 @@ class ChartGenerator:
         Args:
             prob_data: 概率数据字典 {period: {up_prob, down_prob, ...}}
             periods: 周期列表
+            index_name: 指数名称（用于生成唯一div_id）
 
         Returns:
             Plotly HTML
@@ -140,15 +142,21 @@ class ChartGenerator:
             textposition='outside'
         ))
 
+        title = '不同周期涨跌概率对比'
+        if index_name:
+            title = f'{index_name} - 不同周期涨跌概率对比'
+
         fig.update_layout(
-            title='不同周期涨跌概率对比',
+            title=title,
             xaxis_title='预测周期',
             yaxis_title='概率 (%)',
             barmode='group',
             height=400
         )
 
-        return fig.to_html(include_plotlyjs=False, div_id="probability_chart")
+        # 使用唯一的div_id
+        div_id = f"probability_chart_{index_name.replace(' ', '_')}" if index_name else "probability_chart"
+        return fig.to_html(include_plotlyjs=False, div_id=div_id)
 
     @staticmethod
     def create_return_distribution(

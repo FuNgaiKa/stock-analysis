@@ -458,10 +458,11 @@ class PositionAnalysisEngine:
             if 'prob_stats' not in result:
                 continue
 
-            # 概率图表
+            # 概率图表 - 传入指数名称以生成唯一div_id
             prob_chart = self.chart_gen.create_probability_chart(
                 result['prob_stats'],
-                periods
+                periods,
+                index_name=SUPPORTED_INDICES[index_code].name
             )
             charts[f"{SUPPORTED_INDICES[index_code].name} - 涨跌概率"] = prob_chart
 
@@ -556,9 +557,18 @@ def main():
     ╚══════════════════════════════════════════════════════════════╝
     """)
 
-    # 创建分析引擎（分析主要指数）
+    # 创建分析引擎（包含科创50）
+    # 默认分析A股主要指数（恒生科技数据源不稳定，暂时注释）
+    indices_to_analyze = [
+        'sh000001',  # 上证指数
+        'sh000300',  # 沪深300
+        'sz399006',  # 创业板指
+        'sh000688',  # 科创50
+        # 'hk_hstech'  # 恒生科技（数据源不稳定，需要时手动启用）
+    ]
+
     engine = PositionAnalysisEngine(
-        indices=['sh000001', 'sh000300', 'sz399006']
+        indices=indices_to_analyze
     )
 
     # 执行分析

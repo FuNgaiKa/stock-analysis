@@ -37,7 +37,11 @@ SUPPORTED_INDICES = {
     'sz399006': IndexConfig('sz399006', '创业板指', 'sz399006'),
     'sh000688': IndexConfig('sh000688', '科创50', 'sh000688'),
     'sz399001': IndexConfig('sz399001', '深证成指', 'sz399001'),
+    'hk_hstech': IndexConfig('hk_hstech', '恒生科技', '恒生科技指数'),  # 港股
 }
+
+# 默认分析的指数（用户可自定义）
+DEFAULT_INDICES = ['sh000001', 'sh000300', 'sz399006', 'sh000688']
 
 
 class DataCache:
@@ -70,7 +74,7 @@ class HistoricalPositionAnalyzer:
         logger.info("历史点位分析器初始化完成")
 
     def get_index_data(self, index_code: str) -> pd.DataFrame:
-        """获取指数历史数据"""
+        """获取指数历史数据（支持A股和港股）"""
         # 检查缓存
         if self.cache:
             cached = self.cache.get(index_code)
@@ -80,7 +84,15 @@ class HistoricalPositionAnalyzer:
         # 从 akshare 获取数据
         try:
             logger.info(f"正在获取 {index_code} 历史数据...")
-            df = ak.stock_zh_index_daily(symbol=index_code)
+
+            # 判断是否为港股指数
+            if index_code.startswith('hk_'):
+                # 港股指数使用不同的接口
+                symbol = SUPPORTED_INDICES[index_code].symbol
+                df = ak.stock_hk_index_daily_em(symbol=symbol)
+            else:
+                # A股指数
+                df = ak.stock_zh_index_daily(symbol=index_code)
 
             # 数据处理
             df['date'] = pd.to_datetime(df['date'])
