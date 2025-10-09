@@ -622,6 +622,305 @@ class EnhancedDataProvider:
         else:
             return "极高波动"
 
+    def get_margin_trading_metrics(self, market: str = '沪深两市') -> Dict:
+        """
+        获取融资融券指标 - Phase 3新增
+
+        Args:
+            market: 市场范围 ('沪深两市', '沪市', '深市')
+
+        Returns:
+            {
+                'margin_balance': 融资余额(亿元),
+                'margin_balance_change': 融资余额变化(亿元),
+                'margin_balance_pct_change': 融资余额变化率(%),
+                'short_balance': 融券余额(亿元),
+                'total_balance': 两融余额(亿元),
+                'leverage_level': 杠杆水平分类
+            }
+        """
+        try:
+            # 获取融资融券汇总数据
+            df = ak.stock_margin_underlying_info_szse(date="20231201")
+
+            # 获取最新日期的汇总数据(使用全市场数据)
+            df_summary = ak.stock_margin_szse(symbol="融资融券标的")
+
+            if len(df_summary) == 0:
+                return {}
+
+            # 取最新数据
+            latest = df_summary.iloc[-1]
+            prev = df_summary.iloc[-2] if len(df_summary) >= 2 else latest
+
+            # 提取数据(单位转换为亿元)
+            margin_balance = float(latest.get('融资余额', 0)) / 100000000
+            prev_margin_balance = float(prev.get('融资余额', 0)) / 100000000
+
+            margin_change = margin_balance - prev_margin_balance
+            margin_pct_change = (margin_change / prev_margin_balance * 100) if prev_margin_balance > 0 else 0
+
+            short_balance = float(latest.get('融券余额', 0)) / 100000000
+            total_balance = margin_balance + short_balance
+
+            # 杠杆水平分类
+            leverage_level = self._classify_leverage_level(margin_pct_change)
+
+            return {
+                'margin_balance': float(margin_balance),
+                'margin_balance_change': float(margin_change),
+                'margin_balance_pct_change': float(margin_pct_change),
+                'short_balance': float(short_balance),
+                'total_balance': float(total_balance),
+                'leverage_level': leverage_level,
+                'data_date': str(latest.get('交易日期', ''))
+            }
+
+        except Exception as e:
+            logger.warning(f"获取融资融券指标失败: {str(e)}")
+            return {}
+
+    def get_main_fund_flow(self, index_code: str = 'sh000001', lookback_days: int = 5) -> Dict:
+        """
+        获取主力资金流向 - Phase 3新增
+
+        Args:
+            index_code: 指数代码
+            lookback_days: 回溯天数
+
+        Returns:
+            {
+                'today_main_inflow': 当日主力净流入(亿元),
+                'today_super_inflow': 当日超级大单净流入(亿元),
+                'today_big_inflow': 当日大单净流入(亿元),
+                'cumulative_5d': 近5日主力累计净流入,
+                'main_participation_rate': 主力参与度(%),
+                'fund_flow_status': 资金流向状态
+            }
+        """
+        try:
+            # 获取个股资金流(使用上证指数作为市场整体代理)
+            # 注: AKShare的主力资金接口主要针对个股,对指数支持有限
+            # 这里使用市场整体资金流向数据
+            df = ak.stock_individual_fund_flow_rank(indicator="今日")
+
+            if len(df) == 0:
+                return {}
+
+            # 计算市场整体主力资金(汇总前100只个股)
+            top_stocks = df.head(100)
+
+            today_main = top_stocks['主力净流入-净额'].sum() / 100000000  # 转亿元
+            today_super = top_stocks['超大单净流入-净额'].sum() / 100000000
+            today_big = top_stocks['大单净流入-净额'].sum() / 100000000
+
+            # 近5日数据
+            df_5d = ak.stock_individual_fund_flow_rank(indicator="5日")
+            top_5d = df_5d.head(100)
+            cumulative_5d = top_5d['主力净流入-净额'].sum() / 100000000
+
+            # 主力参与度(主力成交额/总成交额)
+            total_amount = top_stocks['今日收盘'].sum()
+            main_amount = abs(top_stocks['主力净流入-净额'].sum())
+            participation_rate = (main_amount / total_amount * 100) if total_amount > 0 else 0
+
+            # 资金流向状态
+            fund_flow_status = self._classify_fund_flow(today_main, cumulative_5d)
+
+            return {
+                'today_main_inflow': float(today_main),
+                'today_super_inflow': float(today_super),
+                'today_big_inflow': float(today_big),
+                'cumulative_5d': float(cumulative_5d),
+                'main_participation_rate': float(participation_rate),
+                'fund_flow_status': fund_flow_status
+            }
+
+        except Exception as e:
+            logger.warning(f"获取主力资金流向失败: {str(e)}")
+            return {}
+
+    def get_dragon_tiger_list_metrics(self, lookback_days: int = 5) -> Dict:
+        """
+        获取龙虎榜指标 - Phase 3新增
+
+        Args:
+            lookback_days: 回溯天数
+
+        Returns:
+            {
+                'lhb_stock_count': 龙虎榜股票数量,
+                'institution_buy_count': 机构买入席位数,
+                'institution_sell_count': 机构卖出席位数,
+                'institution_net_buy': 机构净买入额(亿元),
+                'activity_level': 活跃度水平
+            }
+        """
+        try:
+            # 获取最近的龙虎榜汇总数据
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=lookback_days)
+
+            df = ak.stock_lhb_detail_em(
+                start_date=start_date.strftime('%Y%m%d'),
+                end_date=end_date.strftime('%Y%m%d')
+            )
+
+            if len(df) == 0:
+                return {}
+
+            # 统计股票数量
+            lhb_count = df['代码'].nunique()
+
+            # 获取机构数据
+            df_institution = ak.stock_lhb_jgmmtj_em(start_date=start_date.strftime('%Y%m%d'), end_date=end_date.strftime('%Y%m%d'))
+
+            if len(df_institution) > 0:
+                inst_buy_count = len(df_institution[df_institution['买方机构数'] > 0])
+                inst_sell_count = len(df_institution[df_institution['卖方机构数'] > 0])
+                inst_net_buy = df_institution['机构买入总额'].sum() - df_institution['机构卖出总额'].sum()
+                inst_net_buy = inst_net_buy / 100000000  # 转亿元
+            else:
+                inst_buy_count = 0
+                inst_sell_count = 0
+                inst_net_buy = 0
+
+            # 活跃度分类
+            activity_level = self._classify_lhb_activity(lhb_count)
+
+            return {
+                'lhb_stock_count': int(lhb_count),
+                'institution_buy_count': int(inst_buy_count),
+                'institution_sell_count': int(inst_sell_count),
+                'institution_net_buy': float(inst_net_buy),
+                'activity_level': activity_level
+            }
+
+        except Exception as e:
+            logger.warning(f"获取龙虎榜指标失败: {str(e)}")
+            return {}
+
+    def get_moving_averages(self, index_code: str, periods: list = [20, 60, 120]) -> Dict:
+        """
+        获取均线数据 - Phase 3新增
+
+        Args:
+            index_code: 指数代码
+            periods: 均线周期列表
+
+        Returns:
+            {
+                'current_price': 当前价格,
+                'ma20': 20日均线,
+                'ma60': 60日均线,
+                'ma120': 120日均线,
+                'ma_arrangement': 均线排列状态,
+                'distance_to_ma20': 距20日均线距离(%),
+                'distance_to_ma60': 距60日均线距离(%),
+                'trend_strength': 趋势强度分数
+            }
+        """
+        try:
+            # 获取历史数据
+            df = ak.stock_zh_index_daily(symbol=index_code)
+            df['date'] = pd.to_datetime(df['date'])
+            df = df.set_index('date').sort_index()
+
+            # 计算均线
+            for period in periods:
+                df[f'ma{period}'] = df['close'].rolling(period).mean()
+
+            # 最新数据
+            latest = df.iloc[-1]
+            current_price = float(latest['close'])
+
+            result = {
+                'current_price': current_price
+            }
+
+            # 添加各周期均线
+            for period in periods:
+                ma_value = float(latest[f'ma{period}'])
+                result[f'ma{period}'] = ma_value
+
+                # 计算距离
+                distance = (current_price - ma_value) / ma_value * 100
+                result[f'distance_to_ma{period}'] = float(distance)
+
+            # 判断均线排列
+            ma_values = [result[f'ma{p}'] for p in sorted(periods)]
+
+            if all(ma_values[i] > ma_values[i+1] for i in range(len(ma_values)-1)):
+                if current_price > ma_values[0]:
+                    ma_arrangement = "完美多头排列"
+                else:
+                    ma_arrangement = "多头排列(价格回调)"
+            elif all(ma_values[i] < ma_values[i+1] for i in range(len(ma_values)-1)):
+                if current_price < ma_values[0]:
+                    ma_arrangement = "完美空头排列"
+                else:
+                    ma_arrangement = "空头排列(价格反弹)"
+            else:
+                ma_arrangement = "均线粘合/交叉"
+
+            result['ma_arrangement'] = ma_arrangement
+
+            # 趋势强度(基于价格与均线的关系)
+            distances = [result[f'distance_to_ma{p}'] for p in periods]
+            avg_distance = sum(distances) / len(distances)
+            trend_strength = min(10, max(0, abs(avg_distance)))  # 0-10分
+            result['trend_strength'] = float(trend_strength)
+
+            return result
+
+        except Exception as e:
+            logger.warning(f"获取均线数据失败: {str(e)}")
+            return {}
+
+    @staticmethod
+    def _classify_leverage_level(margin_pct_change: float) -> str:
+        """分类杠杆水平"""
+        if margin_pct_change > 2:
+            return "杠杆快速上升"
+        elif margin_pct_change > 0.5:
+            return "杠杆温和上升"
+        elif margin_pct_change > -0.5:
+            return "杠杆稳定"
+        elif margin_pct_change > -2:
+            return "杠杆温和下降"
+        else:
+            return "杠杆快速下降"
+
+    @staticmethod
+    def _classify_fund_flow(today: float, recent_5d: float) -> str:
+        """分类资金流向状态"""
+        if today > 100 and recent_5d > 300:
+            return "主力大幅流入"
+        elif today > 50 and recent_5d > 100:
+            return "主力持续流入"
+        elif today > 0:
+            return "主力小幅流入"
+        elif today > -50 and recent_5d > -100:
+            return "主力小幅流出"
+        elif today > -100 and recent_5d > -300:
+            return "主力持续流出"
+        else:
+            return "主力大幅流出"
+
+    @staticmethod
+    def _classify_lhb_activity(lhb_count: int) -> str:
+        """分类龙虎榜活跃度"""
+        if lhb_count > 100:
+            return "极度活跃"
+        elif lhb_count > 50:
+            return "非常活跃"
+        elif lhb_count > 20:
+            return "活跃"
+        elif lhb_count > 10:
+            return "一般"
+        else:
+            return "低迷"
+
     def get_comprehensive_metrics(
         self,
         index_code: str,
