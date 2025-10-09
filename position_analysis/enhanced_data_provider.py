@@ -254,6 +254,374 @@ class EnhancedDataProvider:
         else:
             return "情绪平稳"
 
+    def get_valuation_metrics(self, date: datetime = None) -> Dict:
+        """
+        获取市场估值指标 (A股整体)
+
+        Returns:
+            {
+                'pe_ttm': 市盈率TTM中位数,
+                'pe_percentile_all': PE历史分位数(全部历史),
+                'pe_percentile_10y': PE历史分位数(近10年),
+                'pb': 市净率中位数,
+                'pb_percentile_all': PB历史分位数(全部历史),
+                'pb_percentile_10y': PB历史分位数(近10年),
+                'valuation_level': 估值水平分类
+            }
+        """
+        try:
+            # 获取PE数据
+            df_pe = ak.stock_a_ttm_lyr()
+            df_pe['date'] = pd.to_datetime(df_pe['date'])
+            df_pe = df_pe.set_index('date').sort_index()
+
+            # 获取PB数据
+            df_pb = ak.stock_a_all_pb()
+            df_pb['date'] = pd.to_datetime(df_pb['date'])
+            df_pb = df_pb.set_index('date').sort_index()
+
+            # 直接使用最新数据(估值数据通常滞后,不做复杂的日期匹配)
+            latest_pe_date = df_pe.index[-1]
+            latest_pb_date = df_pb.index[-1]
+
+            # 提取PE数据
+            pe_ttm = float(df_pe.iloc[-1]['middlePETTM'])
+            pe_pct_all = float(df_pe.iloc[-1]['quantileInAllHistoryMiddlePeTtm'])
+            pe_pct_10y = float(df_pe.iloc[-1]['quantileInRecent10YearsMiddlePeTtm'])
+
+            # 提取PB数据
+            pb = float(df_pb.iloc[-1]['middlePB'])
+            pb_pct_all = float(df_pb.iloc[-1]['quantileInAllHistoryMiddlePB'])
+            pb_pct_10y = float(df_pb.iloc[-1]['quantileInRecent10YearsMiddlePB'])
+
+            # 使用较新的日期作为数据日期
+            data_date = max(latest_pe_date, latest_pb_date)
+
+            # 估值水平分类
+            valuation_level = self._classify_valuation(pe_pct_10y, pb_pct_10y)
+
+            return {
+                'pe_ttm': pe_ttm,
+                'pe_percentile_all': pe_pct_all,
+                'pe_percentile_10y': pe_pct_10y,
+                'pb': pb,
+                'pb_percentile_all': pb_pct_all,
+                'pb_percentile_10y': pb_pct_10y,
+                'valuation_level': valuation_level,
+                'data_date': data_date.strftime('%Y-%m-%d')
+            }
+
+        except Exception as e:
+            logger.warning(f"获取估值指标失败: {str(e)}")
+            import traceback
+            logger.debug(traceback.format_exc())
+            return {}
+
+    def get_north_capital_flow(self, lookback_days: int = 5) -> Dict:
+        """
+        获取北向资金流向指标
+
+        Args:
+            lookback_days: 回溯天数,用于计算累计流入
+
+        Returns:
+            {
+                'today_net_inflow': 当日净流入(亿元),
+                'cumulative_5d': 近5日累计净流入,
+                'cumulative_20d': 近20日累计净流入,
+                'flow_status': 资金流向状态,
+                'recent_trend': 近期趋势(流入/流出)
+            }
+        """
+        try:
+            # 获取北向资金历史数据
+            df = ak.stock_hsgt_fund_flow_summary_em()
+
+            # 筛选北向数据(沪股通+深股通)
+            df_north = df[df['资金方向'] == '北向'].copy()
+            df_north['交易日'] = pd.to_datetime(df_north['交易日'])
+            df_north = df_north.sort_values('交易日', ascending=False)
+
+            if len(df_north) == 0:
+                return {}
+
+            # 当日净流入
+            today_inflow = df_north.iloc[0]['资金净流入']
+
+            # 计算累计流入
+            df_recent = df_north.head(lookback_days)
+            cumulative_5d = df_recent['资金净流入'].sum()
+
+            df_20d = df_north.head(20) if len(df_north) >= 20 else df_north
+            cumulative_20d = df_20d['资金净流入'].sum()
+
+            # 判断趋势
+            recent_trend = '持续流入' if cumulative_5d > 0 else '持续流出'
+
+            # 流向状态
+            flow_status = self._classify_capital_flow(today_inflow, cumulative_5d)
+
+            return {
+                'today_net_inflow': float(today_inflow),
+                'cumulative_5d': float(cumulative_5d),
+                'cumulative_20d': float(cumulative_20d),
+                'flow_status': flow_status,
+                'recent_trend': recent_trend,
+                'data_date': df_north.iloc[0]['交易日'].strftime('%Y-%m-%d')
+            }
+
+        except Exception as e:
+            logger.warning(f"获取北向资金流向失败: {str(e)}")
+            return {}
+
+    def get_market_breadth_metrics(self) -> Dict:
+        """
+        获取市场宽度指标
+
+        Returns:
+            {
+                'total_stocks': 总股票数,
+                'up_count': 上涨家数,
+                'down_count': 下跌家数,
+                'flat_count': 平盘家数,
+                'up_ratio': 上涨比例,
+                'advance_decline_ratio': 涨跌比(上涨/下跌),
+                'breadth_level': 市场宽度水平
+            }
+        """
+        try:
+            # 从情绪数据中提取(因为直接获取实时行情可能超时)
+            # 使用涨跌停数据作为替代
+            sentiment = self.get_market_sentiment()
+
+            if not sentiment:
+                return {}
+
+            # 估算市场宽度(基于涨跌停数据)
+            limit_up = sentiment.get('limit_up_count', 0)
+            limit_down = sentiment.get('limit_down_count', 0)
+
+            # A股约5000只
+            total_stocks = 5000
+
+            # 根据涨跌停推算上涨/下跌家数(经验公式)
+            # 一般涨停占上涨家数的5-10%
+            estimated_up = min(total_stocks, int(limit_up * 15)) if limit_up > 0 else 0
+            estimated_down = min(total_stocks, int(limit_down * 15)) if limit_down > 0 else 0
+            estimated_flat = total_stocks - estimated_up - estimated_down
+
+            up_ratio = estimated_up / total_stocks if total_stocks > 0 else 0
+            ad_ratio = estimated_up / estimated_down if estimated_down > 0 else 99.9
+
+            breadth_level = self._classify_market_breadth(up_ratio, ad_ratio)
+
+            return {
+                'total_stocks': total_stocks,
+                'up_count': estimated_up,
+                'down_count': estimated_down,
+                'flat_count': estimated_flat,
+                'up_ratio': float(up_ratio),
+                'advance_decline_ratio': float(ad_ratio),
+                'breadth_level': breadth_level,
+                'note': '基于涨跌停数据估算'
+            }
+
+        except Exception as e:
+            logger.warning(f"获取市场宽度指标失败: {str(e)}")
+            return {}
+
+    def get_technical_indicators(self, index_code: str, lookback_days: int = 100) -> Dict:
+        """
+        获取技术指标 (MACD, RSI)
+
+        Args:
+            index_code: 指数代码
+            lookback_days: 回溯天数
+
+        Returns:
+            {
+                'macd': MACD值,
+                'signal': 信号线,
+                'histogram': MACD柱,
+                'rsi': RSI值,
+                'macd_signal': MACD信号(金叉/死叉),
+                'rsi_signal': RSI信号(超买/超卖/中性)
+            }
+        """
+        try:
+            # 获取历史数据
+            df = ak.stock_zh_index_daily(symbol=index_code)
+            df['date'] = pd.to_datetime(df['date'])
+            df = df.set_index('date').sort_index()
+            df = df.tail(lookback_days)
+
+            close = df['close'].values
+
+            # 计算MACD (12, 26, 9)
+            exp1 = pd.Series(close).ewm(span=12, adjust=False).mean()
+            exp2 = pd.Series(close).ewm(span=26, adjust=False).mean()
+            macd = exp1 - exp2
+            signal = macd.ewm(span=9, adjust=False).mean()
+            histogram = macd - signal
+
+            # 计算RSI (14)
+            delta = pd.Series(close).diff()
+            gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+            rs = gain / loss
+            rsi = 100 - (100 / (1 + rs))
+
+            # 取最新值
+            current_macd = float(macd.iloc[-1])
+            current_signal = float(signal.iloc[-1])
+            current_histogram = float(histogram.iloc[-1])
+            current_rsi = float(rsi.iloc[-1])
+
+            # MACD信号判断
+            prev_histogram = float(histogram.iloc[-2])
+            if current_histogram > 0 and prev_histogram < 0:
+                macd_signal = '金叉'
+            elif current_histogram < 0 and prev_histogram > 0:
+                macd_signal = '死叉'
+            elif current_histogram > 0:
+                macd_signal = '多头'
+            else:
+                macd_signal = '空头'
+
+            # RSI信号判断
+            if current_rsi > 70:
+                rsi_signal = '超买'
+            elif current_rsi < 30:
+                rsi_signal = '超卖'
+            else:
+                rsi_signal = '中性'
+
+            return {
+                'macd': current_macd,
+                'signal': current_signal,
+                'histogram': current_histogram,
+                'rsi': current_rsi,
+                'macd_signal': macd_signal,
+                'rsi_signal': rsi_signal
+            }
+
+        except Exception as e:
+            logger.warning(f"获取技术指标失败: {str(e)}")
+            return {}
+
+    def get_volatility_metrics(self, index_code: str, lookback_days: int = 252) -> Dict:
+        """
+        获取波动率指标
+
+        Args:
+            index_code: 指数代码
+            lookback_days: 回溯天数(默认一年)
+
+        Returns:
+            {
+                'current_volatility': 当前波动率(年化),
+                'volatility_20d': 20日波动率,
+                'volatility_60d': 60日波动率,
+                'volatility_percentile': 波动率历史分位数,
+                'volatility_level': 波动率水平
+            }
+        """
+        try:
+            # 获取历史数据
+            df = ak.stock_zh_index_daily(symbol=index_code)
+            df['date'] = pd.to_datetime(df['date'])
+            df = df.set_index('date').sort_index()
+
+            # 计算收益率
+            df['return'] = df['close'].pct_change()
+
+            # 波动率计算(年化)
+            vol_20d = df['return'].tail(20).std() * np.sqrt(252)
+            vol_60d = df['return'].tail(60).std() * np.sqrt(252)
+            current_vol = vol_20d  # 使用20日波动率作为当前值
+
+            # 历史波动率序列
+            df['vol_rolling'] = df['return'].rolling(20).std() * np.sqrt(252)
+            historical_vols = df['vol_rolling'].dropna()
+
+            # 分位数
+            vol_percentile = (historical_vols < current_vol).sum() / len(historical_vols)
+
+            # 波动率水平分类
+            vol_level = self._classify_volatility(vol_percentile)
+
+            return {
+                'current_volatility': float(current_vol),
+                'volatility_20d': float(vol_20d),
+                'volatility_60d': float(vol_60d),
+                'volatility_percentile': float(vol_percentile),
+                'volatility_level': vol_level
+            }
+
+        except Exception as e:
+            logger.warning(f"获取波动率指标失败: {str(e)}")
+            return {}
+
+    @staticmethod
+    def _classify_valuation(pe_pct: float, pb_pct: float) -> str:
+        """分类估值水平"""
+        avg_pct = (pe_pct + pb_pct) / 2
+
+        if avg_pct < 0.2:
+            return "极低估值"
+        elif avg_pct < 0.4:
+            return "低估值"
+        elif avg_pct < 0.6:
+            return "合理估值"
+        elif avg_pct < 0.8:
+            return "高估值"
+        else:
+            return "极高估值"
+
+    @staticmethod
+    def _classify_capital_flow(today: float, recent_5d: float) -> str:
+        """分类资金流向状态"""
+        if today > 100 and recent_5d > 300:
+            return "大幅流入"
+        elif today > 50 and recent_5d > 100:
+            return "持续流入"
+        elif today > 0:
+            return "小幅流入"
+        elif today > -50 and recent_5d > -100:
+            return "小幅流出"
+        elif today > -100 and recent_5d > -300:
+            return "持续流出"
+        else:
+            return "大幅流出"
+
+    @staticmethod
+    def _classify_market_breadth(up_ratio: float, ad_ratio: float) -> str:
+        """分类市场宽度"""
+        if up_ratio > 0.7 and ad_ratio > 3:
+            return "普涨行情"
+        elif up_ratio > 0.6:
+            return "多数上涨"
+        elif up_ratio > 0.4:
+            return "涨跌平衡"
+        elif up_ratio > 0.3:
+            return "多数下跌"
+        else:
+            return "普跌行情"
+
+    @staticmethod
+    def _classify_volatility(percentile: float) -> str:
+        """分类波动率水平"""
+        if percentile < 0.2:
+            return "极低波动"
+        elif percentile < 0.4:
+            return "低波动"
+        elif percentile < 0.6:
+            return "正常波动"
+        elif percentile < 0.8:
+            return "高波动"
+        else:
+            return "极高波动"
+
     def get_comprehensive_metrics(
         self,
         index_code: str,
@@ -273,11 +641,18 @@ class EnhancedDataProvider:
             'volume_metrics': self.get_volume_metrics(index_code, date),
             'sentiment_metrics': self.get_market_sentiment(date_str),
             'macro_metrics': self.get_macro_indicators(),
-            'divergence_metrics': self.get_volume_price_divergence(index_code)
+            'divergence_metrics': self.get_volume_price_divergence(index_code),
+            'valuation_metrics': self.get_valuation_metrics(date),
+            'capital_flow_metrics': self.get_north_capital_flow(),
+            'market_breadth_metrics': self.get_market_breadth_metrics(),
+            'technical_indicators': self.get_technical_indicators(index_code),
+            'volatility_metrics': self.get_volatility_metrics(index_code)
         }
 
         logger.info(f"成交量状态: {metrics['volume_metrics'].get('volume_status', 'N/A')}")
         logger.info(f"市场情绪: {metrics['sentiment_metrics'].get('sentiment_level', 'N/A')}")
+        logger.info(f"估值水平: {metrics['valuation_metrics'].get('valuation_level', 'N/A')}")
+        logger.info(f"北向资金: {metrics['capital_flow_metrics'].get('flow_status', 'N/A')}")
 
         return metrics
 

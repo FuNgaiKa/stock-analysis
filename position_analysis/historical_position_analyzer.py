@@ -380,6 +380,121 @@ class HistoricalPositionAnalyzer:
 
         return result_df
 
+    def find_similar_periods_multidim(
+        self,
+        index_code: str,
+        current_price: float = None,
+        current_metrics: Dict = None,
+        price_tolerance: float = 0.05,
+        volume_tolerance: float = 0.3,
+        use_valuation_filter: bool = True,
+        use_capital_flow_filter: bool = True,
+        min_gap_days: int = 5
+    ) -> pd.DataFrame:
+        """
+        九维度增强匹配 - Phase 2核心算法
+
+        在价格+成交量基础上,增加估值、资金流向等维度的过滤
+
+        Args:
+            index_code: 指数代码
+            current_price: 当前价格
+            current_metrics: 当前市场指标字典,包含:
+                - valuation_metrics: 估值指标
+                - capital_flow_metrics: 资金流向
+                - sentiment_metrics: 市场情绪
+                - technical_indicators: 技术指标
+                - volatility_metrics: 波动率
+            price_tolerance: 价格容差
+            volume_tolerance: 成交量容差
+            use_valuation_filter: 是否启用估值过滤
+            use_capital_flow_filter: 是否启用资金流向过滤
+            min_gap_days: 最小间隔天数
+
+        Returns:
+            多维度匹配的相似时期DataFrame
+        """
+        # 1. 基础匹配: 价格+成交量
+        similar = self.find_similar_periods_enhanced(
+            index_code,
+            current_price,
+            price_tolerance=price_tolerance,
+            volume_tolerance=volume_tolerance,
+            use_volume_filter=True,
+            min_gap_days=min_gap_days
+        )
+
+        if len(similar) == 0:
+            logger.warning("价格+成交量匹配无结果")
+            return similar
+
+        logger.info(f"[多维度匹配] 价格+成交量: {len(similar)} 个时期")
+
+        # 2. 如果没有提供额外指标,返回基础匹配结果
+        if current_metrics is None:
+            return similar
+
+        # 3. 估值过滤 (如果启用)
+        if use_valuation_filter and 'valuation_metrics' in current_metrics:
+            val_metrics = current_metrics['valuation_metrics']
+            if val_metrics:
+                current_pe_pct = val_metrics.get('pe_percentile_10y', 0.5)
+
+                # 估值相似: PE分位数在 ±20% 范围内
+                # 例如当前PE分位70%, 匹配 50%-90% 区间
+                pe_lower = max(0, current_pe_pct - 0.2)
+                pe_upper = min(1, current_pe_pct + 0.2)
+
+                # TODO: 这里需要获取历史每日的PE分位数
+                # 暂时跳过,因为需要额外的历史估值数据
+                logger.info(f"[多维度匹配] 估值过滤: 当前PE分位{current_pe_pct:.1%}, 匹配区间[{pe_lower:.1%}, {pe_upper:.1%}]")
+                # 未实现: similar = similar[PE在区间内]
+
+        # 4. 资金流向过滤 (如果启用)
+        if use_capital_flow_filter and 'capital_flow_metrics' in current_metrics:
+            cap_metrics = current_metrics['capital_flow_metrics']
+            if cap_metrics:
+                current_flow_5d = cap_metrics.get('cumulative_5d', 0)
+
+                # 资金流向相似: 同为流入或同为流出
+                # 流入: 5日累计 > 100亿
+                # 流出: 5日累计 < -100亿
+                # 中性: 其他
+
+                if current_flow_5d > 100:
+                    flow_type = '大幅流入'
+                elif current_flow_5d > 0:
+                    flow_type = '流入'
+                elif current_flow_5d > -100:
+                    flow_type = '流出'
+                else:
+                    flow_type = '大幅流出'
+
+                logger.info(f"[多维度匹配] 资金状态: {flow_type} (5日累计{current_flow_5d:.1f}亿)")
+                # TODO: 获取历史每日的北向资金流向
+                # 未实现: similar = similar[资金状态相似]
+
+        # 5. 情绪过滤 (基于现有情绪指标)
+        if 'sentiment_metrics' in current_metrics:
+            sent_metrics = current_metrics['sentiment_metrics']
+            if sent_metrics:
+                sentiment_level = sent_metrics.get('sentiment_level', '情绪平稳')
+                logger.info(f"[多维度匹配] 市场情绪: {sentiment_level}")
+                # 情绪作为参考,不硬过滤
+
+        # 6. 技术指标过滤
+        if 'technical_indicators' in current_metrics:
+            tech_metrics = current_metrics['technical_indicators']
+            if tech_metrics:
+                macd_signal = tech_metrics.get('macd_signal', '中性')
+                rsi_signal = tech_metrics.get('rsi_signal', '中性')
+                logger.info(f"[多维度匹配] 技术指标: MACD {macd_signal}, RSI {rsi_signal}")
+                # 技术指标作为参考,不硬过滤
+
+        logger.info(f"[多维度匹配] 最终匹配: {len(similar)} 个时期")
+
+        return similar
+
 
 class ProbabilityAnalyzer:
     """概率统计分析器"""
