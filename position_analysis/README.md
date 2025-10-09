@@ -6,11 +6,13 @@
 
 ## 🎉 最新更新 - Phase 1.5 增强版
 
-**新增功能**（2025-10-02）:
+**新增功能**（2025-10-09）:
+- ✅ **支持ETF和个股分析** - 不仅限于指数，可分析任意ETF和个股！
 - ✅ **成交量匹配分析** - 价格+成交量双重过滤，更精准
 - ✅ **市场情绪指标** - 涨跌停统计，情绪得分
 - ✅ **量价背离检测** - 自动识别顶背离/底背离
 - ✅ **分层概率统计** - 放量/缩量分别统计，不同情况不同概率
+- ✅ **命令行参数支持** - 灵活指定分析标的
 
 **实测效果**: 增强匹配使概率预测更准确，避免虚假相似！
 
@@ -45,13 +47,27 @@
    - **命令行文本报告**：详细的文字分析报告
    - **HTML可视化报告**：交互式图表（概率柱状图、置信度仪表盘等）
 
-## 支持的指数
+## 支持的标的
 
+### 指数
 - 上证指数 (sh000001)
 - 沪深300 (sh000300)
 - 创业板指 (sz399006)
 - 科创50 (sh000688)
 - 深证成指 (sz399001)
+- 恒生科技 (hk_hstech)
+
+### ETF（可自定义添加）
+- 化工ETF (159870)
+- 煤炭ETF (515220)
+- 证券ETF (512880)
+- 酒ETF (512690)
+
+### 个股（可自定义添加）
+- 三花智控 (002050)
+- 其他个股...
+
+💡 **添加新标的**: 编辑 `position_analysis/historical_position_analyzer.py` 中的 `SUPPORTED_INDICES` 字典即可
 
 ## 安装依赖
 
@@ -68,32 +84,59 @@ pip install -r requirements.txt
 
 ### 方式1：运行增强版分析（推荐）
 
+**1.1 查看所有支持的标的**
 ```bash
-python run_enhanced_analysis.py
+python run_enhanced_analysis.py --list
+```
+
+**1.2 分析指定标的**
+```bash
+# 分析指数
+python run_enhanced_analysis.py --code sh000001  # 上证指数
+python run_enhanced_analysis.py --code sz399006  # 创业板指
+python run_enhanced_analysis.py --code sh000688  # 科创50
+
+# 分析ETF
+python run_enhanced_analysis.py --code 512690    # 酒ETF
+python run_enhanced_analysis.py --code 159870    # 化工ETF
+python run_enhanced_analysis.py --code 512880    # 证券ETF
+
+# 分析个股
+python run_enhanced_analysis.py --code 002050    # 三花智控
+
+# 简写形式
+python run_enhanced_analysis.py -c 512690
+```
+
+**1.3 默认分析（不指定标的）**
+```bash
+python run_enhanced_analysis.py  # 默认分析科创50
 ```
 
 **输出示例**:
 ```
+当前酒ETF (etf): 0.58
+
 === 当前市场状态 ===
 成交量状态: 正常水平
   当前成交量: 569.7亿
   量比: 0.98
 市场情绪: 情绪高涨
-  涨停: 52只
+  涨停: 88只
 
 【基础匹配】仅价格（±5%）
-  样本数: 127
-  20日上涨概率: 50.9%
+  样本数: 183
+  20日上涨概率: 51.4%
 
 【增强匹配】价格+成交量
-  样本数: 92
-  20日上涨概率: 44.7%
-  💡 调整: -6.2% (更谨慎)
+  样本数: 109
+  20日上涨概率: 51.5%
+  💡 调整: +0.0%
 
 【分层统计】
-缩量上涨: 上涨概率73.9%
+放量突破（量比>1.5）: 上涨概率72.7%
 
-建议仓位: 50%
+建议仓位: 65%
 ```
 
 ### 方式2：运行基础版分析
@@ -102,7 +145,33 @@ python run_enhanced_analysis.py
 python run_position_analysis.py
 ```
 
-### 方式3：自定义参数
+### 方式3：添加自定义ETF/个股
+
+编辑 `position_analysis/historical_position_analyzer.py` 文件：
+
+```python
+# 在 SUPPORTED_INDICES 字典中添加
+SUPPORTED_INDICES = {
+    # ... 现有配置 ...
+
+    # 添加你想分析的ETF
+    '159915': IndexConfig('159915', '创业板ETF', '159915', 'etf'),
+    '510300': IndexConfig('510300', '沪深300ETF', '510300', 'etf'),
+    '588000': IndexConfig('588000', '科创50ETF', '588000', 'etf'),
+
+    # 添加你想分析的个股
+    '600519': IndexConfig('600519', '贵州茅台', '600519', 'stock'),
+    '000858': IndexConfig('000858', '五粮液', '000858', 'stock'),
+}
+```
+
+保存后即可使用：
+```bash
+python run_enhanced_analysis.py --code 159915  # 分析创业板ETF
+python run_enhanced_analysis.py --code 600519  # 分析贵州茅台
+```
+
+### 方式4：Python API调用
 
 ```python
 from position_analysis import PositionAnalysisEngine
@@ -248,11 +317,17 @@ reports/                               # 报告输出目录
 
 ## 下一步计划 (Phase 2/3)
 
-### Phase 2: 增强因子
-- [ ] 成交量维度分析
+### Phase 1.5: 增强因子 ✅ 已完成
+- [x] 成交量维度分析
+- [x] 市场情绪指标（涨跌停、北向资金）
+- [x] 量价背离检测
+- [x] ETF和个股支持
+
+### Phase 2: 待开发功能
 - [ ] 估值指标（PE/PB分位数）
-- [ ] 市场情绪指标（涨跌停、北向资金）
 - [ ] 技术形态识别（均线、MACD）
+- [ ] 行业轮动分析
+- [ ] 资金流向监控
 
 ### Phase 3: 高级功能
 - [ ] K线形态对比可视化
@@ -260,6 +335,7 @@ reports/                               # 报告输出目录
 - [ ] 机器学习模型（随机森林、XGBoost）
 - [ ] 策略回测与评估
 - [ ] 在线学习与模型更新
+- [ ] Web界面（Streamlit/Gradio）
 
 ## 技术栈
 

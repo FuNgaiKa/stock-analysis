@@ -31,8 +31,12 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def main():
-    """增强版主函数"""
+def main(target_code: str = None):
+    """增强版主函数
+
+    Args:
+        target_code: 指定要分析的标的代码（指数/ETF/个股），如不指定则使用默认
+    """
     print("""
     ╔══════════════════════════════════════════════════════════════╗
     ║       历史点位对比分析系统 - Phase 1.5 增强版                 ║
@@ -43,6 +47,7 @@ def main():
     ║  ✓ 市场情绪指标                                               ║
     ║  ✓ 量价背离检测                                               ║
     ║  ✓ 分层概率统计（放量/缩量）                                  ║
+    ║  ✓ 支持指数/ETF/个股分析                                      ║
     ╚══════════════════════════════════════════════════════════════╝
     """)
 
@@ -62,12 +67,22 @@ def main():
         logger.error("无法获取当前点位数据")
         return 1
 
-    # 选择主要指数分析
-    main_index = 'sh000001'
+    # 选择主要分析标的（支持命令行参数或交互选择）
+    if target_code and target_code in SUPPORTED_INDICES:
+        main_index = target_code
+    else:
+        # 默认使用科创50，或者可以改成交互选择
+        main_index = 'sh000688'  # 科创50
+
+    if main_index not in positions:
+        logger.error(f"无法获取 {main_index} 的数据，使用上证指数")
+        main_index = 'sh000001'
+
     index_name = SUPPORTED_INDICES[main_index].name
+    target_type = SUPPORTED_INDICES[main_index].type
     current_price = positions[main_index]['price']
 
-    print(f"\n当前{index_name}: {current_price:.2f}")
+    print(f"\n当前{index_name} ({target_type}): {current_price:.2f}")
 
     # 获取增强指标
     logger.info("\n" + "=" * 80)
@@ -248,4 +263,24 @@ def main():
 
 
 if __name__ == '__main__':
-    sys.exit(main())
+    # 支持命令行参数指定标的
+    import argparse
+    parser = argparse.ArgumentParser(description='历史点位对比分析')
+    parser.add_argument('--code', '-c', type=str, help='标的代码（指数/ETF/个股）',
+                        choices=list(SUPPORTED_INDICES.keys()))
+    parser.add_argument('--list', '-l', action='store_true', help='列出所有支持的标的')
+
+    args = parser.parse_args()
+
+    if args.list:
+        print("\n支持的标的列表：")
+        print("=" * 70)
+        print(f"{'代码':<12} {'名称':<15} {'类型':<10}")
+        print("-" * 70)
+        for code, config in SUPPORTED_INDICES.items():
+            type_name = {'index': '指数', 'etf': 'ETF', 'stock': '个股'}.get(config.type, config.type)
+            print(f"{code:<12} {config.name:<15} {type_name:<10}")
+        print("=" * 70)
+        sys.exit(0)
+
+    sys.exit(main(target_code=args.code))

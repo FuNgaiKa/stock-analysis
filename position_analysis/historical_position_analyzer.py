@@ -24,20 +24,28 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class IndexConfig:
-    """指数配置"""
+    """指数/ETF/个股配置"""
     code: str
     name: str
     symbol: str  # akshare 的 symbol
+    type: str = 'index'  # 'index', 'etf', 'stock'
 
 
 # 支持的指数配置
 SUPPORTED_INDICES = {
-    'sh000001': IndexConfig('sh000001', '上证指数', 'sh000001'),
-    'sh000300': IndexConfig('sh000300', '沪深300', 'sh000300'),
-    'sz399006': IndexConfig('sz399006', '创业板指', 'sz399006'),
-    'sh000688': IndexConfig('sh000688', '科创50', 'sh000688'),
-    'sz399001': IndexConfig('sz399001', '深证成指', 'sz399001'),
-    'hk_hstech': IndexConfig('hk_hstech', '恒生科技', '恒生科技指数'),  # 港股
+    'sh000001': IndexConfig('sh000001', '上证指数', 'sh000001', 'index'),
+    'sh000300': IndexConfig('sh000300', '沪深300', 'sh000300', 'index'),
+    'sz399006': IndexConfig('sz399006', '创业板指', 'sz399006', 'index'),
+    'sh000688': IndexConfig('sh000688', '科创50', 'sh000688', 'index'),
+    'sz399001': IndexConfig('sz399001', '深证成指', 'sz399001', 'index'),
+    'hk_hstech': IndexConfig('hk_hstech', '恒生科技', '恒生科技指数', 'index'),  # 港股
+    # ETF
+    '159870': IndexConfig('159870', '化工ETF', '159870', 'etf'),
+    '515220': IndexConfig('515220', '煤炭ETF', '515220', 'etf'),
+    '512880': IndexConfig('512880', '证券ETF', '512880', 'etf'),
+    '512690': IndexConfig('512690', '酒ETF', '512690', 'etf'),
+    # 个股
+    '002050': IndexConfig('002050', '三花智控', '002050', 'stock'),
 }
 
 # 默认分析的指数（用户可自定义）
@@ -74,7 +82,7 @@ class HistoricalPositionAnalyzer:
         logger.info("历史点位分析器初始化完成")
 
     def get_index_data(self, index_code: str) -> pd.DataFrame:
-        """获取指数历史数据（支持A股和港股）"""
+        """获取指数/ETF/个股历史数据（支持A股、港股、ETF、个股）"""
         # 检查缓存
         if self.cache:
             cached = self.cache.get(index_code)
@@ -85,10 +93,24 @@ class HistoricalPositionAnalyzer:
         try:
             logger.info(f"正在获取 {index_code} 历史数据...")
 
-            # 判断是否为港股指数
-            if index_code.startswith('hk_'):
-                # 港股指数使用不同的接口
-                symbol = SUPPORTED_INDICES[index_code].symbol
+            config = SUPPORTED_INDICES.get(index_code)
+            if not config:
+                raise ValueError(f"不支持的代码: {index_code}")
+
+            # 根据类型选择不同的接口
+            if config.type == 'etf':
+                # ETF数据
+                df = ak.fund_etf_hist_em(symbol=index_code, period='daily', adjust='')
+                df.rename(columns={'日期': 'date', '收盘': 'close', '成交量': 'volume',
+                                   '开盘': 'open', '最高': 'high', '最低': 'low'}, inplace=True)
+            elif config.type == 'stock':
+                # 个股数据
+                df = ak.stock_zh_a_hist(symbol=index_code, period='daily', adjust='hfq')  # 后复权
+                df.rename(columns={'日期': 'date', '收盘': 'close', '成交量': 'volume',
+                                   '开盘': 'open', '最高': 'high', '最低': 'low'}, inplace=True)
+            elif index_code.startswith('hk_'):
+                # 港股指数
+                symbol = config.symbol
                 df = ak.stock_hk_index_daily_em(symbol=symbol)
             else:
                 # A股指数
