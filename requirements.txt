@@ -20,6 +20,7 @@ requests>=2.25.0
 
 # 其他工具
 scipy>=1.7.0
+PyYAML>=5.4.0
 
 # 可选的机器学习库
 scikit-learn>=1.0.0

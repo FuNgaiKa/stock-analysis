@@ -78,6 +78,7 @@ Thumbs.db
 config.ini
 .env
 secrets.py
+email_config.yaml
 
 # Data files
 data/
