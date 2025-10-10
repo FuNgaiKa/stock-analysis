@@ -164,13 +164,24 @@ def run_trading_strategy():
         print(f"运行失败: {e}")
 
 
+def run_hk_stock_analysis():
+    """运行港股市场分析"""
+    print("\n=== 港股市场分析 ===")
+    try:
+        import subprocess
+        subprocess.run([sys.executable, "scripts/hk_stock_analysis/run_hk_analysis.py"])
+    except Exception as e:
+        print(f"运行失败: {e}")
+
+
 def main():
     """主函数"""
     print("=" * 70)
-    print("欢迎使用 A股量化分析系统！")
+    print("欢迎使用 股票量化分析系统！")
     print("=" * 70)
     print("此项目包含以下功能:")
     print("  - A股市场火热程度分析")
+    print("  - 港股市场综合分析")
     print("  - 历史点位对比分析")
     print("  - 四指标共振交易策略")
     print("  - 复合收益计算")
@@ -178,22 +189,25 @@ def main():
     while True:
         print("\n请选择功能:")
         print("1. A股市场分析 (市场热度)")
-        print("2. 历史点位对比分析")
-        print("3. 四指标共振交易策略")
-        print("4. 复合收益计算")
-        print("5. 退出")
+        print("2. 港股市场分析 (综合分析)")
+        print("3. 历史点位对比分析")
+        print("4. 四指标共振交易策略")
+        print("5. 复合收益计算")
+        print("6. 退出")
 
-        choice = input("\n请输入选择 (1-5): ").strip()
+        choice = input("\n请输入选择 (1-6): ").strip()
 
         if choice == '1':
             demo_stock_analysis()
         elif choice == '2':
-            run_position_analysis()
+            run_hk_stock_analysis()
         elif choice == '3':
-            run_trading_strategy()
+            run_position_analysis()
         elif choice == '4':
-            demo_compound_calculator()
+            run_trading_strategy()
         elif choice == '5':
+            demo_compound_calculator()
+        elif choice == '6':
             print("\n谢谢使用！")
             break
         else:
