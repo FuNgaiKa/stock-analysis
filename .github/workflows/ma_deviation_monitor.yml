@@ -55,7 +55,9 @@ jobs:
           name: ${{ secrets.SENDER_NAME }}
 
         recipients:
-          - ${{ secrets.RECIPIENT_EMAIL }}
+          - 1264947688@qq.com
+          - 2645826123@qq.com
+          - 1194714620@qq.com
 
         send_no_alert_email: false
         EOF
