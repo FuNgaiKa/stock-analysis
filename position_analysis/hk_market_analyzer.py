@@ -87,6 +87,78 @@ class HKMarketAnalyzer:
             else:
                 macd_signal = "数据不足"
 
+            # 布林带 (Bollinger Bands)
+            bb_period = 20
+            bb_std = 2
+            bb_middle = df_recent['close'].rolling(bb_period).mean()
+            bb_std_dev = df_recent['close'].rolling(bb_period).std()
+            bb_upper = bb_middle + (bb_std * bb_std_dev)
+            bb_lower = bb_middle - (bb_std * bb_std_dev)
+
+            # 布林带宽度百分比
+            bb_width = ((bb_upper - bb_lower) / bb_middle * 100).iloc[-1] if not pd.isna(bb_middle.iloc[-1]) else 0
+
+            # 价格在布林带中的位置 (0-100%)
+            if not pd.isna(bb_upper.iloc[-1]) and not pd.isna(bb_lower.iloc[-1]):
+                bb_position = (latest['close'] - bb_lower.iloc[-1]) / (bb_upper.iloc[-1] - bb_lower.iloc[-1]) * 100
+            else:
+                bb_position = 50
+
+            # 布林带信号判断
+            if bb_position > 100:
+                bb_signal = "突破上轨"
+            elif bb_position > 80:
+                bb_signal = "接近上轨"
+            elif bb_position > 60:
+                bb_signal = "中轨上方"
+            elif bb_position > 40:
+                bb_signal = "中轨附近"
+            elif bb_position > 20:
+                bb_signal = "中轨下方"
+            elif bb_position > 0:
+                bb_signal = "接近下轨"
+            else:
+                bb_signal = "突破下轨"
+
+            # ATR (Average True Range)
+            atr_period = 14
+            high_low = df_recent['high'] - df_recent['low']
+            high_close = abs(df_recent['high'] - df_recent['close'].shift())
+            low_close = abs(df_recent['low'] - df_recent['close'].shift())
+            true_range = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+            atr = true_range.rolling(atr_period).mean()
+            atr_pct = (atr.iloc[-1] / latest['close'] * 100) if not pd.isna(atr.iloc[-1]) else 0
+
+            # 成交量指标
+            if 'volume' in df_recent.columns:
+                # OBV (On Balance Volume)
+                obv = (df_recent['volume'] * df_recent['close'].diff().apply(lambda x: 1 if x > 0 else (-1 if x < 0 else 0))).cumsum()
+
+                # 量比 (当日成交量 / 近20日平均成交量)
+                avg_volume_20 = df_recent['volume'].rolling(20).mean()
+                volume_ratio = (latest['volume'] / avg_volume_20.iloc[-1]) if not pd.isna(avg_volume_20.iloc[-1]) and avg_volume_20.iloc[-1] > 0 else 1.0
+
+                # 量价背离检测（简化版：比较最近20日）
+                recent_20 = df_recent.tail(20)
+                if len(recent_20) >= 20:
+                    price_high_idx = recent_20['close'].idxmax()
+                    obv_high_idx = obv.tail(20).idxmax()
+
+                    if price_high_idx == recent_20.index[-1] and obv_high_idx != obv.tail(20).index[-1]:
+                        volume_divergence = "顶背离"
+                    elif recent_20['close'].iloc[-1] == recent_20['close'].min() and obv.iloc[-1] != obv.tail(20).min():
+                        volume_divergence = "底背离"
+                    else:
+                        volume_divergence = "无"
+                else:
+                    volume_divergence = "数据不足"
+
+                obv_value = float(obv.iloc[-1]) if not pd.isna(obv.iloc[-1]) else 0
+            else:
+                obv_value = 0
+                volume_ratio = 1.0
+                volume_divergence = "无成交量数据"
+
             # 波动率
             returns = df_recent['close'].pct_change()
             volatility = returns.std() * np.sqrt(252)
@@ -129,6 +201,17 @@ class HKMarketAnalyzer:
                 'macd_dea': float(dea.iloc[-1]) if not pd.isna(dea.iloc[-1]) else 0,
                 'macd_hist': float(macd_hist.iloc[-1]) if not pd.isna(macd_hist.iloc[-1]) else 0,
                 'macd_signal': macd_signal,
+                'bb_upper': float(bb_upper.iloc[-1]) if not pd.isna(bb_upper.iloc[-1]) else 0,
+                'bb_middle': float(bb_middle.iloc[-1]) if not pd.isna(bb_middle.iloc[-1]) else 0,
+                'bb_lower': float(bb_lower.iloc[-1]) if not pd.isna(bb_lower.iloc[-1]) else 0,
+                'bb_width': float(bb_width),
+                'bb_position': float(bb_position),
+                'bb_signal': bb_signal,
+                'atr': float(atr.iloc[-1]) if not pd.isna(atr.iloc[-1]) else 0,
+                'atr_pct': float(atr_pct),
+                'obv': obv_value,
+                'volume_ratio': float(volume_ratio),
+                'volume_divergence': volume_divergence,
                 'volatility': float(volatility),
                 'high_52w': float(high_52w),
                 'low_52w': float(low_52w),

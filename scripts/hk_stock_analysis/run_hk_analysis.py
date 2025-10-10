@@ -41,6 +41,16 @@ def format_analysis_report(result: dict) -> None:
         print(f"    - MACD DEA: {hsi['macd_dea']:.2f}")
         print(f"    - MACD 柱: {hsi['macd_hist']:.2f}")
         print(f"    - MACD 信号: {hsi['macd_signal']}")
+        print(f"  布林带:")
+        print(f"    - 上轨: {hsi['bb_upper']:.2f}")
+        print(f"    - 中轨: {hsi['bb_middle']:.2f}")
+        print(f"    - 下轨: {hsi['bb_lower']:.2f}")
+        print(f"    - 带宽: {hsi['bb_width']:.2f}%")
+        print(f"    - 位置: {hsi['bb_signal']}")
+        print(f"  波动与成交量:")
+        print(f"    - ATR: {hsi['atr']:.2f} ({hsi['atr_pct']:.2f}%)")
+        print(f"    - 量比: {hsi['volume_ratio']:.2f}")
+        print(f"    - 量价背离: {hsi['volume_divergence']}")
         print(f"  52周表现:")
         print(f"    - 52周最高: {hsi['high_52w']:.2f} (距离: {hsi['dist_to_high_pct']:+.2f}%)")
         print(f"    - 52周最低: {hsi['low_52w']:.2f} (距离: {hsi['dist_to_low_pct']:+.2f}%)")
@@ -57,10 +67,10 @@ def format_analysis_report(result: dict) -> None:
         print(f"  趋势状态: {tech['trend']}")
         print(f"  技术指标:")
         print(f"    - RSI: {tech['rsi']:.2f}")
-        print(f"    - MACD DIF: {tech['macd_dif']:.2f}")
-        print(f"    - MACD DEA: {tech['macd_dea']:.2f}")
-        print(f"    - MACD 柱: {tech['macd_hist']:.2f}")
         print(f"    - MACD 信号: {tech['macd_signal']}")
+        print(f"    - 布林带位置: {tech['bb_signal']}")
+        print(f"    - 量比: {tech['volume_ratio']:.2f}")
+        print(f"    - 量价背离: {tech['volume_divergence']}")
     else:
         print("  数据获取失败")
 
@@ -144,6 +154,9 @@ def format_analysis_report(result: dict) -> None:
         if 'hsi_analysis' in result and 'error' not in result['hsi_analysis']:
             rsi = result['hsi_analysis'].get('rsi', 50)
             macd_signal = result['hsi_analysis'].get('macd_signal', '')
+            bb_signal = result['hsi_analysis'].get('bb_signal', '')
+            volume_divergence = result['hsi_analysis'].get('volume_divergence', '')
+            volume_ratio = result['hsi_analysis'].get('volume_ratio', 1.0)
 
             if rsi > 70:
                 print(f"    - 恒指RSI达{rsi:.1f}，市场可能短期超买")
@@ -154,6 +167,23 @@ def format_analysis_report(result: dict) -> None:
                 print(f"    - MACD出现死叉信号，注意短期回调风险")
             elif macd_signal == "金叉":
                 print(f"    - MACD出现金叉信号，可关注上涨机会")
+
+            if bb_signal == "突破上轨":
+                print(f"    - 价格突破布林带上轨，短期超买，警惕回调")
+            elif bb_signal == "突破下轨":
+                print(f"    - 价格突破布林带下轨，短期超卖，关注反弹")
+            elif bb_signal == "接近下轨":
+                print(f"    - 价格接近布林带下轨，可能存在支撑")
+
+            if volume_divergence == "顶背离":
+                print(f"    - 出现量价顶背离，价格创新高但成交量未跟上，警惕见顶")
+            elif volume_divergence == "底背离":
+                print(f"    - 出现量价底背离，可能是见底信号")
+
+            if volume_ratio > 2.0:
+                print(f"    - 量比达{volume_ratio:.1f}，成交量异常放大，关注市场变化")
+            elif volume_ratio < 0.5:
+                print(f"    - 量比仅{volume_ratio:.1f}，成交清淡，警惕流动性风险")
 
         if 'ah_premium' in result and 'median_premium' in result['ah_premium']:
             premium = result['ah_premium']['median_premium']
