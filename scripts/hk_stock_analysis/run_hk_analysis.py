@@ -37,6 +37,10 @@ def format_analysis_report(result: dict) -> None:
         print(f"    - MA60: {hsi['ma60']:.2f}")
         print(f"    - MA120: {hsi['ma120']:.2f}")
         print(f"    - RSI: {hsi['rsi']:.2f}")
+        print(f"    - MACD DIF: {hsi['macd_dif']:.2f}")
+        print(f"    - MACD DEA: {hsi['macd_dea']:.2f}")
+        print(f"    - MACD 柱: {hsi['macd_hist']:.2f}")
+        print(f"    - MACD 信号: {hsi['macd_signal']}")
         print(f"  52周表现:")
         print(f"    - 52周最高: {hsi['high_52w']:.2f} (距离: {hsi['dist_to_high_pct']:+.2f}%)")
         print(f"    - 52周最低: {hsi['low_52w']:.2f} (距离: {hsi['dist_to_low_pct']:+.2f}%)")
@@ -52,6 +56,7 @@ def format_analysis_report(result: dict) -> None:
         print(f"  涨跌幅: {tech['change_pct']:+.2f}% ({tech['change']:+.2f}点)")
         print(f"  趋势状态: {tech['trend']}")
         print(f"  RSI: {tech['rsi']:.2f}")
+        print(f"  MACD 信号: {tech['macd_signal']}")
     else:
         print("  数据获取失败")
 
@@ -134,10 +139,17 @@ def format_analysis_report(result: dict) -> None:
         print(f"\n  风险提示:")
         if 'hsi_analysis' in result and 'error' not in result['hsi_analysis']:
             rsi = result['hsi_analysis'].get('rsi', 50)
+            macd_signal = result['hsi_analysis'].get('macd_signal', '')
+
             if rsi > 70:
                 print(f"    - 恒指RSI达{rsi:.1f}，市场可能短期超买")
             elif rsi < 30:
                 print(f"    - 恒指RSI仅{rsi:.1f}，市场可能短期超卖，关注反弹机会")
+
+            if macd_signal == "死叉":
+                print(f"    - MACD出现死叉信号，注意短期回调风险")
+            elif macd_signal == "金叉":
+                print(f"    - MACD出现金叉信号，可关注上涨机会")
 
         if 'ah_premium' in result and 'median_premium' in result['ah_premium']:
             premium = result['ah_premium']['median_premium']

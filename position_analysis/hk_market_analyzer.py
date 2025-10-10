@@ -61,6 +61,32 @@ class HKMarketAnalyzer:
             rs = gain / loss
             rsi = 100 - (100 / (1 + rs))
 
+            # MACD
+            ema12 = df_recent['close'].ewm(span=12, adjust=False).mean()
+            ema26 = df_recent['close'].ewm(span=26, adjust=False).mean()
+            dif = ema12 - ema26
+            dea = dif.ewm(span=9, adjust=False).mean()
+            macd_hist = (dif - dea) * 2
+
+            # MACD信号判断
+            if len(df_recent) >= 2:
+                prev_dif = dif.iloc[-2]
+                prev_dea = dea.iloc[-2]
+                curr_dif = dif.iloc[-1]
+                curr_dea = dea.iloc[-1]
+
+                # 金叉/死叉判断
+                if prev_dif <= prev_dea and curr_dif > curr_dea:
+                    macd_signal = "金叉"
+                elif prev_dif >= prev_dea and curr_dif < curr_dea:
+                    macd_signal = "死叉"
+                elif curr_dif > curr_dea:
+                    macd_signal = "多头"
+                else:
+                    macd_signal = "空头"
+            else:
+                macd_signal = "数据不足"
+
             # 波动率
             returns = df_recent['close'].pct_change()
             volatility = returns.std() * np.sqrt(252)
@@ -99,6 +125,10 @@ class HKMarketAnalyzer:
                 'ma60': float(ma60),
                 'ma120': float(ma120),
                 'rsi': float(rsi.iloc[-1]) if not pd.isna(rsi.iloc[-1]) else 50,
+                'macd_dif': float(dif.iloc[-1]) if not pd.isna(dif.iloc[-1]) else 0,
+                'macd_dea': float(dea.iloc[-1]) if not pd.isna(dea.iloc[-1]) else 0,
+                'macd_hist': float(macd_hist.iloc[-1]) if not pd.isna(macd_hist.iloc[-1]) else 0,
+                'macd_signal': macd_signal,
                 'volatility': float(volatility),
                 'high_52w': float(high_52w),
                 'low_52w': float(low_52w),
