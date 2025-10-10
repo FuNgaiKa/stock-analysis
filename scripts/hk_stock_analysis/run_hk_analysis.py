@@ -55,8 +55,12 @@ def format_analysis_report(result: dict) -> None:
         print(f"  最新点位: {tech['latest_price']:.2f}")
         print(f"  涨跌幅: {tech['change_pct']:+.2f}% ({tech['change']:+.2f}点)")
         print(f"  趋势状态: {tech['trend']}")
-        print(f"  RSI: {tech['rsi']:.2f}")
-        print(f"  MACD 信号: {tech['macd_signal']}")
+        print(f"  技术指标:")
+        print(f"    - RSI: {tech['rsi']:.2f}")
+        print(f"    - MACD DIF: {tech['macd_dif']:.2f}")
+        print(f"    - MACD DEA: {tech['macd_dea']:.2f}")
+        print(f"    - MACD 柱: {tech['macd_hist']:.2f}")
+        print(f"    - MACD 信号: {tech['macd_signal']}")
     else:
         print("  数据获取失败")
 
