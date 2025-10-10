@@ -130,12 +130,72 @@ def print_console_report(all_alerts, report, monitor):
                 continue
 
 
-def send_email_report(all_alerts, report):
+def send_email_report(all_alerts, report, monitor):
     """发送邮件报告"""
     try:
         notifier = EmailNotifier()
 
         if all_alerts:
+            # 生成完整报告（包含历史分析）
+            full_report = report + "\n"
+
+            # 添加历史偏离分析
+            full_report += "\n" + "=" * 70 + "\n"
+            full_report += "📈 历史偏离事件回测分析\n"
+            full_report += "=" * 70 + "\n"
+
+            analyzed_count = 0
+            for index_code in all_alerts.keys():
+                if analyzed_count >= 3:  # 只分析前3个
+                    break
+
+                full_report += f"\n【{monitor.INDICES[index_code]['name']}】\n"
+
+                try:
+                    # 获取历史偏离事件
+                    events = monitor.get_historical_deviation_events(
+                        index_code,
+                        ma_period=60,
+                        threshold=30.0,
+                        lookback_days=1000
+                    )
+
+                    if not events.empty:
+                        full_report += f"  近1000天内偏离60日均线>30%事件: {len(events)} 次\n"
+                        if len(events) > 0:
+                            full_report += f"  最近一次: {events.index[-1].strftime('%Y-%m-%d')}\n"
+
+                    # 分析后续表现
+                    performance = monitor.analyze_post_deviation_performance(
+                        index_code,
+                        ma_period=60,
+                        threshold=30.0
+                    )
+
+                    if performance and performance.get('upward_events_count', 0) > 0:
+                        full_report += f"\n  📊 向上偏离>30%后的历史表现 (样本: {performance['upward_events_count']} 次):\n"
+                        for period, stats in performance['upward_performance'].items():
+                            full_report += (
+                                f"    {period:>3}: 平均收益{stats['mean_return']:+6.2f}%, "
+                                f"上涨概率{stats['positive_ratio']:5.1%}, "
+                                f"样本数{stats['sample_size']}\n"
+                            )
+
+                    if performance and performance.get('downward_events_count', 0) > 0:
+                        full_report += f"\n  📊 向下偏离>30%后的历史表现 (样本: {performance['downward_events_count']} 次):\n"
+                        for period, stats in performance['downward_performance'].items():
+                            full_report += (
+                                f"    {period:>3}: 平均收益{stats['mean_return']:+6.2f}%, "
+                                f"上涨概率{stats['positive_ratio']:5.1%}, "
+                                f"样本数{stats['sample_size']}\n"
+                            )
+
+                    analyzed_count += 1
+
+                except Exception as e:
+                    full_report += f"  分析失败: {str(e)}\n"
+                    continue
+
             # 统计预警级别
             alert_count = sum(len(alerts) for alerts in all_alerts.values())
             has_level3 = any('三级预警' in alert.message for alerts in all_alerts.values() for alert in alerts)
@@ -143,7 +203,7 @@ def send_email_report(all_alerts, report):
 
             logger.info(f"发送预警邮件: {alert_count} 个信号")
             success = notifier.send_alert_email(
-                alert_report=report,
+                alert_report=full_report,
                 alert_count=alert_count,
                 has_level3=has_level3,
                 has_level2=has_level2
@@ -227,7 +287,7 @@ def main():
 
     # 发送邮件
     if args.email:
-        success = send_email_report(all_alerts, report)
+        success = send_email_report(all_alerts, report, monitor)
         if not success:
             sys.exit(1)
 
