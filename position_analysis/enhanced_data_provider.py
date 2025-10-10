@@ -921,6 +921,133 @@ class EnhancedDataProvider:
         else:
             return "低迷"
 
+    def get_index_valuation_history(
+        self,
+        index_name: str = "上证",
+        lookback_months: int = 120
+    ) -> pd.DataFrame:
+        """
+        获取指数历史估值时序数据（用于回测和分位数计算）
+
+        Args:
+            index_name: 指数名称 ('上证', '深证', '沪深300')
+            lookback_months: 回溯月数
+
+        Returns:
+            包含日期、指数点位、平均市盈率、PE分位数的DataFrame
+        """
+        try:
+            cache_key = f"index_pe_{index_name}_{lookback_months}"
+            if cache_key in self._cache:
+                return self._cache[cache_key].copy()
+
+            # 获取历史PE数据
+            df = ak.stock_market_pe_lg(symbol=index_name)
+
+            # 数据清洗
+            df = df.rename(columns={
+                '日期': 'date',
+                '指数': 'index',
+                '平均市盈率': 'pe'
+            })
+            df['date'] = pd.to_datetime(df['date'])
+            df = df.set_index('date').sort_index()
+
+            # 过滤时间范围
+            cutoff_date = datetime.now() - timedelta(days=lookback_months * 30)
+            df = df[df.index >= cutoff_date]
+
+            # 计算PE分位数
+            df['pe_percentile'] = df['pe'].rank(pct=True)
+
+            # 缓存
+            self._cache[cache_key] = df.copy()
+
+            logger.info(f"{index_name}指数历史PE数据: {len(df)} 条")
+            return df
+
+        except Exception as e:
+            logger.error(f"获取{index_name}指数历史PE失败: {str(e)}")
+            return pd.DataFrame()
+
+    def get_historical_pe_at_date(
+        self,
+        index_name: str,
+        target_date: datetime
+    ) -> Optional[float]:
+        """
+        获取指定日期的历史PE（用于回测中的估值过滤）
+
+        Args:
+            index_name: 指数名称
+            target_date: 目标日期
+
+        Returns:
+            该日期的PE值，如果没有则返回None
+        """
+        try:
+            df = self.get_index_valuation_history(index_name)
+
+            if len(df) == 0:
+                return None
+
+            # 查找最接近的日期
+            closest_date = df.index[df.index <= target_date]
+            if len(closest_date) == 0:
+                return None
+
+            pe = df.loc[closest_date[-1], 'pe']
+            return float(pe)
+
+        except Exception as e:
+            logger.warning(f"获取{target_date}的历史PE失败: {str(e)}")
+            return None
+
+    def calculate_pe_percentile_at_date(
+        self,
+        index_name: str,
+        target_date: datetime,
+        lookback_years: int = 10
+    ) -> Optional[float]:
+        """
+        计算指定日期的PE历史分位数（用于多维度历史匹配）
+
+        Args:
+            index_name: 指数名称
+            target_date: 目标日期
+            lookback_years: 向前回溯年数
+
+        Returns:
+            PE分位数 (0-1)
+        """
+        try:
+            df = self.get_index_valuation_history(index_name, lookback_months=lookback_years * 12 + 12)
+
+            if len(df) == 0:
+                return None
+
+            # 筛选截止到target_date的数据
+            df_historical = df[df.index <= target_date]
+
+            if len(df_historical) == 0:
+                return None
+
+            # 计算分位数
+            cutoff_date = target_date - timedelta(days=lookback_years * 365)
+            df_window = df_historical[df_historical.index >= cutoff_date]
+
+            if len(df_window) < 10:  # 样本量太少
+                return None
+
+            current_pe = df_historical.iloc[-1]['pe']
+            percentile = (df_window['pe'] < current_pe).sum() / len(df_window)
+
+            return float(percentile)
+
+        except Exception as e:
+            logger.warning(f"计算{target_date}的PE分位数失败: {str(e)}")
+            return None
+
     def get_comprehensive_metrics(
         self,
         index_code: str,

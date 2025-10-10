@@ -434,21 +434,43 @@ class HistoricalPositionAnalyzer:
         if current_metrics is None:
             return similar
 
-        # 3. 估值过滤 (如果启用)
+        # 3. 估值过滤 (如果启用) - 已实现！
         if use_valuation_filter and 'valuation_metrics' in current_metrics:
             val_metrics = current_metrics['valuation_metrics']
-            if val_metrics:
+            if val_metrics and 'enhanced_data_provider' in current_metrics:
+                from .enhanced_data_provider import EnhancedDataProvider
+                data_provider = current_metrics['enhanced_data_provider']
+
                 current_pe_pct = val_metrics.get('pe_percentile_10y', 0.5)
 
                 # 估值相似: PE分位数在 ±20% 范围内
-                # 例如当前PE分位70%, 匹配 50%-90% 区间
                 pe_lower = max(0, current_pe_pct - 0.2)
                 pe_upper = min(1, current_pe_pct + 0.2)
 
-                # TODO: 这里需要获取历史每日的PE分位数
-                # 暂时跳过,因为需要额外的历史估值数据
                 logger.info(f"[多维度匹配] 估值过滤: 当前PE分位{current_pe_pct:.1%}, 匹配区间[{pe_lower:.1%}, {pe_upper:.1%}]")
-                # 未实现: similar = similar[PE在区间内]
+
+                # 对每个相似点位计算历史PE分位数并过滤
+                index_name = SUPPORTED_INDICES[index_code].name.replace('指数', '').replace('成指', '')
+                if index_name == '上证':
+                    index_name_lg = '上证'
+                elif index_name == '深证':
+                    index_name_lg = '深证'
+                else:
+                    index_name_lg = None  # 其他指数暂不支持
+
+                if index_name_lg:
+                    valid_dates = []
+                    for date in similar.index:
+                        pe_pct = data_provider.calculate_pe_percentile_at_date(index_name_lg, date, lookback_years=10)
+                        if pe_pct is not None and pe_lower <= pe_pct <= pe_upper:
+                            valid_dates.append(date)
+
+                    if len(valid_dates) > 0:
+                        similar = similar.loc[valid_dates]
+                        logger.info(f"  [估值过滤] 筛选后剩余: {len(similar)} 个时期")
+                    else:
+                        logger.warning("  [估值过滤] 无符合估值条件的时期")
+                        return pd.DataFrame()  # 返回空DataFrame
 
         # 4. 资金流向过滤 (如果启用)
         if use_capital_flow_filter and 'capital_flow_metrics' in current_metrics:
