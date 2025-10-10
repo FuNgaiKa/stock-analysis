@@ -133,30 +133,67 @@ def demo_compound_calculator():
         traceback.print_exc()
 
 
+def run_position_analysis():
+    """运行历史点位分析"""
+    print("\n=== 历史点位对比分析 ===")
+    try:
+        import subprocess
+        subprocess.run([sys.executable, "scripts/position_analysis/run_position_analysis.py"])
+    except Exception as e:
+        print(f"运行失败: {e}")
+
+
+def run_trading_strategy():
+    """运行四指标共振策略"""
+    print("\n=== 四指标共振交易策略 ===")
+    print("\n请选择:")
+    print("1. 实时信号分析")
+    print("2. 历史回测")
+
+    choice = input("\n请输入选择 (1-2): ").strip()
+
+    try:
+        import subprocess
+        if choice == '1':
+            subprocess.run([sys.executable, "scripts/trading_strategies/run_resonance_strategy.py"])
+        elif choice == '2':
+            subprocess.run([sys.executable, "scripts/trading_strategies/run_backtest.py"])
+        else:
+            print("无效选择")
+    except Exception as e:
+        print(f"运行失败: {e}")
+
+
 def main():
     """主函数"""
-    print("=" * 60)
+    print("=" * 70)
     print("欢迎使用 A股量化分析系统！")
-    print("=" * 60)
+    print("=" * 70)
     print("此项目包含以下功能:")
     print("  - A股市场火热程度分析")
-    print("  - 智能仓位建议")
-    print("  - 多数据源支持 (efinance, baostock, akshare 等)")
+    print("  - 历史点位对比分析")
+    print("  - 四指标共振交易策略")
     print("  - 复合收益计算")
 
     while True:
         print("\n请选择功能:")
-        print("1. A股市场分析 (推荐)")
-        print("2. 复合收益计算")
-        print("3. 退出")
+        print("1. A股市场分析 (市场热度)")
+        print("2. 历史点位对比分析")
+        print("3. 四指标共振交易策略")
+        print("4. 复合收益计算")
+        print("5. 退出")
 
-        choice = input("\n请输入选择 (1-3): ").strip()
+        choice = input("\n请输入选择 (1-5): ").strip()
 
         if choice == '1':
             demo_stock_analysis()
         elif choice == '2':
-            demo_compound_calculator()
+            run_position_analysis()
         elif choice == '3':
+            run_trading_strategy()
+        elif choice == '4':
+            demo_compound_calculator()
+        elif choice == '5':
             print("\n谢谢使用！")
             break
         else:

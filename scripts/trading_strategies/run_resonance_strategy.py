@@ -9,7 +9,7 @@ import sys
 import os
 
 # 确保能找到trading_strategies模块
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from trading_strategies.examples.quick_resonance_demo import main
 
