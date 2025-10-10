@@ -37,6 +37,14 @@ def format_analysis_report(result: dict) -> None:
         print(f"    - MA60: {hsi['ma60']:.2f}")
         print(f"    - MA120: {hsi['ma120']:.2f}")
         print(f"    - RSI: {hsi['rsi']:.2f}")
+        print(f"    - KDJ K: {hsi['kdj_k']:.2f}")
+        print(f"    - KDJ D: {hsi['kdj_d']:.2f}")
+        print(f"    - KDJ J: {hsi['kdj_j']:.2f}")
+        print(f"    - KDJ 信号: {hsi['kdj_signal']}")
+        print(f"    - DMI+: {hsi['dmi_plus']:.2f}")
+        print(f"    - DMI-: {hsi['dmi_minus']:.2f}")
+        print(f"    - ADX: {hsi['adx']:.2f}")
+        print(f"    - DMI 信号: {hsi['dmi_signal']}")
         print(f"    - MACD DIF: {hsi['macd_dif']:.2f}")
         print(f"    - MACD DEA: {hsi['macd_dea']:.2f}")
         print(f"    - MACD 柱: {hsi['macd_hist']:.2f}")
@@ -67,6 +75,8 @@ def format_analysis_report(result: dict) -> None:
         print(f"  趋势状态: {tech['trend']}")
         print(f"  技术指标:")
         print(f"    - RSI: {tech['rsi']:.2f}")
+        print(f"    - KDJ 信号: {tech['kdj_signal']} (K:{tech['kdj_k']:.1f} D:{tech['kdj_d']:.1f} J:{tech['kdj_j']:.1f})")
+        print(f"    - DMI 信号: {tech['dmi_signal']} (ADX:{tech['adx']:.1f})")
         print(f"    - MACD 信号: {tech['macd_signal']}")
         print(f"    - 布林带位置: {tech['bb_signal']}")
         print(f"    - 量比: {tech['volume_ratio']:.2f}")
@@ -153,6 +163,12 @@ def format_analysis_report(result: dict) -> None:
         print(f"\n  风险提示:")
         if 'hsi_analysis' in result and 'error' not in result['hsi_analysis']:
             rsi = result['hsi_analysis'].get('rsi', 50)
+            kdj_k = result['hsi_analysis'].get('kdj_k', 50)
+            kdj_d = result['hsi_analysis'].get('kdj_d', 50)
+            kdj_j = result['hsi_analysis'].get('kdj_j', 50)
+            kdj_signal = result['hsi_analysis'].get('kdj_signal', '')
+            adx = result['hsi_analysis'].get('adx', 0)
+            dmi_signal = result['hsi_analysis'].get('dmi_signal', '')
             macd_signal = result['hsi_analysis'].get('macd_signal', '')
             bb_signal = result['hsi_analysis'].get('bb_signal', '')
             volume_divergence = result['hsi_analysis'].get('volume_divergence', '')
@@ -162,6 +178,29 @@ def format_analysis_report(result: dict) -> None:
                 print(f"    - 恒指RSI达{rsi:.1f}，市场可能短期超买")
             elif rsi < 30:
                 print(f"    - 恒指RSI仅{rsi:.1f}，市场可能短期超卖，关注反弹机会")
+
+            # KDJ 风险提示
+            if kdj_k > 80 and kdj_d > 80:
+                print(f"    - KDJ高位超买 (K:{kdj_k:.1f} D:{kdj_d:.1f})，警惕短期回调")
+            elif kdj_k < 20 and kdj_d < 20:
+                print(f"    - KDJ低位超卖 (K:{kdj_k:.1f} D:{kdj_d:.1f})，关注反弹机会")
+            elif "高位死叉" in kdj_signal:
+                print(f"    - KDJ高位死叉，短期见顶信号")
+            elif "低位金叉" in kdj_signal:
+                print(f"    - KDJ低位金叉，底部反转信号")
+
+            if kdj_j > 100:
+                print(f"    - KDJ的J值达{kdj_j:.1f}，严重超买，警惕快速回调")
+            elif kdj_j < 0:
+                print(f"    - KDJ的J值仅{kdj_j:.1f}，严重超卖，可能出现反弹")
+
+            # DMI/ADX 风险提示
+            if adx > 50:
+                print(f"    - ADX达{adx:.1f}，趋势极强，顺势操作")
+            elif adx > 25:
+                print(f"    - ADX达{adx:.1f}，趋势明确 ({dmi_signal})")
+            elif adx < 20:
+                print(f"    - ADX仅{adx:.1f}，市场无明显趋势，震荡市操作")
 
             if macd_signal == "死叉":
                 print(f"    - MACD出现死叉信号，注意短期回调风险")

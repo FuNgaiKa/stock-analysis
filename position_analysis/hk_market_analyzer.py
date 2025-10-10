@@ -61,6 +61,141 @@ class HKMarketAnalyzer:
             rs = gain / loss
             rsi = 100 - (100 / (1 + rs))
 
+            # KDJ 指标
+            kdj_period = 9
+            kdj_k_smooth = 3
+            kdj_d_smooth = 3
+
+            # 计算 RSV (未成熟随机值)
+            low_min = df_recent['low'].rolling(kdj_period).min()
+            high_max = df_recent['high'].rolling(kdj_period).max()
+            rsv = (df_recent['close'] - low_min) / (high_max - low_min) * 100
+            rsv = rsv.fillna(50)  # 初始值设为50
+
+            # 计算 K 值 (RSV 的移动平均)
+            kdj_k = rsv.ewm(alpha=1/kdj_k_smooth, adjust=False).mean()
+
+            # 计算 D 值 (K 值的移动平均)
+            kdj_d = kdj_k.ewm(alpha=1/kdj_d_smooth, adjust=False).mean()
+
+            # 计算 J 值 (3K - 2D)
+            kdj_j = 3 * kdj_k - 2 * kdj_d
+
+            # KDJ 信号判断
+            if len(df_recent) >= 2:
+                prev_k = kdj_k.iloc[-2]
+                prev_d = kdj_d.iloc[-2]
+                curr_k = kdj_k.iloc[-1]
+                curr_d = kdj_d.iloc[-1]
+                curr_j = kdj_j.iloc[-1]
+
+                # 金叉/死叉判断
+                if prev_k <= prev_d and curr_k > curr_d:
+                    if curr_k < 20:
+                        kdj_signal = "低位金叉"
+                    else:
+                        kdj_signal = "金叉"
+                elif prev_k >= prev_d and curr_k < curr_d:
+                    if curr_k > 80:
+                        kdj_signal = "高位死叉"
+                    else:
+                        kdj_signal = "死叉"
+                elif curr_k > 80 and curr_d > 80:
+                    kdj_signal = "超买"
+                elif curr_k < 20 and curr_d < 20:
+                    kdj_signal = "超卖"
+                elif curr_j > 100:
+                    kdj_signal = "J值超买"
+                elif curr_j < 0:
+                    kdj_signal = "J值超卖"
+                elif curr_k > curr_d:
+                    kdj_signal = "多头"
+                else:
+                    kdj_signal = "空头"
+            else:
+                kdj_signal = "数据不足"
+
+            # DMI/ADX 指标
+            dmi_period = 14
+
+            # 计算 TR (True Range) - 需要先计算，因为DMI和ATR都要用
+            high_low = df_recent['high'] - df_recent['low']
+            high_close = abs(df_recent['high'] - df_recent['close'].shift())
+            low_close = abs(df_recent['low'] - df_recent['close'].shift())
+            true_range = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+
+            # 计算 +DM 和 -DM
+            high_diff = df_recent['high'].diff()
+            low_diff = -df_recent['low'].diff()
+
+            plus_dm = pd.Series(0.0, index=df_recent.index)
+            minus_dm = pd.Series(0.0, index=df_recent.index)
+
+            # +DM: 当前高点 - 前一高点 > 前一低点 - 当前低点 且 > 0
+            plus_dm = high_diff.where((high_diff > low_diff) & (high_diff > 0), 0)
+            # -DM: 前一低点 - 当前低点 > 当前高点 - 前一高点 且 > 0
+            minus_dm = low_diff.where((low_diff > high_diff) & (low_diff > 0), 0)
+
+            # 计算平滑的 +DM, -DM, TR (使用 Wilder's smoothing)
+            plus_dm_smooth = plus_dm.ewm(alpha=1/dmi_period, adjust=False).mean()
+            minus_dm_smooth = minus_dm.ewm(alpha=1/dmi_period, adjust=False).mean()
+            tr_smooth = true_range.ewm(alpha=1/dmi_period, adjust=False).mean()
+
+            # 计算 +DI 和 -DI
+            plus_di = 100 * plus_dm_smooth / tr_smooth
+            minus_di = 100 * minus_dm_smooth / tr_smooth
+
+            # 计算 DX (方向指数)
+            dx = 100 * abs(plus_di - minus_di) / (plus_di + minus_di)
+            dx = dx.fillna(0)
+
+            # 计算 ADX (DX的平滑移动平均)
+            adx = dx.ewm(alpha=1/dmi_period, adjust=False).mean()
+
+            # DMI 信号判断
+            if len(df_recent) >= 2:
+                prev_plus_di = plus_di.iloc[-2]
+                prev_minus_di = minus_di.iloc[-2]
+                curr_plus_di = plus_di.iloc[-1]
+                curr_minus_di = minus_di.iloc[-1]
+                curr_adx = adx.iloc[-1]
+                prev_adx = adx.iloc[-2]
+
+                # 趋势强度判断
+                if curr_adx > 50:
+                    trend_strength = "极强趋势"
+                elif curr_adx > 25:
+                    trend_strength = "强趋势"
+                elif curr_adx > 20:
+                    trend_strength = "趋势形成"
+                else:
+                    trend_strength = "无趋势/震荡"
+
+                # 方向判断
+                if prev_plus_di <= prev_minus_di and curr_plus_di > curr_minus_di:
+                    if curr_adx > 25:
+                        dmi_signal = f"强势金叉({trend_strength})"
+                    else:
+                        dmi_signal = "金叉"
+                elif prev_plus_di >= prev_minus_di and curr_plus_di < curr_minus_di:
+                    if curr_adx > 25:
+                        dmi_signal = f"强势死叉({trend_strength})"
+                    else:
+                        dmi_signal = "死叉"
+                elif curr_plus_di > curr_minus_di:
+                    if curr_adx > prev_adx:
+                        dmi_signal = f"多头加强({trend_strength})"
+                    else:
+                        dmi_signal = f"多头({trend_strength})"
+                else:
+                    if curr_adx > prev_adx:
+                        dmi_signal = f"空头加强({trend_strength})"
+                    else:
+                        dmi_signal = f"空头({trend_strength})"
+            else:
+                dmi_signal = "数据不足"
+                trend_strength = "未知"
+
             # MACD
             ema12 = df_recent['close'].ewm(span=12, adjust=False).mean()
             ema26 = df_recent['close'].ewm(span=26, adjust=False).mean()
@@ -120,12 +255,8 @@ class HKMarketAnalyzer:
             else:
                 bb_signal = "突破下轨"
 
-            # ATR (Average True Range)
+            # ATR (Average True Range) - 使用前面已计算的 true_range
             atr_period = 14
-            high_low = df_recent['high'] - df_recent['low']
-            high_close = abs(df_recent['high'] - df_recent['close'].shift())
-            low_close = abs(df_recent['low'] - df_recent['close'].shift())
-            true_range = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
             atr = true_range.rolling(atr_period).mean()
             atr_pct = (atr.iloc[-1] / latest['close'] * 100) if not pd.isna(atr.iloc[-1]) else 0
 
@@ -197,6 +328,14 @@ class HKMarketAnalyzer:
                 'ma60': float(ma60),
                 'ma120': float(ma120),
                 'rsi': float(rsi.iloc[-1]) if not pd.isna(rsi.iloc[-1]) else 50,
+                'kdj_k': float(kdj_k.iloc[-1]) if not pd.isna(kdj_k.iloc[-1]) else 50,
+                'kdj_d': float(kdj_d.iloc[-1]) if not pd.isna(kdj_d.iloc[-1]) else 50,
+                'kdj_j': float(kdj_j.iloc[-1]) if not pd.isna(kdj_j.iloc[-1]) else 50,
+                'kdj_signal': kdj_signal,
+                'dmi_plus': float(plus_di.iloc[-1]) if not pd.isna(plus_di.iloc[-1]) else 0,
+                'dmi_minus': float(minus_di.iloc[-1]) if not pd.isna(minus_di.iloc[-1]) else 0,
+                'adx': float(adx.iloc[-1]) if not pd.isna(adx.iloc[-1]) else 0,
+                'dmi_signal': dmi_signal,
                 'macd_dif': float(dif.iloc[-1]) if not pd.isna(dif.iloc[-1]) else 0,
                 'macd_dea': float(dea.iloc[-1]) if not pd.isna(dea.iloc[-1]) else 0,
                 'macd_hist': float(macd_hist.iloc[-1]) if not pd.isna(macd_hist.iloc[-1]) else 0,
