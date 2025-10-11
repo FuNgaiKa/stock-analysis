@@ -53,7 +53,7 @@ const updateChart = () => {
           left: 'center',
           textStyle: {
             fontSize: 16,
-            fontWeight: 'normal',
+            fontWeight: 600,
           },
         }
       : undefined,
@@ -61,13 +61,25 @@ const updateChart = () => {
       trigger: 'axis',
       formatter: (params: any) => {
         const param = params[0]
-        return `${param.name}<br/>${param.seriesName}: ${param.value}`
+        return `${param.name}<br/><strong>${param.seriesName}: ${param.value}</strong>`
+      },
+      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+      borderColor: 'transparent',
+      textStyle: {
+        color: '#fff',
+      },
+      axisPointer: {
+        type: 'cross',
+        label: {
+          backgroundColor: '#6a7985',
+        },
       },
     },
     grid: {
       left: '3%',
       right: '4%',
       bottom: '3%',
+      top: props.title ? '12%' : '3%',
       containLabel: true,
     },
     xAxis: {
@@ -76,20 +88,24 @@ const updateChart = () => {
       boundaryGap: false,
       axisLine: {
         lineStyle: {
-          color: '#8c8c8c',
+          color: '#d9d9d9',
         },
+      },
+      axisLabel: {
+        fontSize: 12,
       },
     },
     yAxis: {
       type: 'value',
       axisLine: {
         lineStyle: {
-          color: '#8c8c8c',
+          color: '#d9d9d9',
         },
       },
       splitLine: {
         lineStyle: {
           type: 'dashed',
+          color: '#e8e8e8',
         },
       },
     },
@@ -99,22 +115,43 @@ const updateChart = () => {
         type: 'line',
         smooth: true,
         symbol: 'circle',
-        symbolSize: 6,
+        symbolSize: 8,
         data: yData,
+        lineStyle: {
+          width: 3,
+          color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+            { offset: 0, color: '#667eea' },
+            { offset: 1, color: '#764ba2' },
+          ]),
+        },
         itemStyle: {
-          color: '#1890ff',
+          color: '#667eea',
+          borderColor: '#fff',
+          borderWidth: 2,
+        },
+        emphasis: {
+          itemStyle: {
+            color: '#667eea',
+            borderColor: '#fff',
+            borderWidth: 3,
+            shadowBlur: 10,
+            shadowColor: 'rgba(102, 126, 234, 0.5)',
+          },
         },
         areaStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: 'rgba(24, 144, 255, 0.3)' },
-            { offset: 1, color: 'rgba(24, 144, 255, 0.05)' },
+            { offset: 0, color: 'rgba(102, 126, 234, 0.4)' },
+            { offset: 1, color: 'rgba(118, 75, 162, 0.1)' },
           ]),
         },
+        animationDelay: 0,
+        animationDuration: 1500,
+        animationEasing: 'cubicOut',
       },
     ],
   }
 
-  chart.setOption(option)
+  chart.setOption(option, true)
 }
 
 // 响应式调整

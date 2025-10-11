@@ -29,7 +29,11 @@
           class="slide-in"
           :style="{ animationDelay: `${index * 0.1}s` }"
         >
-          <el-card class="index-card hover-lift modern-card" shadow="hover">
+          <el-card
+            class="index-card hover-lift modern-card clickable-card"
+            shadow="hover"
+            @click="handleIndexClick(item.code)"
+          >
             <div class="index-header">
               <div class="index-info">
                 <h3>{{ item.name }}</h3>
@@ -75,7 +79,7 @@
 
       <!-- 市场统计 -->
       <el-row :gutter="20" class="stats-row">
-        <el-col :span="24">
+        <el-col :xs="24" :md="12">
           <el-card class="stats-card modern-card" shadow="hover">
             <template #header>
               <span class="card-title">
@@ -85,28 +89,28 @@
             </template>
 
             <el-row :gutter="20">
-              <el-col :span="6">
+              <el-col :span="12">
                 <el-statistic title="上涨指数" :value="marketStats.upCount">
                   <template #prefix>
                     <el-icon color="#67c23a"><CaretTop /></el-icon>
                   </template>
                 </el-statistic>
               </el-col>
-              <el-col :span="6">
+              <el-col :span="12">
                 <el-statistic title="下跌指数" :value="marketStats.downCount">
                   <template #prefix>
                     <el-icon color="#f56c6c"><CaretBottom /></el-icon>
                   </template>
                 </el-statistic>
               </el-col>
-              <el-col :span="6">
+              <el-col :span="12" style="margin-top: 20px">
                 <el-statistic title="平均涨跌" :value="marketStats.avgChange" :precision="2" suffix="%">
                   <template #prefix>
                     <el-icon><TrendCharts /></el-icon>
                   </template>
                 </el-statistic>
               </el-col>
-              <el-col :span="6">
+              <el-col :span="12" style="margin-top: 20px">
                 <el-statistic title="总指数数" :value="marketStats.totalCount">
                   <template #prefix>
                     <el-icon><Grid /></el-icon>
@@ -116,7 +120,41 @@
             </el-row>
           </el-card>
         </el-col>
+
+        <!-- 涨跌分布饼图 -->
+        <el-col :xs="24" :md="12">
+          <el-card class="chart-card modern-card" shadow="hover">
+            <template #header>
+              <span class="card-title">
+                <el-icon><PieChart /></el-icon>
+                涨跌分布
+              </span>
+            </template>
+            <pie-chart
+              v-if="pieChartData.length > 0"
+              :data="pieChartData"
+              height="300px"
+              :radius="['40%', '70%']"
+            />
+          </el-card>
+        </el-col>
       </el-row>
+
+      <!-- 指数涨跌幅排行 -->
+      <el-card class="chart-card modern-card" shadow="hover">
+        <template #header>
+          <span class="card-title">
+            <el-icon><Histogram /></el-icon>
+            指数涨跌幅排行
+          </span>
+        </template>
+        <bar-chart
+          v-if="barChartData.length > 0"
+          :data="barChartData"
+          height="400px"
+          :horizontal="true"
+        />
+      </el-card>
 
       <!-- 快速操作 -->
       <el-card class="actions-card modern-card" shadow="hover">
@@ -157,6 +195,8 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import MarketSelector from '@/components/common/MarketSelector.vue'
+import PieChart from '@/components/charts/PieChart.vue'
+import BarChart from '@/components/charts/BarChart.vue'
 import { useAutoRefresh } from '@/composables/useAutoRefresh'
 
 const router = useRouter()
@@ -198,6 +238,42 @@ const getTrendPercentage = (changePct: number) => {
   const normalized = ((changePct + 10) / 20) * 100
   return Math.max(0, Math.min(100, normalized))
 }
+
+// 饼图数据 - 涨跌分布
+const pieChartData = computed(() => {
+  const stats = marketStats.value
+  return [
+    {
+      name: '上涨',
+      value: stats.upCount,
+      color: '#67c23a',
+    },
+    {
+      name: '下跌',
+      value: stats.downCount,
+      color: '#f56c6c',
+    },
+    {
+      name: '平盘',
+      value: Math.max(0, stats.totalCount - stats.upCount - stats.downCount),
+      color: '#909399',
+    },
+  ].filter(item => item.value > 0)
+})
+
+// 柱状图数据 - 按涨跌幅排序
+const barChartData = computed(() => {
+  const indices = marketIndices.value
+  if (indices.length === 0) return []
+
+  return indices
+    .map((item: any) => ({
+      name: item.name,
+      value: item.change_pct,
+      color: item.change_pct >= 0 ? '#67c23a' : '#f56c6c',
+    }))
+    .sort((a, b) => b.value - a.value)
+})
 
 // 获取市场数据
 const fetchMarketData = async () => {
@@ -242,6 +318,12 @@ const goToAnalysis = () => router.push('/index-analysis')
 const goToVix = () => router.push('/vix-analysis')
 const goToSector = () => router.push('/sector-rotation')
 const goToBacktest = () => router.push('/backtest')
+
+// 点击指数卡片，跳转到详细分析
+const handleIndexClick = (code: string) => {
+  ElMessage.info(`点击了 ${code}，跳转到深度分析页面`)
+  router.push('/index-analysis')
+}
 
 // 格式化时间
 const formatTime = (date: Date) => {
@@ -314,7 +396,37 @@ const { lastRefreshTime } = useAutoRefresh({
 
 .index-card {
   height: 100%;
-  transition: all var(--transition-base);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.clickable-card {
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.clickable-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.clickable-card:hover::before {
+  left: 100%;
+}
+
+.clickable-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+}
+
+.clickable-card:active {
+  transform: translateY(-4px) scale(1.01);
 }
 
 .index-header {

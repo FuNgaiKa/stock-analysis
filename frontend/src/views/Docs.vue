@@ -83,7 +83,7 @@
       <el-steps direction="vertical" :active="4">
         <el-step title="选择指数" description="选择要分析的美股指数（标普500/纳斯达克/纳斯达克100等）" />
         <el-step title="配置参数" description="设置相似度容差（建议3-10%）和分析周期（5/10/20/60日）" />
-        <el-step title="运行分析" description="点击"开始分析"按钮，系统将查找历史相似点位" />
+        <el-step title="运行分析" description="点击开始分析按钮，系统将查找历史相似点位" />
         <el-step title="查看结果" description="查看涨跌概率、平均收益率、置信度和仓位建议" />
       </el-steps>
 

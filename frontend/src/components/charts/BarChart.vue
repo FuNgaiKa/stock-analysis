@@ -47,7 +47,7 @@ const updateChart = () => {
           left: 'center',
           textStyle: {
             fontSize: 16,
-            fontWeight: 'normal',
+            fontWeight: 600,
           },
         }
       : undefined,
@@ -55,34 +55,50 @@ const updateChart = () => {
       trigger: 'axis',
       axisPointer: {
         type: 'shadow',
+        shadowStyle: {
+          color: 'rgba(0, 0, 0, 0.1)',
+        },
       },
       formatter: (params: any) => {
         const param = params[0]
-        return `${param.name}<br/>${param.seriesName}: ${param.value}%`
+        return `${param.name}<br/>${param.seriesName}: <strong>${param.value.toFixed(2)}%</strong>`
+      },
+      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+      borderColor: 'transparent',
+      textStyle: {
+        color: '#fff',
       },
     },
     grid: {
       left: props.horizontal ? '15%' : '3%',
       right: '4%',
       bottom: '3%',
+      top: props.title ? '12%' : '3%',
       containLabel: true,
     },
     xAxis: props.horizontal
       ? {
           type: 'value',
           axisLine: {
-            lineStyle: { color: '#8c8c8c' },
+            lineStyle: { color: '#d9d9d9' },
+          },
+          splitLine: {
+            lineStyle: {
+              type: 'dashed',
+              color: '#e8e8e8',
+            },
           },
         }
       : {
           type: 'category',
           data: names,
           axisLine: {
-            lineStyle: { color: '#8c8c8c' },
+            lineStyle: { color: '#d9d9d9' },
           },
           axisLabel: {
             rotate: names.length > 6 ? 45 : 0,
             interval: 0,
+            fontSize: 12,
           },
         },
     yAxis: props.horizontal
@@ -90,26 +106,42 @@ const updateChart = () => {
           type: 'category',
           data: names,
           axisLine: {
-            lineStyle: { color: '#8c8c8c' },
+            lineStyle: { color: '#d9d9d9' },
+          },
+          axisLabel: {
+            fontSize: 12,
           },
         }
       : {
           type: 'value',
           axisLine: {
-            lineStyle: { color: '#8c8c8c' },
+            lineStyle: { color: '#d9d9d9' },
           },
           splitLine: {
-            lineStyle: { type: 'dashed' },
+            lineStyle: {
+              type: 'dashed',
+              color: '#e8e8e8',
+            },
           },
         },
     series: [
       {
-        name: props.title || 'Value',
+        name: props.title || '涨跌幅',
         type: 'bar',
         data: values.map((val, idx) => ({
           value: val,
           itemStyle: {
-            color: colors[idx],
+            color: new echarts.graphic.LinearGradient(
+              props.horizontal ? 1 : 0,
+              props.horizontal ? 0 : 0,
+              props.horizontal ? 0 : 0,
+              props.horizontal ? 0 : 1,
+              [
+                { offset: 0, color: colors[idx] },
+                { offset: 1, color: colors[idx] + 'aa' }, // 添加透明度
+              ]
+            ),
+            borderRadius: props.horizontal ? [0, 4, 4, 0] : [4, 4, 0, 0],
           },
         })),
         barWidth: '60%',
@@ -117,12 +149,23 @@ const updateChart = () => {
           show: true,
           position: props.horizontal ? 'right' : 'top',
           formatter: '{c}%',
+          fontSize: 12,
+          fontWeight: 600,
         },
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 10,
+            shadowOffsetX: 0,
+            shadowColor: 'rgba(0, 0, 0, 0.3)',
+          },
+        },
+        animationDelay: (idx) => idx * 50,
+        animationEasing: 'cubicOut',
       },
     ],
   }
 
-  chart.setOption(option)
+  chart.setOption(option, true)
 }
 
 const handleResize = () => {
