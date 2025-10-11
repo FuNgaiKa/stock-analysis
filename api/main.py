@@ -302,7 +302,7 @@ async def get_sectors_current():
 
 @app.post("/api/backtest/run")
 async def run_backtest(
-    index_code: str = Query(..., description="指数代码"),
+    index_code: str = Query(..., description="指数代码或ETF代码"),
     days: int = Query(500, ge=100, le=2000, description="回测天数"),
     initial_capital: float = Query(100000, ge=10000, description="初始资金"),
     stop_loss: float = Query(0.08, ge=0.01, le=0.5, description="止损比例"),
@@ -312,7 +312,7 @@ async def run_backtest(
     运行策略回测
 
     Args:
-        index_code: 指数代码
+        index_code: 指数代码(SPX/NASDAQ/NDX等)或直接使用yfinance symbol
         days: 回测天数
         initial_capital: 初始资金
         stop_loss: 止损比例
@@ -333,12 +333,17 @@ async def run_backtest(
         import yfinance as yf
         import pandas as pd
 
-        # 获取数据
-        if index_code not in US_INDICES:
-            raise HTTPException(status_code=400, detail=f"不支持的指数代码: {index_code}")
+        # 获取数据 - 支持指数代码或直接使用symbol
+        if index_code in US_INDICES:
+            index_info = US_INDICES[index_code]
+            symbol = index_info.symbol
+            index_name = index_info.name
+        else:
+            # 直接使用提供的代码作为symbol (支持SPY, QQQ等ETF)
+            symbol = index_code
+            index_name = index_code
 
-        index_info = US_INDICES[index_code]
-        ticker = yf.Ticker(index_info.symbol)
+        ticker = yf.Ticker(symbol)
         df = ticker.history(period=f"{days}d")
 
         if df.empty:
@@ -407,7 +412,7 @@ async def run_backtest(
                 "trades": trades_data,
                 "config": {
                     "index_code": index_code,
-                    "index_name": index_info.name,
+                    "index_name": index_name,
                     "days": days,
                     "initial_capital": initial_capital,
                     "stop_loss": stop_loss,
