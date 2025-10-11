@@ -33,7 +33,7 @@ class HKIndexConfig:
 HK_INDICES = {
     'HSI': HKIndexConfig('HSI', '恒生指数', '^HSI'),
     'HSCEI': HKIndexConfig('HSCEI', '国企指数', '^HSCE'),
-    'HSTECH': HKIndexConfig('HSTECH', '恒生科技指数', '^HSTECH'),
+    'HSTECH': HKIndexConfig('HSTECH', '恒生科技指数', '3032.HK'),  # 使用恒生科技ETF代替指数
 }
 
 # 默认分析的指数
