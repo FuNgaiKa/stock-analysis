@@ -1,0 +1,158 @@
+/**
+ * 中文语言包
+ */
+
+export default {
+  common: {
+    confirm: '确定',
+    cancel: '取消',
+    search: '搜索',
+    reset: '重置',
+    add: '添加',
+    delete: '删除',
+    edit: '编辑',
+    save: '保存',
+    submit: '提交',
+    back: '返回',
+    refresh: '刷新',
+    export: '导出',
+    import: '导入',
+    loading: '加载中...',
+    success: '成功',
+    error: '错误',
+    warning: '警告',
+    info: '提示',
+  },
+
+  app: {
+    title: '金融工具平台',
+    subtitle: '美股市场分析',
+    version: '版本',
+  },
+
+  header: {
+    toggleTheme: '切换主题',
+    refresh: '刷新数据',
+    docs: '使用文档',
+    github: 'GitHub仓库',
+    language: '语言',
+  },
+
+  menu: {
+    indexAnalysis: '指数分析',
+    vixAnalysis: 'VIX恐慌指数',
+    sectorRotation: '行业轮动',
+    backtest: '历史回测',
+    docs: '使用文档',
+  },
+
+  indexAnalysis: {
+    title: '指数分析',
+    selectIndex: '选择指数',
+    selectPhase: '分析模式',
+    tolerance: '相似度容差',
+    periods: '预测周期',
+    startAnalysis: '开始分析',
+    analyzing: '分析中...',
+    analysisDone: '分析完成!',
+    currentPrice: '当前价格',
+    dataDate: '数据日期',
+    similarPeriods: '相似时期',
+    phase1: '基础分析',
+    phase2: '增强分析',
+    phase3: '深度分析',
+  },
+
+  marketEnvironment: {
+    title: '市场环境识别',
+    environment: '环境类型',
+    rsi: 'RSI指标',
+    distToHigh: '距52周高点',
+    maState: '均线状态',
+    bullTop: '牛市顶部',
+    bullMid: '牛市中期',
+    bearBottom: '熊市底部',
+    bearMid: '熊市中期',
+    ranging: '震荡市',
+  },
+
+  periodAnalysis: {
+    title: '周期分析详情',
+    period: '周期',
+    sampleSize: '样本数',
+    upProb: '上涨概率',
+    meanReturn: '平均收益',
+    medianReturn: '中位收益',
+    confidence: '置信度',
+    recommendedPosition: '建议仓位',
+    signal: '操作信号',
+    days: '日',
+  },
+
+  phase3: {
+    title: 'Phase 3 深度分析',
+    vix: 'VIX恐慌指数分析',
+    sector: '行业轮动分析',
+    volume: '成交量分析',
+  },
+
+  vixAnalysis: {
+    title: 'VIX恐慌指数',
+    currentValue: 'VIX当前值',
+    status: 'VIX状态',
+    change: '日变化',
+    weekChange: '周变化',
+    signal: '交易信号',
+    description: '描述',
+    action: '操作建议',
+    extremePanic: '极度恐慌',
+    highFear: '恐慌上升',
+    normal: '正常',
+    complacent: '过度乐观',
+  },
+
+  sectorAnalysis: {
+    title: '行业轮动',
+    rotationPattern: '轮动模式',
+    offensiveMode: '进攻模式',
+    defensiveMode: '防守模式',
+    cyclicalMode: '周期模式',
+    allocation: '配置建议',
+    recommendedSectors: '推荐行业',
+    sectorPerformance: '行业表现',
+    rsScore: '相对强度',
+  },
+
+  volumeAnalysis: {
+    title: '成交量分析',
+    status: '成交量状态',
+    ratio: '量比',
+    priceVolumeRelation: '价量关系',
+    signal: '交易信号',
+    extremeVolume: '极度放量',
+    highVolume: '显著放量',
+    normalVolume: '温和放量',
+    normal: '正常',
+    lowVolume: '缩量',
+  },
+
+  positionAdvice: {
+    title: '操作建议',
+    strongBuy: '强烈买入',
+    buy: '买入',
+    cautious: '谨慎观望',
+    hold: '持有',
+    reduce: '减仓',
+    sell: '卖出',
+    wait: '观望',
+  },
+
+  message: {
+    analyzing: '正在分析 {index}...',
+    analysisFailed: '分析失败,请稍后重试',
+    networkError: '网络连接失败,请检查您的网络',
+    paramError: '请求参数错误',
+    serverError: '服务器内部错误',
+    selectAtLeastOne: '请至少选择一个指数',
+  },
+}
