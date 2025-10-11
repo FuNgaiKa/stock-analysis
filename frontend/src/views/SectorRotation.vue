@@ -296,4 +296,24 @@ onMounted(() => {
 .dark .recommended-sectors h4 {
   color: #e5eaf3;
 }
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: flex-start;
+  }
+
+  .page-header h1 {
+    font-size: 20px;
+  }
+
+  .card-title {
+    font-size: 14px;
+  }
+
+  .pattern-card :deep(.el-col) {
+    margin-bottom: 15px;
+  }
+}
 </style>

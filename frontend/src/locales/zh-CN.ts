@@ -39,6 +39,7 @@ export default {
   },
 
   menu: {
+    marketOverview: '市场概览',
     indexAnalysis: '指数分析',
     vixAnalysis: 'VIX恐慌指数',
     sectorRotation: '行业轮动',

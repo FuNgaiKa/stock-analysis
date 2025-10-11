@@ -301,4 +301,20 @@ onMounted(() => {
   font-size: 16px;
   font-weight: 600;
 }
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: flex-start;
+  }
+
+  .page-header h1 {
+    font-size: 20px;
+  }
+
+  .card-title {
+    font-size: 14px;
+  }
+}
 </style>

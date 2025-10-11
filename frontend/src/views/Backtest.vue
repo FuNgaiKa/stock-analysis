@@ -396,4 +396,22 @@ onMounted(() => {
 :deep(.el-slider__runway) {
   margin: 16px 0;
 }
+
+@media (max-width: 768px) {
+  .page-header h1 {
+    font-size: 20px;
+  }
+
+  .card-title {
+    font-size: 14px;
+  }
+
+  .config-card :deep(.el-col) {
+    margin-bottom: 15px;
+  }
+
+  .config-card :deep(.el-form-item__label) {
+    font-size: 13px;
+  }
+}
 </style>

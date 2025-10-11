@@ -13,6 +13,11 @@
       router
       class="sidebar-menu"
     >
+      <el-menu-item index="/market-overview">
+        <el-icon><DataLine /></el-icon>
+        <template #title>{{ $t('menu.marketOverview') }}</template>
+      </el-menu-item>
+
       <el-menu-item index="/index-analysis">
         <el-icon><TrendCharts /></el-icon>
         <template #title>{{ $t('menu.indexAnalysis') }}</template>

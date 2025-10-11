@@ -10,8 +10,17 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/',
     component: () => import('@/components/layout/MainLayout.vue'),
-    redirect: '/index-analysis',
+    redirect: '/market-overview',
     children: [
+      {
+        path: '/market-overview',
+        name: 'MarketOverview',
+        component: () => import('@/views/MarketOverview.vue'),
+        meta: {
+          title: '市场概览',
+          icon: 'DataLine',
+        },
+      },
       {
         path: '/index-analysis',
         name: 'IndexAnalysis',

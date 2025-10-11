@@ -39,6 +39,7 @@ export default {
   },
 
   menu: {
+    marketOverview: 'Market Overview',
     indexAnalysis: 'Index Analysis',
     vixAnalysis: 'VIX Panic Index',
     sectorRotation: 'Sector Rotation',
