@@ -244,6 +244,60 @@ async def health_check():
     }
 
 
+# ==================== VIX专用API ====================
+
+@app.get("/api/vix/current")
+async def get_vix_current():
+    """
+    获取VIX当前状态
+
+    Returns:
+        VIX当前数据和状态
+    """
+    try:
+        analyzer = get_analyzer()
+
+        # 获取VIX分析数据
+        vix_analysis = analyzer.vix_analyzer.analyze_vix(period="5y")
+
+        return {
+            "success": True,
+            "data": vix_analysis,
+            "timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== 行业轮动API ====================
+
+@app.get("/api/sectors/current")
+async def get_sectors_current():
+    """
+    获取当前行业表现
+
+    Returns:
+        11个行业ETF当前表现数据
+    """
+    try:
+        analyzer = get_analyzer()
+
+        # 获取行业轮动分析
+        sector_analysis = analyzer.sector_analyzer.analyze_sector_rotation(
+            periods=[1, 5, 20, 60]
+        )
+
+        return {
+            "success": True,
+            "data": sector_analysis,
+            "timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ==================== 启动配置 ====================
 
 if __name__ == "__main__":
