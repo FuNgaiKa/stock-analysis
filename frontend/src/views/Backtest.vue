@@ -397,6 +397,53 @@ onMounted(() => {
   margin: 16px 0;
 }
 
+/* 动画效果 */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.metrics-card,
+.chart-card,
+.table-card {
+  animation: fade-in 0.5s ease-out backwards;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.metrics-card {
+  animation-delay: 0.1s;
+}
+
+.chart-card {
+  animation-delay: 0.2s;
+}
+
+.table-card {
+  animation-delay: 0.3s;
+}
+
+.metrics-card:hover,
+.chart-card:hover,
+.table-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+}
+
+.config-card :deep(.el-button) {
+  transition: all 0.3s ease;
+}
+
+.config-card :deep(.el-button:hover) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
 @media (max-width: 768px) {
   .page-header h1 {
     font-size: 20px;
@@ -412,6 +459,34 @@ onMounted(() => {
 
   .config-card :deep(.el-form-item__label) {
     font-size: 13px;
+    width: 100px !important;
+  }
+
+  .config-card :deep(.el-row) {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  .config-card :deep(.el-col) {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .config-card :deep(.el-input-number),
+  .config-card :deep(.el-select) {
+    width: 100% !important;
+  }
+
+  .metrics-card :deep(.el-descriptions) {
+    font-size: 13px;
+  }
+
+  .table-card :deep(.el-table) {
+    font-size: 12px;
+  }
+
+  .table-card :deep(.el-table__body-wrapper) {
+    overflow-x: auto;
   }
 }
 </style>

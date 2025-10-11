@@ -269,3 +269,240 @@ body {
   background: rgba(239, 68, 68, 0.1);
   color: var(--danger-color);
 }
+
+/* 按钮微交互动画 */
+.el-button {
+  transition: all var(--transition-base) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.el-button::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.el-button:active::before {
+  width: 300px;
+  height: 300px;
+}
+
+.el-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.el-button:active {
+  transform: translateY(0);
+}
+
+/* 表单控件微交互 */
+.el-input__inner,
+.el-textarea__inner,
+.el-select .el-input__inner {
+  transition: all var(--transition-base) !important;
+}
+
+.el-input__inner:focus,
+.el-textarea__inner:focus {
+  transform: scale(1.02);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.el-select:hover .el-input__inner,
+.el-input:hover .el-input__inner {
+  border-color: var(--primary-color);
+}
+
+/* 卡片悬停光效 */
+@keyframes card-shine {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+.el-card {
+  position: relative;
+  overflow: hidden;
+  transition: all var(--transition-base) !important;
+}
+
+.el-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  transition: left 0.7s;
+  pointer-events: none;
+}
+
+.el-card:hover::after {
+  left: 100%;
+}
+
+/* Tag标签动画 */
+.el-tag {
+  transition: all var(--transition-base) !important;
+}
+
+.el-tag:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 进度条动画优化 */
+.el-progress__bar {
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* 加载动画 */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.el-loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+/* 滚动触发动画 */
+@keyframes scroll-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.scroll-fade-in {
+  animation: scroll-fade-in 0.6s ease-out;
+}
+
+/* Switch开关动画 */
+.el-switch {
+  transition: all var(--transition-base) !important;
+}
+
+.el-switch:hover {
+  transform: scale(1.05);
+}
+
+.el-switch__core {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Checkbox/Radio动画 */
+.el-checkbox,
+.el-radio {
+  transition: all var(--transition-base) !important;
+}
+
+.el-checkbox:hover,
+.el-radio:hover {
+  transform: scale(1.05);
+}
+
+/* 表格行悬停效果 */
+.el-table__row {
+  transition: all var(--transition-fast) !important;
+}
+
+.el-table__row:hover {
+  background-color: rgba(102, 126, 234, 0.05) !important;
+}
+
+/* 下拉菜单动画 */
+.el-dropdown-menu {
+  animation: fade-in 0.3s ease-out;
+}
+
+/* 对话框动画 */
+.el-dialog {
+  animation: fade-in 0.4s ease-out;
+}
+
+/* 消息提示动画 */
+.el-message {
+  animation: slide-in 0.4s ease-out;
+}
+
+/* 通知动画 */
+.el-notification {
+  animation: slide-in 0.5s ease-out;
+}
+
+/* 选项卡切换动画 */
+.el-tabs__content {
+  animation: fade-in 0.3s ease-out;
+}
+
+/* 折叠面板动画 */
+.el-collapse-item__content {
+  transition: all 0.3s ease-out !important;
+}
+
+/* 步骤条动画 */
+.el-step {
+  transition: all var(--transition-base) !important;
+}
+
+.el-step:hover {
+  transform: translateY(-2px);
+}
+
+/* 时间线动画 */
+.el-timeline-item {
+  animation: fade-in 0.5s ease-out backwards;
+}
+
+.el-timeline-item:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+.el-timeline-item:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.el-timeline-item:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.el-timeline-item:nth-child(4) {
+  animation-delay: 0.4s;
+}
+
+/* 统计数字动画 */
+.el-statistic__value {
+  transition: all 0.3s ease-out !important;
+}
+
+.el-statistic:hover .el-statistic__value {
+  transform: scale(1.1);
+  color: var(--primary-color);
+}

@@ -433,4 +433,93 @@ onMounted(async () => {
 .phase3-section {
   margin-top: 20px;
 }
+
+/* 动画效果 */
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.analysis-card,
+.conclusion-card {
+  animation: slide-in 0.5s ease-out backwards;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.analysis-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+}
+
+.result-section .analysis-card:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+.result-section .analysis-card:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.result-section .analysis-card:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.phase3-section .analysis-card:nth-child(1) {
+  animation-delay: 0.4s;
+}
+
+.phase3-section .analysis-card:nth-child(2) {
+  animation-delay: 0.5s;
+}
+
+.phase3-section .analysis-card:nth-child(3) {
+  animation-delay: 0.6s;
+}
+
+@media (max-width: 768px) {
+  .config-card :deep(.el-form) {
+    .el-form-item {
+      margin-bottom: 15px;
+    }
+
+    .el-form--inline .el-form-item {
+      display: block;
+      margin-right: 0;
+    }
+
+    .el-select,
+    .el-input-number {
+      width: 100% !important;
+    }
+  }
+
+  .card-title {
+    font-size: 14px;
+  }
+
+  .result-section {
+    .el-descriptions {
+      font-size: 13px;
+    }
+
+    .el-table {
+      font-size: 12px;
+    }
+  }
+
+  .conclusion-card :deep(.el-alert) {
+    font-size: 13px;
+  }
+
+  .phase3-section {
+    .el-divider__text {
+      font-size: 16px !important;
+    }
+  }
+}
 </style>

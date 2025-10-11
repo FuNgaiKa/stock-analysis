@@ -17,13 +17,21 @@
       </div>
     </el-card>
 
+    <!-- 加载动画 -->
+    <div v-if="loading" class="loading-container">
+      <el-skeleton :rows="3" animated />
+      <el-skeleton :rows="3" animated style="margin-top: 20px" />
+    </div>
+
     <!-- 市场指标卡片 -->
-    <div v-if="marketData" class="content-section">
+    <transition name="fade-slide" mode="out-in">
+      <div v-if="marketData && !loading" class="content-section" :key="selectedMarket">
       <el-row :gutter="20" class="metric-row">
         <el-col
           :xs="24"
-          :sm="12"
-          :md="8"
+          :sm="getColSpan(marketIndices.length).sm"
+          :md="getColSpan(marketIndices.length).md"
+          :lg="getColSpan(marketIndices.length).lg"
           v-for="(item, index) in marketIndices"
           :key="item.code"
           class="slide-in"
@@ -185,8 +193,10 @@
         </el-space>
       </el-card>
     </div>
+    </transition>
 
-    <el-empty v-else-if="!loading" description="暂无数据" />
+    <!-- 空数据状态 -->
+    <el-empty v-if="!loading && !marketData" description="暂无市场数据" />
   </div>
 </template>
 
@@ -203,6 +213,23 @@ const router = useRouter()
 const loading = ref(false)
 const selectedMarket = ref('US')
 const marketData = ref<any>(null)
+
+// 根据指数数量动态调整列宽
+const getColSpan = (count: number) => {
+  if (count <= 2) {
+    // 1-2个指数：每行2个
+    return { sm: 12, md: 12, lg: 12 }
+  } else if (count <= 3) {
+    // 3个指数：每行3个
+    return { sm: 12, md: 8, lg: 8 }
+  } else if (count <= 4) {
+    // 4个指数：每行4个
+    return { sm: 12, md: 6, lg: 6 }
+  } else {
+    // 5个及以上：每行3个
+    return { sm: 12, md: 8, lg: 8 }
+  }
+}
 
 // 市场指数列表
 const marketIndices = computed(() => {
@@ -385,8 +412,28 @@ const { lastRefreshTime } = useAutoRefresh({
   align-items: center;
 }
 
+.loading-container {
+  padding: 20px 0;
+}
+
 .content-section {
   animation: fade-in 0.5s ease-out;
+}
+
+/* Transition 动画 */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.3s ease;
+}
+
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-20px);
 }
 
 .metric-row,

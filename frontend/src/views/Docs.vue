@@ -134,7 +134,7 @@
       <h3>💡 使用技巧</h3>
       <ul>
         <li><strong>VIX飙升（>30）：</strong>市场极度恐慌，往往是买入机会（抄底）</li>
-        <li><strong>VIX极低（<15）：</strong>市场过于乐观，需警惕风险（减仓）</li>
+        <li><strong>VIX极低（&lt;15）：</strong>市场过于乐观，需警惕风险（减仓）</li>
         <li><strong>VIX急速上升：</strong>短期内快速上涨>20%，表明市场不确定性增加</li>
         <li><strong>VIX分位数：</strong>查看当前VIX在历史中的位置，判断是高位还是低位</li>
       </ul>
@@ -438,5 +438,98 @@ ul li {
 :deep(.el-collapse-item__header) {
   font-weight: 600;
   font-size: 15px;
+}
+
+/* 动画效果 */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.doc-section {
+  animation: fade-up 0.6s ease-out backwards;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.doc-section:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+}
+
+.doc-section:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+.doc-section:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.doc-section:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.doc-section:nth-child(4) {
+  animation-delay: 0.4s;
+}
+
+.doc-section:nth-child(5) {
+  animation-delay: 0.5s;
+}
+
+.doc-section:nth-child(6) {
+  animation-delay: 0.6s;
+}
+
+.doc-section:nth-child(7) {
+  animation-delay: 0.7s;
+}
+
+.feature-card {
+  animation: fade-up 0.5s ease-out backwards;
+}
+
+@media (max-width: 768px) {
+  .page-header h1 {
+    font-size: 20px;
+  }
+
+  .section-title {
+    font-size: 14px;
+  }
+
+  .feature-card :deep(.el-card__header) {
+    font-size: 14px;
+  }
+
+  .feature-card p {
+    font-size: 13px;
+  }
+
+  h3 {
+    font-size: 16px;
+  }
+
+  p, li {
+    font-size: 14px;
+  }
+
+  .el-descriptions,
+  .el-table {
+    font-size: 13px;
+  }
+
+  .el-collapse-item__header {
+    font-size: 14px;
+  }
+
+  :deep(.el-row .el-col) {
+    margin-bottom: 10px;
+  }
 }
 </style>
