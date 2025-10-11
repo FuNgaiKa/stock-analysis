@@ -548,15 +548,8 @@ class PositionAnalysisEngine:
         return suggestions
 
 
-def main():
-    """主函数"""
-    print("""
-    ╔══════════════════════════════════════════════════════════════╗
-    ║          历史点位对比分析系统 - Phase 1                       ║
-    ║                  Historical Position Analyzer                 ║
-    ╚══════════════════════════════════════════════════════════════╝
-    """)
-
+def run_a_stock_analysis():
+    """运行A股市场分析"""
     # 创建分析引擎（包含科创50）
     # 默认分析A股主要指数（恒生科技数据源不稳定，暂时注释）
     indices_to_analyze = [
@@ -581,13 +574,79 @@ def main():
         )
 
         print("\n✓ 分析完成！报告已生成。")
+        return 0
 
     except Exception as e:
         logger.error(f"分析过程出错: {str(e)}", exc_info=True)
         print(f"\n✗ 分析失败: {str(e)}")
         return 1
 
-    return 0
+
+def run_us_stock_analysis():
+    """运行美股市场分析"""
+    # 导入美股分析脚本
+    scripts_dir = project_root / 'scripts' / 'us_stock_analysis'
+    sys.path.insert(0, str(scripts_dir))
+
+    try:
+        from run_us_analysis import run_analysis, DEFAULT_US_INDICES
+
+        print("\n开始美股市场分析...")
+        success = run_analysis(
+            indices=DEFAULT_US_INDICES,
+            tolerance=0.05,
+            detail=True,
+            periods=[5, 10, 20, 60]
+        )
+
+        return 0 if success else 1
+
+    except Exception as e:
+        logger.error(f"美股分析失败: {str(e)}", exc_info=True)
+        print(f"\n✗ 美股分析失败: {str(e)}")
+        return 1
+
+
+def main():
+    """主函数"""
+    print("""
+    ╔══════════════════════════════════════════════════════════════╗
+    ║          历史点位对比分析系统 - Phase 1                       ║
+    ║                  Historical Position Analyzer                 ║
+    ╚══════════════════════════════════════════════════════════════╝
+    """)
+
+    print("\n请选择要分析的市场:")
+    print("  1. A股市场 (上证、沪深300、创业板、科创50)")
+    print("  2. 美股市场 (标普500、纳斯达克、纳斯达克100、VIX)")
+    print("  3. 港股市场 (恒生指数、恒生科技)")
+    print("  0. 退出")
+
+    choice = input("\n请输入选项 (0-3): ").strip()
+
+    if choice == '1':
+        print("\n" + "=" * 70)
+        print("  A股市场分析")
+        print("=" * 70)
+        return run_a_stock_analysis()
+
+    elif choice == '2':
+        print("\n" + "=" * 70)
+        print("  美股市场分析")
+        print("=" * 70)
+        return run_us_stock_analysis()
+
+    elif choice == '3':
+        print("\n  ⚠️  港股分析功能正在开发中...")
+        return 0
+
+    elif choice == '0':
+        print("\n  退出程序。")
+        return 0
+
+    else:
+        print("\n  ✗ 无效的选项，请重新运行程序。")
+        return 1
 
 
 if __name__ == '__main__':
