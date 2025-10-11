@@ -1,0 +1,70 @@
+name: 美股市场分析定时任务
+
+on:
+  schedule:
+    # 每天美股收盘后2小时运行 (UTC 22:00 = 北京时间 06:00 = 美东时间 18:00)
+    - cron: '0 22 * * 1-5'  # 周一到周五
+  workflow_dispatch:  # 支持手动触发
+  push:
+    paths:
+      - 'position_analysis/**'
+      - 'scripts/us_stock_analysis/**'
+      - '.github/workflows/us_market_analysis.yml'
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+
+    - name: 设置Python环境
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+        cache: 'pip'
+
+    - name: 安装依赖
+      run: |
+        python -m pip install --upgrade pip
+        pip install pandas numpy yfinance matplotlib seaborn jinja2
+
+    - name: 运行Phase 3分析
+      run: |
+        python scripts/us_stock_analysis/run_us_analysis.py \
+          --indices SPX NASDAQ NDX \
+          --phase3 \
+          --detail > analysis_report.txt
+
+    - name: 保存分析报告
+      uses: actions/upload-artifact@v4
+      with:
+        name: us-market-analysis-${{ github.run_number }}
+        path: analysis_report.txt
+        retention-days: 90
+
+    - name: 发送邮件通知(可选)
+      if: success()
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: smtp.gmail.com
+        server_port: 587
+        username: ${{ secrets.MAIL_USERNAME }}
+        password: ${{ secrets.MAIL_PASSWORD }}
+        subject: "美股分析报告 - ${{ github.run_number }}"
+        to: ${{ secrets.MAIL_TO }}
+        from: 股票分析系统
+        body: file://analysis_report.txt
+        attachments: analysis_report.txt
+
+    - name: 提交报告到仓库(可选)
+      if: success()
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        mkdir -p reports/us_market
+        cp analysis_report.txt reports/us_market/report_$(date +%Y%m%d).txt
+        git add reports/us_market/
+        git commit -m "chore: 添加美股分析报告 $(date +%Y-%m-%d)" || echo "No changes"
+        git push || echo "Push failed"
