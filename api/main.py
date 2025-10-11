@@ -9,6 +9,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
+from datetime import datetime
 import sys
 import os
 
@@ -247,7 +248,6 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    from datetime import datetime
 
     print("=" * 60)
     print("美股市场分析API服务")
