@@ -298,6 +298,129 @@ async def get_sectors_current():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== 回测API ====================
+
+@app.post("/api/backtest/run")
+async def run_backtest(
+    index_code: str = Query(..., description="指数代码"),
+    days: int = Query(500, ge=100, le=2000, description="回测天数"),
+    initial_capital: float = Query(100000, ge=10000, description="初始资金"),
+    stop_loss: float = Query(0.08, ge=0.01, le=0.5, description="止损比例"),
+    take_profit: float = Query(0.15, ge=0.05, le=1.0, description="止盈比例")
+):
+    """
+    运行策略回测
+
+    Args:
+        index_code: 指数代码
+        days: 回测天数
+        initial_capital: 初始资金
+        stop_loss: 止损比例
+        take_profit: 止盈比例
+
+    Returns:
+        回测结果
+    """
+    try:
+        import sys
+        import os
+        sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+        from trading_strategies.signal_generators.technical_indicators import TechnicalIndicators
+        from trading_strategies.signal_generators.resonance_signals import ResonanceSignalGenerator
+        from trading_strategies.backtesting.backtest_engine import BacktestEngine
+        from trading_strategies.backtesting.performance_metrics import PerformanceMetrics
+        import yfinance as yf
+        import pandas as pd
+
+        # 获取数据
+        if index_code not in US_INDICES:
+            raise HTTPException(status_code=400, detail=f"不支持的指数代码: {index_code}")
+
+        index_info = US_INDICES[index_code]
+        ticker = yf.Ticker(index_info.symbol)
+        df = ticker.history(period=f"{days}d")
+
+        if df.empty:
+            raise HTTPException(status_code=500, detail="获取历史数据失败")
+
+        # 重命名列
+        df = df.rename(columns={
+            'Open': 'open',
+            'High': 'high',
+            'Low': 'low',
+            'Close': 'close',
+            'Volume': 'volume'
+        })
+
+        # 计算技术指标
+        calculator = TechnicalIndicators()
+        df = calculator.calculate_all_indicators(df)
+
+        # 运行回测
+        generator = ResonanceSignalGenerator()
+        engine = BacktestEngine(
+            initial_capital=initial_capital,
+            commission=0.0003,
+            slippage=0.0001,
+            stop_loss=stop_loss,
+            take_profit=take_profit
+        )
+
+        result = engine.run_backtest_with_strategy(df, generator)
+
+        # 计算性能指标
+        metrics = PerformanceMetrics()
+        performance = metrics.generate_performance_report(
+            returns=result['daily_returns'],
+            trades=result['trades'],
+            initial_capital=initial_capital
+        )
+
+        # 准备返回数据
+        # 权益曲线数据
+        equity_curve = [
+            {"date": str(df.index[i].date() if hasattr(df.index[i], 'date') else df.index[i]),
+             "value": result['portfolio_value'][i]}
+            for i in range(len(result['portfolio_value']))
+        ]
+
+        # 交易记录（前20笔）
+        trades_data = []
+        for trade in result['trades'][:20]:
+            trades_data.append({
+                'entry_date': str(trade['entry_date']),
+                'exit_date': str(trade['exit_date']),
+                'entry_price': round(trade['entry_price'], 2),
+                'exit_price': round(trade['exit_price'], 2),
+                'shares': trade['shares'],
+                'return': round(trade['return'] * 100, 2),
+                'pnl': round(trade['pnl'], 2),
+                'signal': trade.get('signal', 'SELL')
+            })
+
+        return {
+            "success": True,
+            "data": {
+                "performance": performance,
+                "equity_curve": equity_curve,
+                "trades": trades_data,
+                "config": {
+                    "index_code": index_code,
+                    "index_name": index_info.name,
+                    "days": days,
+                    "initial_capital": initial_capital,
+                    "stop_loss": stop_loss,
+                    "take_profit": take_profit
+                }
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ==================== 启动配置 ====================
 
 if __name__ == "__main__":
