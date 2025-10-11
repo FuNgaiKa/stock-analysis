@@ -426,6 +426,98 @@ async def run_backtest(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== 港股市场API ====================
+
+@app.get("/api/hk/indices")
+async def get_hk_indices():
+    """获取支持的港股指数列表"""
+    try:
+        from position_analysis.hk_market_analyzer import HK_INDICES
+        return [
+            {
+                "code": code,
+                "name": config.name,
+                "symbol": config.symbol,
+                "market": "HK"
+            }
+            for code, config in HK_INDICES.items()
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/hk/current-positions")
+async def get_hk_current_positions(
+    indices: Optional[List[str]] = Query(None)
+):
+    """获取港股指数当前点位"""
+    try:
+        from position_analysis.hk_market_analyzer import HKMarketAnalyzer, DEFAULT_HK_INDICES
+
+        analyzer = HKMarketAnalyzer()
+
+        if indices is None:
+            indices = DEFAULT_HK_INDICES
+
+        positions = analyzer.get_current_positions(indices)
+
+        return {
+            "success": True,
+            "data": positions,
+            "market": "HK",
+            "timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== A股市场API ====================
+
+@app.get("/api/cn/indices")
+async def get_cn_indices():
+    """获取支持的A股指数列表"""
+    try:
+        from position_analysis.cn_market_analyzer import CN_INDICES
+        return [
+            {
+                "code": code,
+                "name": config.name,
+                "symbol": config.symbol,
+                "market": "CN"
+            }
+            for code, config in CN_INDICES.items()
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/cn/current-positions")
+async def get_cn_current_positions(
+    indices: Optional[List[str]] = Query(None)
+):
+    """获取A股指数当前点位"""
+    try:
+        from position_analysis.cn_market_analyzer import CNMarketAnalyzer, DEFAULT_CN_INDICES
+
+        analyzer = CNMarketAnalyzer()
+
+        if indices is None:
+            indices = DEFAULT_CN_INDICES
+
+        positions = analyzer.get_current_positions(indices)
+
+        return {
+            "success": True,
+            "data": positions,
+            "market": "CN",
+            "timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ==================== 启动配置 ====================
 
 if __name__ == "__main__":
