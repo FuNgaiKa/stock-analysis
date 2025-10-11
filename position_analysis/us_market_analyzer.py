@@ -257,37 +257,59 @@ class USMarketAnalyzer:
             f"均线状态={current_ma_state}"
         )
 
-        # 3. 过滤技术指标相似的时期
+        # 3. 过滤技术指标相似的时期 - 优化版(预计算指标)
+        # 优化关键: 一次性计算所有历史技术指标,避免重复计算
+        logger.debug("预计算全部历史技术指标...")
+
+        # 预计算RSI (向量化操作)
+        df_full['rsi'] = self._calculate_rsi_vectorized(df_full['close'])
+
+        # 预计算均线
+        df_full['ma20'] = df_full['close'].rolling(20).mean()
+        df_full['ma60'] = df_full['close'].rolling(60).mean()
+        df_full['ma250'] = df_full['close'].rolling(250).mean()
+
+        # 预计算52周高点距离
+        df_full['high_52w'] = df_full['close'].rolling(252).max()
+        df_full['dist_to_high_pct'] = ((df_full['close'] - df_full['high_52w']) / df_full['high_52w'] * 100)
+
+        logger.debug(f"技术指标预计算完成,开始过滤...")
+
+        # 向量化过滤(直接查表,无需重复计算)
         filtered_dates = []
 
         for date in similar.index:
-            # 获取该日期之前的数据(模拟当时的市场状态)
-            hist_df = df_full[df_full.index <= date].tail(250)  # 最近250个交易日
+            # 直接从预计算结果中查询(O(1)操作)
+            try:
+                hist_rsi = df_full.loc[date, 'rsi']
+                hist_dist_to_high = df_full.loc[date, 'dist_to_high_pct']
+                hist_price = df_full.loc[date, 'close']
+                hist_ma20 = df_full.loc[date, 'ma20']
+                hist_ma60 = df_full.loc[date, 'ma60']
+                hist_ma250 = df_full.loc[date, 'ma250']
 
-            if len(hist_df) < 60:  # 数据不足,跳过
+                # 跳过NaN值
+                if pd.isna(hist_rsi) or pd.isna(hist_dist_to_high):
+                    continue
+
+                # 检查RSI相似度
+                if abs(current_rsi - hist_rsi) > rsi_tolerance:
+                    continue
+
+                # 检查距52周高点位置相似度
+                if abs(current_dist_to_high - hist_dist_to_high) > percentile_tolerance:
+                    continue
+
+                # 检查均线状态
+                hist_ma_state = self._get_ma_state_from_values(hist_price, hist_ma20, hist_ma60, hist_ma250)
+                if current_ma_state != hist_ma_state:
+                    continue
+
+                filtered_dates.append(date)
+
+            except KeyError:
+                # 日期不在df_full中,跳过
                 continue
-
-            hist_indicators = self.data_source.calculate_technical_indicators(hist_df)
-
-            if not hist_indicators:
-                continue
-
-            # 检查RSI相似度
-            hist_rsi = hist_indicators.get('rsi', 50)
-            if abs(current_rsi - hist_rsi) > rsi_tolerance:
-                continue
-
-            # 检查距52周高点位置相似度
-            hist_dist_to_high = hist_indicators.get('dist_to_high_pct', 0)
-            if abs(current_dist_to_high - hist_dist_to_high) > percentile_tolerance:
-                continue
-
-            # 检查均线状态
-            hist_ma_state = self._get_ma_state(hist_indicators)
-            if current_ma_state != hist_ma_state:
-                continue
-
-            filtered_dates.append(date)
 
         # 4. 返回过滤后的结果
         if len(filtered_dates) == 0:
@@ -309,7 +331,7 @@ class USMarketAnalyzer:
 
     def _get_ma_state(self, indicators: Dict) -> str:
         """
-        判断均线排列状态
+        判断均线排列状态(从indicators字典)
 
         Returns:
             '多头排列' / '空头排列' / '震荡'
@@ -319,6 +341,21 @@ class USMarketAnalyzer:
         ma60 = indicators.get('ma60', price)
         ma250 = indicators.get('ma250', price)
 
+        return self._get_ma_state_from_values(price, ma20, ma60, ma250)
+
+    def _get_ma_state_from_values(self, price: float, ma20: float, ma60: float, ma250: float) -> str:
+        """
+        判断均线排列状态(从数值) - 优化版辅助方法
+
+        Args:
+            price: 当前价格
+            ma20: 20日均线
+            ma60: 60日均线
+            ma250: 250日均线
+
+        Returns:
+            '多头排列' / '空头排列' / '震荡'
+        """
         # 完美多头: 价格 > MA20 > MA60 > MA250
         if price > ma20 and ma20 > ma60 and ma60 > ma250:
             return '多头排列'
@@ -329,6 +366,27 @@ class USMarketAnalyzer:
 
         # 其他情况视为震荡
         return '震荡'
+
+    def _calculate_rsi_vectorized(self, prices: pd.Series, period: int = 14) -> pd.Series:
+        """
+        向量化RSI计算 - 优化版(避免逐行循环)
+
+        Args:
+            prices: 价格序列
+            period: RSI周期(默认14)
+
+        Returns:
+            RSI序列
+        """
+        delta = prices.diff()
+        gain = delta.where(delta > 0, 0).rolling(window=period).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+
+        # 避免除零
+        rs = gain / loss.replace(0, np.nan)
+        rsi = 100 - (100 / (1 + rs))
+
+        return rsi
 
     def identify_market_environment(self, indicators: Dict) -> str:
         """
