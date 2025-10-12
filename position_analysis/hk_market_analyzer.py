@@ -148,7 +148,7 @@ class HKMarketAnalyzer:
         self,
         index_code: str,
         similar_periods: pd.DataFrame,
-        periods: List[int] = [5, 10, 20, 60]
+        periods: List[int] = [5, 10, 20, 30, 60]
     ) -> pd.DataFrame:
         """计算相似时期的后续收益率"""
         df = self.get_index_data(index_code, period="10y")
@@ -243,25 +243,60 @@ class HKMarketAnalyzer:
         avg_loss = float(losing_returns.mean() if len(losing_returns) > 0 else 0)
         profit_loss_ratio = float(abs(avg_win / avg_loss) if avg_loss != 0 else 0)
 
+        # 量化机构专业指标
+        mean_return = float(valid_returns.mean())
+        std_return = float(valid_returns.std())
+
+        # 1. 夏普比率 (Sharpe Ratio) - 假设无风险利率3%
+        risk_free_rate = 0.03 / 252  # 日度无风险利率
+        sharpe_ratio = float((mean_return - risk_free_rate) / std_return if std_return > 0 else 0)
+
+        # 2. 索提诺比率 (Sortino Ratio) - 只考虑下行波动
+        downside_returns = valid_returns[valid_returns < 0]
+        downside_std = float(downside_returns.std() if len(downside_returns) > 0 else std_return)
+        sortino_ratio = float((mean_return - risk_free_rate) / downside_std if downside_std > 0 else 0)
+
+        # 3. 卡玛比率 (Calmar Ratio) - 需要与最大回撤配合使用,这里先预留
+        # 实际计算在有最大回撤数据后进行
+
+        # 4. 偏度 (Skewness) - 收益分布的对称性
+        skewness = float(valid_returns.skew())
+
+        # 5. 峰度 (Kurtosis) - 收益分布的尾部厚度
+        kurtosis = float(valid_returns.kurtosis())
+
+        # 6. VaR (Value at Risk) 95%置信度
+        var_95 = float(valid_returns.quantile(0.05))  # 5%分位数
+
+        # 7. CVaR (Conditional VaR) 超出VaR的平均损失
+        cvar_95 = float(valid_returns[valid_returns <= var_95].mean() if (valid_returns <= var_95).any() else var_95)
+
         return {
             'sample_size': total,
             'up_prob': float(up_count / total if total > 0 else 0),
             'down_prob': float(down_count / total if total > 0 else 0),
             'up_count': int(up_count),
             'down_count': int(down_count),
-            'mean_return': float(valid_returns.mean()),
+            'mean_return': mean_return,
             'median_return': float(valid_returns.median()),
             'max_return': float(valid_returns.max()),
             'min_return': float(valid_returns.min()),
-            'std': float(valid_returns.std()),
+            'std': std_return,
             'percentile_25': float(valid_returns.quantile(0.25)),
             'percentile_75': float(valid_returns.quantile(0.75)),
-            # 新增指标
+            # 基础新增指标
             'win_rate': win_rate,
             'avg_win': avg_win,
             'avg_loss': avg_loss,
             'profit_loss_ratio': profit_loss_ratio,
-            'volatility': float(valid_returns.std() * np.sqrt(252))  # 年化波动率
+            'volatility': float(std_return * np.sqrt(252)),  # 年化波动率
+            # 量化机构专业指标
+            'sharpe_ratio': sharpe_ratio,
+            'sortino_ratio': sortino_ratio,
+            'skewness': skewness,
+            'kurtosis': kurtosis,
+            'var_95': var_95,
+            'cvar_95': cvar_95,
         }
 
     def calculate_confidence(self, sample_size: int, consistency: float) -> float:
@@ -328,7 +363,7 @@ class HKMarketAnalyzer:
         self,
         index_code: str,
         tolerance: float = 0.05,
-        periods: List[int] = [5, 10, 20, 60]
+        periods: List[int] = [5, 10, 20, 30, 60]
     ) -> Dict:
         """单指数完整分析"""
         logger.info(f"开始分析港股 {HK_INDICES[index_code].name}...")
@@ -380,6 +415,14 @@ class HKMarketAnalyzer:
                     # 计算最大回撤
                     drawdown_stats = self.calculate_max_drawdown(index_code, similar, period)
                     stats.update(drawdown_stats)
+
+                    # 计算卡玛比率 (Calmar Ratio) = 年化收益率 / |最大回撤|
+                    if drawdown_stats.get('max_dd', 0) < 0:
+                        annualized_return = stats['mean_return'] * (252 / period)  # 年化收益
+                        calmar_ratio = float(annualized_return / abs(drawdown_stats['max_dd']))
+                        stats['calmar_ratio'] = calmar_ratio
+                    else:
+                        stats['calmar_ratio'] = 0.0
 
                     # 计算仓位建议
                     if stats['sample_size'] > 0:
