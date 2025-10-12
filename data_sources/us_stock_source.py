@@ -336,6 +336,25 @@ class USStockDataSource:
                     indicators['volume_ma20'] = float(avg_volume_20)
                     indicators['volume_ratio'] = float(latest['volume'] / avg_volume_20) if avg_volume_20 > 0 else 1.0
 
+            # KDJ指标
+            if len(df) >= 9:
+                from trading_strategies.signal_generators.technical_indicators import TechnicalIndicators
+                calc = TechnicalIndicators()
+                df_with_kdj = calc.calculate_kdj(df.copy())
+                indicators['kdj_k'] = float(df_with_kdj['kdj_k'].iloc[-1])
+                indicators['kdj_d'] = float(df_with_kdj['kdj_d'].iloc[-1])
+                indicators['kdj_j'] = float(df_with_kdj['kdj_j'].iloc[-1])
+
+            # DMI/ADX指标
+            if len(df) >= 28:  # 需要至少14*2天数据
+                from trading_strategies.signal_generators.technical_indicators import TechnicalIndicators
+                calc = TechnicalIndicators()
+                df_with_dmi = calc.calculate_dmi_adx(df.copy())
+                if not df_with_dmi.empty and 'adx' in df_with_dmi.columns:
+                    indicators['adx'] = float(df_with_dmi['adx'].iloc[-1])
+                    indicators['+di'] = float(df_with_dmi['+di'].iloc[-1])
+                    indicators['-di'] = float(df_with_dmi['-di'].iloc[-1])
+
             return indicators
 
         except Exception as e:
