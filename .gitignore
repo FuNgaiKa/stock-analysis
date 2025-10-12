@@ -84,3 +84,8 @@ email_config.yaml
 data/
 output/
 results/
+
+# Reports and logs
+reports/
+logs/
+*.html

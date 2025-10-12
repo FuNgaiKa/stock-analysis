@@ -206,12 +206,30 @@ class TechnicalIndicators:
 
         return df
 
+    @staticmethod
+    def calculate_dmi_adx(df: pd.DataFrame, period: int = 14) -> pd.DataFrame:
+        """
+        计算DMI/ADX指标 (Directional Movement Index / Average Directional Index)
+
+        用于判断趋势强度，适合趋势跟踪策略
+
+        Args:
+            df: 包含'high', 'low', 'close'列的DataFrame
+            period: 周期，默认14
+
+        Returns:
+            添加了+di, -di, adx列的DataFrame
+        """
+        from .dmi_adx import calculate_dmi_adx_simple
+        return calculate_dmi_adx_simple(df, period)
+
     def calculate_all_indicators(
         self,
         df: pd.DataFrame,
         ma_periods: list = [5, 10, 20, 60],
         include_boll: bool = True,
-        include_atr: bool = True
+        include_atr: bool = True,
+        include_dmi_adx: bool = True
     ) -> pd.DataFrame:
         """
         一次性计算所有技术指标
@@ -221,6 +239,7 @@ class TechnicalIndicators:
             ma_periods: MA周期列表
             include_boll: 是否包含布林带
             include_atr: 是否包含ATR
+            include_dmi_adx: 是否包含DMI/ADX (趋势强度指标)
 
         Returns:
             添加了所有指标的DataFrame
@@ -242,6 +261,9 @@ class TechnicalIndicators:
 
         if include_atr:
             df = self.calculate_atr(df)
+
+        if include_dmi_adx:
+            df = self.calculate_dmi_adx(df)
 
         logger.info(f"技术指标计算完成，共 {len(df)} 条数据")
 
@@ -469,6 +491,31 @@ class TechnicalIndicators:
             'j': float(j),
             'strength': strength
         }
+
+    @staticmethod
+    def identify_dmi_adx_signal(df: pd.DataFrame, index: int = -1) -> Dict:
+        """
+        识别DMI/ADX趋势强度信号
+
+        Args:
+            df: 包含DMI/ADX指标的DataFrame
+            index: 要分析的行索引
+
+        Returns:
+            {
+                'trend_strength': 'very_strong'/'strong'/'medium'/'weak',
+                'trend_direction': 'bullish'/'bearish'/'neutral',
+                'adx': ADX值,
+                '+di': +DI值,
+                '-di': -DI值,
+                'signal': 描述信号,
+                'recommendation': 操作建议,
+                'strength': 0-10评分
+            }
+        """
+        from .dmi_adx import DMI_ADX_Calculator
+        calculator = DMI_ADX_Calculator()
+        return calculator.identify_trend_strength(df, index)
 
 
 if __name__ == '__main__':
