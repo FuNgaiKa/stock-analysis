@@ -652,6 +652,153 @@ async def analyze_market_sentiment():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== 支撑/压力位策略回测API ====================
+
+@app.post("/api/backtest/sr-breakout")
+async def run_sr_breakout_backtest(
+    symbol: str = Query(..., description="资产代码"),
+    days: int = Query(500, ge=100, le=2000, description="回测天数"),
+    initial_capital: float = Query(100000, ge=10000, description="初始资金"),
+    lookback_period: int = Query(60, ge=20, le=120, description="支撑/压力位回溯周期"),
+    breakout_threshold: float = Query(0.01, ge=0.005, le=0.05, description="突破确认阈值"),
+    volume_threshold: float = Query(1.2, ge=1.0, le=2.0, description="成交量确认倍数")
+):
+    """
+    支撑/压力位突破策略回测
+
+    Args:
+        symbol: 资产代码
+        days: 回测天数
+        initial_capital: 初始资金
+        lookback_period: 支撑/压力位计算回溯周期
+        breakout_threshold: 突破确认阈值(0.01=1%)
+        volume_threshold: 成交量确认倍数
+
+    Returns:
+        回测结果和性能指标
+    """
+    try:
+        import yfinance as yf
+        from trading_strategies.signal_generators.sr_breakout_strategy import SRBreakoutStrategy
+        from trading_strategies.backtesting.backtest_engine import BacktestEngine
+        from trading_strategies.backtesting.performance_metrics import PerformanceMetrics
+
+        # 获取数据
+        ticker = yf.Ticker(symbol)
+        df = ticker.history(period=f"{days}d")
+
+        if df.empty:
+            raise HTTPException(status_code=500, detail="获取历史数据失败")
+
+        # 重命名列
+        df = df.rename(columns={
+            'Open': 'open',
+            'High': 'high',
+            'Low': 'low',
+            'Close': 'close',
+            'Volume': 'volume'
+        })
+
+        # 创建策略
+        strategy = SRBreakoutStrategy(
+            lookback_period=lookback_period,
+            breakout_threshold=breakout_threshold,
+            volume_threshold=volume_threshold
+        )
+
+        # 生成信号
+        signals = strategy.generate_signals(df)
+        df['signal'] = signals
+
+        # 运行回测
+        engine = BacktestEngine(
+            initial_capital=initial_capital,
+            commission=0.0003,
+            slippage=0.0001
+        )
+
+        # 简单回测逻辑
+        portfolio_value = [initial_capital]
+        cash = initial_capital
+        shares = 0
+        trades = []
+
+        for i in range(1, len(df)):
+            current_price = df['close'].iloc[i]
+            signal = df['signal'].iloc[i]
+            date = df.index[i]
+
+            # 买入信号
+            if signal == 1 and shares == 0:
+                shares = int(cash / current_price)
+                cost = shares * current_price * (1 + 0.0003)
+                if cost <= cash:
+                    cash -= cost
+                    trades.append({
+                        'type': 'BUY',
+                        'date': str(date.date()),
+                        'price': current_price,
+                        'shares': shares
+                    })
+
+            # 卖出信号
+            elif signal == -1 and shares > 0:
+                cash += shares * current_price * (1 - 0.0003)
+                trades.append({
+                    'type': 'SELL',
+                    'date': str(date.date()),
+                    'price': current_price,
+                    'shares': shares
+                })
+                shares = 0
+
+            # 计算当前总资产
+            total_value = cash + shares * current_price
+            portfolio_value.append(total_value)
+
+        # 最后平仓
+        if shares > 0:
+            final_price = df['close'].iloc[-1]
+            cash += shares * final_price * (1 - 0.0003)
+            shares = 0
+
+        final_value = cash
+        total_return = (final_value - initial_capital) / initial_capital * 100
+
+        # 准备返回数据
+        equity_curve = [
+            {"date": str(df.index[i].date()), "value": portfolio_value[i]}
+            for i in range(len(portfolio_value))
+        ]
+
+        return {
+            "success": True,
+            "data": {
+                "performance": {
+                    "total_return": total_return,
+                    "final_value": final_value,
+                    "total_trades": len(trades),
+                    "win_rate": 0,  # 简化版暂不计算
+                },
+                "equity_curve": equity_curve,
+                "trades": trades[:20],  # 返回前20笔交易
+                "strategy_info": strategy.get_strategy_info(),
+                "config": {
+                    "symbol": symbol,
+                    "days": days,
+                    "initial_capital": initial_capital,
+                    "lookback_period": lookback_period,
+                    "breakout_threshold": breakout_threshold,
+                    "volume_threshold": volume_threshold
+                }
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ==================== WebSocket实时数据推送 ====================
 
 # 存储所有活跃的WebSocket连接
