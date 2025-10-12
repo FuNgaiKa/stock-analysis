@@ -58,6 +58,33 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        path: '/position-analysis',
+        name: 'PositionAnalysis',
+        component: () => import('@/views/PositionAnalysis.vue'),
+        meta: {
+          title: '历史点位对比',
+          icon: 'Position',
+        },
+      },
+      {
+        path: '/hk-stock-analysis',
+        name: 'HKStockAnalysis',
+        component: () => import('@/views/HKStockAnalysis.vue'),
+        meta: {
+          title: '港股市场分析',
+          icon: 'Location',
+        },
+      },
+      {
+        path: '/compound-calculator',
+        name: 'CompoundCalculator',
+        component: () => import('@/views/CompoundCalculator.vue'),
+        meta: {
+          title: '复合收益计算器',
+          icon: 'Money',
+        },
+      },
+      {
         path: '/docs',
         name: 'Docs',
         component: () => import('@/views/Docs.vue'),

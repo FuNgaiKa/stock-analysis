@@ -44,6 +44,9 @@ export default {
     vixAnalysis: 'VIX恐慌指数',
     sectorRotation: '行业轮动',
     backtest: '历史回测',
+    positionAnalysis: '历史点位对比',
+    hkStockAnalysis: '港股市场分析',
+    compoundCalculator: '复合收益计算器',
     docs: '使用文档',
   },
 

@@ -38,6 +38,23 @@
         <template #title>{{ $t('menu.backtest') }}</template>
       </el-menu-item>
 
+      <el-menu-item index="/position-analysis">
+        <el-icon><Position /></el-icon>
+        <template #title>{{ $t('menu.positionAnalysis') }}</template>
+      </el-menu-item>
+
+      <el-divider />
+
+      <el-menu-item index="/hk-stock-analysis">
+        <el-icon><Location /></el-icon>
+        <template #title>{{ $t('menu.hkStockAnalysis') }}</template>
+      </el-menu-item>
+
+      <el-menu-item index="/compound-calculator">
+        <el-icon><Money /></el-icon>
+        <template #title>{{ $t('menu.compoundCalculator') }}</template>
+      </el-menu-item>
+
       <el-divider />
 
       <el-menu-item index="/docs">

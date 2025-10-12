@@ -44,6 +44,9 @@ export default {
     vixAnalysis: 'VIX Panic Index',
     sectorRotation: 'Sector Rotation',
     backtest: 'Historical Backtest',
+    positionAnalysis: 'Position Analysis',
+    hkStockAnalysis: 'HK Stock Analysis',
+    compoundCalculator: 'Compound Calculator',
     docs: 'Documentation',
   },
 
