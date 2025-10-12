@@ -518,6 +518,138 @@ async def get_cn_current_positions(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== 相关性分析API ====================
+
+@app.post("/api/correlation/analyze")
+async def analyze_correlation(
+    symbols: List[str] = Query(..., description="资产代码列表"),
+    lookback_days: int = Query(252, ge=60, le=1000, description="回溯天数")
+):
+    """
+    跨资产相关性分析
+
+    Args:
+        symbols: 资产代码列表(至少2个)
+        lookback_days: 回溯天数
+
+    Returns:
+        相关性分析结果
+    """
+    try:
+        if len(symbols) < 2:
+            raise HTTPException(status_code=400, detail="至少需要2个资产代码")
+
+        from position_analysis.analyzers.correlation_analyzer import CorrelationAnalyzer
+
+        # 资产名称映射
+        asset_names = {
+            '^IXIC': '纳斯达克',
+            '^GSPC': '标普500',
+            '^DJI': '道琼斯',
+            '000001.SS': '上证指数',
+            '399001.SZ': '深证成指',
+            '000300.SS': '沪深300',
+            '399006.SZ': '创业板指',
+            '000688.SS': '科创50',
+            '^HSI': '恒生指数',
+            'HSTECH.HK': '恒生科技',
+            'GC=F': '黄金',
+            'SI=F': '白银',
+            'CL=F': '原油',
+            'BTC-USD': '比特币',
+            'ETH-USD': '以太坊'
+        }
+
+        analyzer = CorrelationAnalyzer(lookback_days=lookback_days)
+        result = analyzer.comprehensive_analysis(symbols, asset_names)
+
+        if 'error' in result:
+            raise HTTPException(status_code=500, detail=result['error'])
+
+        # 转换datetime为字符串
+        if 'timestamp' in result:
+            result['timestamp'] = result['timestamp'].isoformat()
+
+        return {
+            "success": True,
+            "data": result,
+            "timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== 支撑/压力位分析API ====================
+
+@app.get("/api/support-resistance/analyze")
+async def analyze_support_resistance(
+    symbol: str = Query(..., description="资产代码"),
+    lookback_days: int = Query(252, ge=120, le=1000, description="回溯天数")
+):
+    """
+    支撑/压力位分析
+
+    Args:
+        symbol: 资产代码
+        lookback_days: 回溯天数
+
+    Returns:
+        支撑/压力位分析结果
+    """
+    try:
+        from position_analysis.analyzers.support_resistance import SupportResistanceAnalyzer
+
+        analyzer = SupportResistanceAnalyzer(symbol, lookback_days=lookback_days)
+        result = analyzer.comprehensive_analysis()
+
+        if 'error' in result:
+            raise HTTPException(status_code=500, detail=result['error'])
+
+        # 转换datetime为字符串
+        if 'timestamp' in result:
+            result['timestamp'] = result['timestamp'].isoformat()
+
+        return {
+            "success": True,
+            "data": result,
+            "timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== 市场情绪指数API ====================
+
+@app.get("/api/sentiment/analyze")
+async def analyze_market_sentiment():
+    """
+    市场情绪综合指数分析
+
+    Returns:
+        市场情绪指数(0-100)和各维度评分
+    """
+    try:
+        from position_analysis.analyzers.sentiment_index import MarketSentimentIndex
+
+        analyzer = MarketSentimentIndex()
+        result = analyzer.calculate_comprehensive_sentiment()
+
+        # 转换datetime为字符串
+        if 'timestamp' in result:
+            result['timestamp'] = result['timestamp'].isoformat()
+
+        return {
+            "success": True,
+            "data": result,
+            "timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ==================== 启动配置 ====================
 
 if __name__ == "__main__":

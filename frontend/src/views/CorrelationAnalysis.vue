@@ -183,7 +183,7 @@
       </el-table>
     </el-card>
 
-    <!-- 相关性热力图 (将来实现) -->
+    <!-- 相关性热力图 -->
     <el-card v-if="result" class="modern-card hover-lift fade-in">
       <template #header>
         <div class="card-header">
@@ -192,19 +192,7 @@
       </template>
 
       <div class="heatmap-container">
-        <el-alert
-          title="热力图可视化正在开发中..."
-          type="info"
-          :closable="false"
-          show-icon
-        >
-          <template #default>
-            <p>将使用 ECharts 展示相关性矩阵热力图</p>
-            <p>- 红色: 强正相关 (联动上涨/下跌)</p>
-            <p>- 蓝色: 强负相关 (对冲机会)</p>
-            <p>- 灰色: 弱相关/无相关</p>
-          </template>
-        </el-alert>
+        <div ref="heatmapRef" style="width: 100%; height: 500px"></div>
       </div>
     </el-card>
 
@@ -216,9 +204,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Connection } from '@element-plus/icons-vue'
+import * as echarts from 'echarts'
 
 // 配置
 const config = ref({
@@ -228,6 +217,7 @@ const config = ref({
 
 const loading = ref(false)
 const result = ref<any>(null)
+const heatmapRef = ref<HTMLElement>()
 
 // 资产名称映射
 const assetNames: Record<string, string> = {
@@ -256,72 +246,134 @@ const analyzeCorrelation = async () => {
   loading.value = true
 
   try {
-    // TODO: 调用后端API
-    // const response = await fetch('/api/correlation/analyze', {
-    //   method: 'POST',
-    //   body: JSON.stringify(config.value)
-    // })
-    // result.value = await response.json()
+    // 调用后端API
+    const params = new URLSearchParams()
+    config.value.symbols.forEach(symbol => {
+      params.append('symbols', symbol)
+    })
+    params.append('lookback_days', config.value.lookback.toString())
 
-    // 模拟数据
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    const response = await fetch(`http://localhost:8000/api/correlation/analyze?${params}`, {
+      method: 'POST'
+    })
 
-    result.value = {
-      lookback_days: config.value.lookback,
-      num_assets: config.value.symbols.length,
-      high_correlations: [
-        {
-          asset1: '^IXIC',
-          asset1_name: assetNames['^IXIC'],
-          asset2: '^GSPC',
-          asset2_name: assetNames['^GSPC'],
-          correlation: 0.973,
-          strength: '极强正相关'
-        },
-        {
-          asset1: '^GSPC',
-          asset1_name: assetNames['^GSPC'],
-          asset2: '^HSI',
-          asset2_name: assetNames['^HSI'],
-          correlation: 0.756,
-          strength: '强正相关'
-        },
-        {
-          asset1: 'BTC-USD',
-          asset1_name: assetNames['BTC-USD'],
-          asset2: '^IXIC',
-          asset2_name: assetNames['^IXIC'],
-          correlation: 0.682,
-          strength: '中等正相关'
-        }
-      ],
-      negative_correlations: [
-        {
-          asset1: 'GC=F',
-          asset1_name: assetNames['GC=F'],
-          asset2: '^GSPC',
-          asset2_name: assetNames['^GSPC'],
-          correlation: -0.612,
-          hedge_potential: '中'
-        },
-        {
-          asset1: 'GC=F',
-          asset1_name: assetNames['GC=F'],
-          asset2: '^IXIC',
-          asset2_name: assetNames['^IXIC'],
-          correlation: -0.589,
-          hedge_potential: '中'
-        }
-      ]
+    if (!response.ok) {
+      throw new Error('API请求失败')
     }
 
-    ElMessage.success('分析完成！')
+    const apiResult = await response.json()
+
+    if (apiResult.success) {
+      result.value = apiResult.data
+      ElMessage.success('分析完成！')
+
+      // 等待DOM更新后渲染热力图
+      await nextTick()
+      renderHeatmap()
+    } else {
+      throw new Error('分析失败')
+    }
   } catch (error) {
-    ElMessage.error('分析失败，请重试')
+    ElMessage.error('分析失败，请检查后端服务是否启动')
     console.error(error)
   } finally {
     loading.value = false
   }
+}
+
+// 渲染热力图
+const renderHeatmap = () => {
+  if (!heatmapRef.value || !result.value || !result.value.correlation_matrix) {
+    return
+  }
+
+  const corrMatrix = result.value.correlation_matrix
+  const symbols = Object.keys(corrMatrix)
+
+  // 准备数据: [x, y, value]
+  const data: [number, number, number][] = []
+  symbols.forEach((symbol1, i) => {
+    symbols.forEach((symbol2, j) => {
+      const value = corrMatrix[symbol1][symbol2]
+      data.push([i, j, value])
+    })
+  })
+
+  // 获取资产名称
+  const labels = symbols.map(s => assetNames[s] || s)
+
+  const chart = echarts.init(heatmapRef.value)
+  const option = {
+    tooltip: {
+      position: 'top',
+      formatter: (params: any) => {
+        const [x, y, value] = params.data
+        return `${labels[x]} vs ${labels[y]}<br/>相关系数: ${value.toFixed(3)}`
+      }
+    },
+    grid: {
+      left: '15%',
+      right: '5%',
+      top: '5%',
+      bottom: '15%'
+    },
+    xAxis: {
+      type: 'category',
+      data: labels,
+      splitArea: {
+        show: true
+      },
+      axisLabel: {
+        rotate: 45,
+        interval: 0
+      }
+    },
+    yAxis: {
+      type: 'category',
+      data: labels,
+      splitArea: {
+        show: true
+      }
+    },
+    visualMap: {
+      min: -1,
+      max: 1,
+      calculable: true,
+      orient: 'horizontal',
+      left: 'center',
+      bottom: '0%',
+      inRange: {
+        color: ['#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8',
+                '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027', '#a50026']
+      },
+      text: ['强正相关', '强负相关'],
+      textStyle: {
+        color: '#333'
+      }
+    },
+    series: [{
+      name: '相关系数',
+      type: 'heatmap',
+      data: data,
+      label: {
+        show: true,
+        formatter: (params: any) => params.data[2].toFixed(2)
+      },
+      emphasis: {
+        itemStyle: {
+          shadowBlur: 10,
+          shadowColor: 'rgba(0, 0, 0, 0.5)'
+        }
+      }
+    }]
+  }
+
+  chart.setOption(option)
+
+  // 响应式调整
+  window.addEventListener('resize', () => {
+    chart.resize()
+  })
 }
 
 // 设置默认资产

@@ -332,66 +332,25 @@ const analyzeSR = async () => {
   loading.value = true
 
   try {
-    // TODO: 调用后端API
-    // const response = await fetch(`/api/sr/analyze?symbol=${config.value.symbol}`)
-    // result.value = await response.json()
+    // 调用后端API
+    const response = await fetch(
+      `http://localhost:8000/api/support-resistance/analyze?symbol=${config.value.symbol}&lookback_days=${config.value.lookback}`
+    )
 
-    // 模拟数据
-    await new Promise(resolve => setTimeout(resolve, 1500))
-
-    result.value = {
-      symbol: config.value.symbol,
-      current_price: 4000.40,
-      '52_week_high': 4049.20,
-      '52_week_low': 2658.30,
-      dist_to_52w_high_pct: -1.21,
-      dist_to_52w_low_pct: 50.48,
-      key_resistances: [
-        { price: 4015.20, distance: 0.37, strength: '强' },
-        { price: 4049.20, distance: 1.22, strength: '中' },
-        { price: 4092.50, distance: 2.30, strength: '弱' }
-      ],
-      key_supports: [
-        { price: 3909.20, distance: -2.28, strength: '强' },
-        { price: 3850.00, distance: -3.76, strength: '中' },
-        { price: 3780.50, distance: -5.50, strength: '中' }
-      ],
-      pivot_points: {
-        pivot: 3985.60,
-        resistance_1: 4021.30,
-        resistance_2: 4049.80,
-        resistance_3: 4085.50,
-        support_1: 3957.10,
-        support_2: 3921.40,
-        support_3: 3892.90
-      },
-      fibonacci_levels: {
-        high: 4049.20,
-        'fib_0.236': 3977.20,
-        'fib_0.382': 3935.60,
-        'fib_0.500': 3853.75,
-        'fib_0.618': 3771.90,
-        'fib_0.786': 3652.40,
-        low: 2658.30
-      },
-      ma_levels: {
-        MA20: 3956.80,
-        MA50: 3889.20,
-        MA60: 3867.50,
-        MA120: 3756.90,
-        MA200: 3612.40,
-        MA250: 3498.20
-      },
-      trading_advice: [
-        '⚠️ 当前价接近压力位 $4015.20，突破确认后可追涨',
-        '🟢 如跌破支撑位 $3909.20，及时止损',
-        '🔥 接近52周高点，突破后空间打开'
-      ]
+    if (!response.ok) {
+      throw new Error('API请求失败')
     }
 
-    ElMessage.success('分析完成！')
+    const apiResult = await response.json()
+
+    if (apiResult.success) {
+      result.value = apiResult.data
+      ElMessage.success('分析完成！')
+    } else {
+      throw new Error('分析失败')
+    }
   } catch (error) {
-    ElMessage.error('分析失败，请重试')
+    ElMessage.error('分析失败，请检查后端服务是否启动')
     console.error(error)
   } finally {
     loading.value = false
