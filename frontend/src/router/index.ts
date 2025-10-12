@@ -121,6 +121,15 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        path: '/kline-chart',
+        name: 'KLineChart',
+        component: () => import('@/views/KLineChart.vue'),
+        meta: {
+          title: 'K线图分析',
+          icon: 'Histogram',
+        },
+      },
+      {
         path: '/docs',
         name: 'Docs',
         component: () => import('@/views/Docs.vue'),
