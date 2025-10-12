@@ -103,6 +103,24 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        path: '/correlation-analysis',
+        name: 'CorrelationAnalysis',
+        component: () => import('@/views/CorrelationAnalysis.vue'),
+        meta: {
+          title: '跨资产相关性分析',
+          icon: 'Connection',
+        },
+      },
+      {
+        path: '/support-resistance',
+        name: 'SupportResistance',
+        component: () => import('@/views/SupportResistance.vue'),
+        meta: {
+          title: '支撑/压力位分析',
+          icon: 'TrendCharts',
+        },
+      },
+      {
         path: '/docs',
         name: 'Docs',
         component: () => import('@/views/Docs.vue'),
