@@ -1,0 +1,69 @@
+name: Daily Market Report
+
+on:
+  schedule:
+    # 北京时间 15:10 = UTC 07:10 (工作日)
+    - cron: '10 7 * * 1-5'  # 周一到周五
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  daily-report:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout代码
+        uses: actions/checkout@v3
+
+      - name: 设置Python环境
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: 安装依赖
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 生成并发送每日市场报告
+        env:
+          # SMTP配置 (需在GitHub Secrets中设置)
+          SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
+          SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
+          RECIPIENT_EMAILS: ${{ secrets.RECIPIENT_EMAILS }}
+        run: |
+          # 创建临时配置文件
+          cat > email_config.yaml <<EOF
+          smtp:
+            server: ${SMTP_SERVER}
+            port: ${SMTP_PORT}
+
+          sender:
+            email: ${SENDER_EMAIL}
+            password: ${SENDER_PASSWORD}
+
+          recipients:
+            - ${RECIPIENT_EMAILS}
+
+          send_no_alert_email: false
+          EOF
+
+          # 运行每日报告脚本
+          python scripts/run_daily_report.py --email --verbose
+
+      - name: 清理配置文件
+        if: always()
+        run: |
+          rm -f email_config.yaml
+
+      - name: 上传报告日志 (失败时)
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: daily-report-logs
+          path: |
+            logs/
+            *.log
+          retention-days: 7
