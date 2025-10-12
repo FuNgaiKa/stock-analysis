@@ -30,6 +30,13 @@ class USStockDataSource:
         'SOX': '^SOX',       # 费城半导体
     }
 
+    # A股主要指数
+    A_INDICES = {
+        'SSE': '000001.SS',  # 上证指数
+        'SZSE': '399001.SZ', # 深证成指
+        'CSI300': '000300.SS', # 沪深300
+    }
+
     # 大宗商品期货
     COMMODITIES = {
         'GOLD': 'GC=F',      # 纽约黄金期货 (COMEX Gold)
@@ -80,9 +87,11 @@ class USStockDataSource:
             DataFrame with columns: [Open, High, Low, Close, Volume]
             索引为日期 (DatetimeIndex)
         """
-        # 标准化symbol - 支持指数、商品、加密货币
+        # 标准化symbol - 支持指数、商品、加密货币、A股
         if symbol in self.US_INDICES:
             symbol = self.US_INDICES[symbol]
+        elif symbol in self.A_INDICES:
+            symbol = self.A_INDICES[symbol]
         elif symbol in self.COMMODITIES:
             symbol = self.COMMODITIES[symbol]
         elif symbol in self.CRYPTO:

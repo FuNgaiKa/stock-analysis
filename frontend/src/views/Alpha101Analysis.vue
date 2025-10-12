@@ -26,6 +26,11 @@
                 <el-option-group label="港股指数">
                   <el-option label="恒生指数 (^HSI)" value="^HSI" />
                 </el-option-group>
+                <el-option-group label="A股指数">
+                  <el-option label="上证指数 (000001.SS)" value="000001.SS" />
+                  <el-option label="深证成指 (399001.SZ)" value="399001.SZ" />
+                  <el-option label="沪深300 (000300.SS)" value="000300.SS" />
+                </el-option-group>
                 <el-option-group label="大宗商品">
                   <el-option label="黄金 (GC=F)" value="GC=F" />
                   <el-option label="白银 (SI=F)" value="SI=F" />
