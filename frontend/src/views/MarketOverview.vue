@@ -23,6 +23,9 @@
       <el-skeleton :rows="3" animated style="margin-top: 20px" />
     </div>
 
+    <!-- 实时数据组件 -->
+    <real-time-data v-if="!loading" />
+
     <!-- 市场指标卡片 -->
     <transition name="fade-slide" mode="out-in">
       <div v-if="marketData && !loading" class="content-section" :key="selectedMarket">
@@ -207,6 +210,7 @@ import { ElMessage } from 'element-plus'
 import MarketSelector from '@/components/common/MarketSelector.vue'
 import PieChart from '@/components/charts/PieChart.vue'
 import BarChart from '@/components/charts/BarChart.vue'
+import RealTimeData from '@/components/RealTimeData.vue'
 import { useAutoRefresh } from '@/composables/useAutoRefresh'
 
 const router = useRouter()

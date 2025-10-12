@@ -5,13 +5,15 @@
 提供RESTful API给前端调用
 """
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
 import sys
 import os
+import asyncio
+import json
 
 # 添加项目根目录到路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -648,6 +650,124 @@ async def analyze_market_sentiment():
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== WebSocket实时数据推送 ====================
+
+# 存储所有活跃的WebSocket连接
+active_connections: List[WebSocket] = []
+
+
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def send_personal_message(self, message: str, websocket: WebSocket):
+        await websocket.send_text(message)
+
+    async def broadcast(self, message: str):
+        for connection in self.active_connections:
+            try:
+                await connection.send_text(message)
+            except:
+                pass
+
+
+manager = ConnectionManager()
+
+
+@app.websocket("/ws/market-data")
+async def websocket_market_data(websocket: WebSocket):
+    """
+    WebSocket端点 - 实时推送市场数据
+
+    推送频率: 每30秒
+    数据内容:
+    - 市场情绪指数
+    - 主要指数当前价格
+    - VIX当前值
+    """
+    await manager.connect(websocket)
+    print(f"WebSocket客户端已连接,当前连接数: {len(manager.active_connections)}")
+
+    try:
+        while True:
+            # 获取实时数据
+            try:
+                from position_analysis.analyzers.sentiment_index import MarketSentimentIndex
+                from data_sources.us_stock_source import USStockDataSource
+
+                # 1. 市场情绪指数
+                sentiment_analyzer = MarketSentimentIndex()
+                sentiment = sentiment_analyzer.calculate_comprehensive_sentiment()
+
+                # 2. 主要指数当前价格
+                data_source = USStockDataSource()
+                indices_data = {}
+
+                for symbol, name in [
+                    ('^IXIC', '纳斯达克'),
+                    ('^GSPC', '标普500'),
+                    ('^VIX', 'VIX')
+                ]:
+                    try:
+                        df = data_source.get_us_index_daily(symbol, period='5d')
+                        if not df.empty:
+                            indicators = data_source.calculate_technical_indicators(df)
+                            indices_data[symbol] = {
+                                'name': name,
+                                'price': indicators.get('latest_price', 0),
+                                'change_pct': indicators.get('change_pct', 0),
+                                'date': indicators.get('latest_date', '')
+                            }
+                    except:
+                        pass
+
+                # 转换datetime为字符串
+                if 'timestamp' in sentiment:
+                    sentiment['timestamp'] = sentiment['timestamp'].isoformat()
+
+                # 构建推送消息
+                message = {
+                    "type": "market_data",
+                    "timestamp": datetime.now().isoformat(),
+                    "data": {
+                        "sentiment": {
+                            "score": sentiment.get('sentiment_score', 0),
+                            "rating": sentiment.get('rating', ''),
+                            "emoji": sentiment.get('emoji', ''),
+                        },
+                        "indices": indices_data
+                    }
+                }
+
+                await websocket.send_json(message)
+
+            except Exception as e:
+                print(f"获取数据失败: {str(e)}")
+                # 发送错误消息
+                await websocket.send_json({
+                    "type": "error",
+                    "message": "数据获取失败",
+                    "timestamp": datetime.now().isoformat()
+                })
+
+            # 等待30秒
+            await asyncio.sleep(30)
+
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+        print(f"WebSocket客户端已断开,当前连接数: {len(manager.active_connections)}")
+    except Exception as e:
+        print(f"WebSocket错误: {str(e)}")
+        manager.disconnect(websocket)
 
 
 # ==================== 启动配置 ====================

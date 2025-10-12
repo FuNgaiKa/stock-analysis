@@ -53,6 +53,7 @@ declare module 'vue' {
     MetricCard: typeof import('./../components/cards/MetricCard.vue')['default']
     PieChart: typeof import('./../components/charts/PieChart.vue')['default']
     RadarChart: typeof import('./../components/charts/RadarChart.vue')['default']
+    RealTimeData: typeof import('./../components/RealTimeData.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     Sidebar: typeof import('./../components/layout/Sidebar.vue')['default']
