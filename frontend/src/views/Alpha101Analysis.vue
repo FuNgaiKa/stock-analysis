@@ -25,11 +25,14 @@
                 </el-option-group>
                 <el-option-group label="港股指数">
                   <el-option label="恒生指数 (^HSI)" value="^HSI" />
+                  <el-option label="恒生科技 (HSTECH.HK)" value="HSTECH.HK" />
                 </el-option-group>
                 <el-option-group label="A股指数">
                   <el-option label="上证指数 (000001.SS)" value="000001.SS" />
                   <el-option label="深证成指 (399001.SZ)" value="399001.SZ" />
                   <el-option label="沪深300 (000300.SS)" value="000300.SS" />
+                  <el-option label="创业板指 (399006.SZ)" value="399006.SZ" />
+                  <el-option label="科创50 (000688.SS)" value="000688.SS" />
                 </el-option-group>
                 <el-option-group label="大宗商品">
                   <el-option label="黄金 (GC=F)" value="GC=F" />

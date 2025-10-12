@@ -35,6 +35,14 @@ class USStockDataSource:
         'SSE': '000001.SS',  # 上证指数
         'SZSE': '399001.SZ', # 深证成指
         'CSI300': '000300.SS', # 沪深300
+        'CHINEXT': '399006.SZ', # 创业板指
+        'STAR50': '000688.SS', # 科创50
+    }
+
+    # 港股主要指数
+    HK_INDICES = {
+        'HSI': '^HSI',       # 恒生指数
+        'HSTECH': 'HSTECH.HK', # 恒生科技指数
     }
 
     # 大宗商品期货
@@ -87,11 +95,13 @@ class USStockDataSource:
             DataFrame with columns: [Open, High, Low, Close, Volume]
             索引为日期 (DatetimeIndex)
         """
-        # 标准化symbol - 支持指数、商品、加密货币、A股
+        # 标准化symbol - 支持指数、商品、加密货币、A股、港股
         if symbol in self.US_INDICES:
             symbol = self.US_INDICES[symbol]
         elif symbol in self.A_INDICES:
             symbol = self.A_INDICES[symbol]
+        elif symbol in self.HK_INDICES:
+            symbol = self.HK_INDICES[symbol]
         elif symbol in self.COMMODITIES:
             symbol = self.COMMODITIES[symbol]
         elif symbol in self.CRYPTO:
