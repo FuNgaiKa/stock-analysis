@@ -47,6 +47,8 @@ export default {
     positionAnalysis: '历史点位对比',
     hkStockAnalysis: '港股市场分析',
     compoundCalculator: '复合收益计算器',
+    slopeAnalysis: '趋势斜率分析',
+    alpha101Analysis: 'Alpha101因子分析',
     docs: '使用文档',
   },
 

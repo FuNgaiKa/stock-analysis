@@ -47,6 +47,8 @@ export default {
     positionAnalysis: 'Position Analysis',
     hkStockAnalysis: 'HK Stock Analysis',
     compoundCalculator: 'Compound Calculator',
+    slopeAnalysis: 'Slope Analysis',
+    alpha101Analysis: 'Alpha101 Factors',
     docs: 'Documentation',
   },
 

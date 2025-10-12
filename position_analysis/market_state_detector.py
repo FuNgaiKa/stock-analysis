@@ -19,18 +19,19 @@ class MarketStateDetector:
     def __init__(self):
         """初始化"""
         self.dimension_weights = {
-            'trend': 0.15,          # 1. 趋势 (均线排列)
-            'price_change': 0.10,   # 2. 涨跌幅
-            'valuation': 0.12,      # 3. 估值
-            'capital_flow': 0.10,   # 4. 北向资金
-            'sentiment': 0.08,      # 5. 情绪
-            'breadth': 0.08,        # 6. 市场宽度
-            'leverage': 0.08,       # 7. 融资融券
-            'main_fund': 0.10,      # 8. 主力资金
+            'trend': 0.14,          # 1. 趋势 (均线排列)
+            'price_change': 0.09,   # 2. 涨跌幅
+            'valuation': 0.11,      # 3. 估值
+            'capital_flow': 0.09,   # 4. 北向资金
+            'sentiment': 0.07,      # 5. 情绪
+            'breadth': 0.07,        # 6. 市场宽度
+            'leverage': 0.07,       # 7. 融资融券
+            'main_fund': 0.09,      # 8. 主力资金
             'institution': 0.05,    # 9. 机构行为
             'volatility': 0.05,     # 10. 波动率
             'volume': 0.05,         # 11. 成交量
-            'technical': 0.04       # 12. 技术形态
+            'technical': 0.04,      # 12. 技术形态
+            'slope': 0.08           # 13. 趋势斜率 (新增)
         }
 
         logger.info("市场状态检测器初始化完成")
@@ -48,7 +49,8 @@ class MarketStateDetector:
         lhb_metrics: Dict,
         volatility_metrics: Dict,
         volume_metrics: Dict,
-        technical_metrics: Dict
+        technical_metrics: Dict,
+        slope_metrics: Dict = None
     ) -> Dict:
         """
         检测市场状态
@@ -102,6 +104,10 @@ class MarketStateDetector:
 
             # 1.12 技术形态得分
             dimension_scores['technical'] = self._score_technical(technical_metrics)
+
+            # 1.13 趋势斜率得分 (新增)
+            if slope_metrics:
+                dimension_scores['slope'] = self._score_slope(slope_metrics)
 
             # 2. 加权综合评分 (-1到+1, 负数看空, 正数看多)
             overall_score = sum(
@@ -420,6 +426,76 @@ class MarketStateDetector:
 
         return max(-1, min(1, score))
 
+    def _score_slope(self, slope_metrics: Dict) -> float:
+        """
+        趋势斜率得分 (第13维度)
+
+        基于线性回归斜率分析,判断趋势强度和过热程度
+
+        Args:
+            slope_metrics: 斜率指标字典,包含:
+                - annual_return_60d: 60日年化收益率
+                - annual_return_120d: 120日年化收益率
+                - zscore: Z-Score值 (均值回归信号)
+                - risk_score: 风险评分 (0-100)
+                - is_accelerating: 是否加速
+
+        Returns:
+            -1到+1
+            正值: 趋势向上,斜率合理
+            负值: 趋势向下或斜率过陡(过热)
+        """
+        if not slope_metrics:
+            return 0.0
+
+        annual_return_60d = slope_metrics.get('annual_return_60d', 0)
+        annual_return_120d = slope_metrics.get('annual_return_120d', 0)
+        zscore = slope_metrics.get('zscore', 0)
+        risk_score = slope_metrics.get('risk_score', 50)
+        is_accelerating = slope_metrics.get('is_accelerating', False)
+
+        # 1. 斜率方向得分 (60%权重)
+        # 年化收益率转换为得分
+        # 0-20%: 温和上涨 → +0.7
+        # 20-40%: 快速上涨 → +0.5 (开始警惕)
+        # 40%+: 过快上涨 → +0.2 (过热风险)
+        # 负值: 下跌 → 负分
+        if annual_return_60d > 40:
+            direction_score = 0.2  # 过热,降低得分
+        elif annual_return_60d > 20:
+            direction_score = 0.5
+        elif annual_return_60d > 0:
+            direction_score = min(0.7, annual_return_60d / 20 * 0.7)
+        elif annual_return_60d > -20:
+            direction_score = max(-0.7, annual_return_60d / 20 * 0.7)
+        else:
+            direction_score = -0.7
+
+        # 2. Z-Score调整 (30%权重)
+        # Z-Score > 2: 严重超买 → 负分
+        # Z-Score < -2: 严重超卖 → 正分
+        # Z-Score在(-1, 1): 正常区间 → 中性
+        if zscore > 2:
+            zscore_adjustment = -0.3  # 超买,风险
+        elif zscore > 1.5:
+            zscore_adjustment = -0.15
+        elif zscore < -2:
+            zscore_adjustment = 0.3  # 超卖,机会
+        elif zscore < -1.5:
+            zscore_adjustment = 0.15
+        else:
+            zscore_adjustment = 0  # 正常区间
+
+        # 3. 加速度调整 (10%权重)
+        # 加速中 → 趋势强化
+        # 减速中 → 趋势减弱
+        acceleration_adjustment = 0.1 if is_accelerating else -0.05
+
+        # 综合得分
+        score = direction_score * 0.6 + zscore_adjustment * 0.3 + acceleration_adjustment * 0.1
+
+        return max(-1, min(1, score))
+
     def _map_score_to_state(self, score: float, dimension_scores: Dict) -> Tuple[str, str]:
         """
         将综合得分映射到市场状态
@@ -486,7 +562,8 @@ class MarketStateDetector:
             'institution': '机构积极买入',
             'volatility': '波动率稳定',
             'volume': '成交量放大',
-            'technical': '技术形态良好'
+            'technical': '技术形态良好',
+            'slope': '趋势斜率健康'
         }
 
         for dim, score in dimension_scores.items():
@@ -514,7 +591,8 @@ class MarketStateDetector:
             'institution': '机构抛售',
             'volatility': '波动率异常',
             'volume': '成交量萎缩',
-            'technical': '技术形态破位'
+            'technical': '技术形态破位',
+            'slope': '趋势斜率过陡或下跌'
         }
 
         for dim, score in dimension_scores.items():

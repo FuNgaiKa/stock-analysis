@@ -30,6 +30,19 @@ class USStockDataSource:
         'SOX': '^SOX',       # 费城半导体
     }
 
+    # 大宗商品期货
+    COMMODITIES = {
+        'GOLD': 'GC=F',      # 纽约黄金期货 (COMEX Gold)
+        'SILVER': 'SI=F',    # 纽约白银期货 (COMEX Silver)
+        'OIL': 'CL=F',       # 纽约原油期货 (WTI Crude Oil)
+    }
+
+    # 加密货币
+    CRYPTO = {
+        'BTC': 'BTC-USD',    # 比特币/美元
+        'ETH': 'ETH-USD',    # 以太坊/美元
+    }
+
     # 主要ETF
     US_ETFS = {
         'SPY': 'SPY',   # SPDR S&P 500 ETF
@@ -67,9 +80,13 @@ class USStockDataSource:
             DataFrame with columns: [Open, High, Low, Close, Volume]
             索引为日期 (DatetimeIndex)
         """
-        # 标准化symbol
+        # 标准化symbol - 支持指数、商品、加密货币
         if symbol in self.US_INDICES:
             symbol = self.US_INDICES[symbol]
+        elif symbol in self.COMMODITIES:
+            symbol = self.COMMODITIES[symbol]
+        elif symbol in self.CRYPTO:
+            symbol = self.CRYPTO[symbol]
 
         cache_key = f"us_index_{symbol}_{start_date}_{end_date}_{period}"
 

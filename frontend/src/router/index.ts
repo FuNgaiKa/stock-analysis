@@ -85,6 +85,24 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        path: '/slope-analysis',
+        name: 'SlopeAnalysis',
+        component: () => import('@/views/SlopeAnalysis.vue'),
+        meta: {
+          title: '趋势斜率分析',
+          icon: 'TrendCharts',
+        },
+      },
+      {
+        path: '/alpha101-analysis',
+        name: 'Alpha101Analysis',
+        component: () => import('@/views/Alpha101Analysis.vue'),
+        meta: {
+          title: 'Alpha101因子分析',
+          icon: 'DataAnalysis',
+        },
+      },
+      {
         path: '/docs',
         name: 'Docs',
         component: () => import('@/views/Docs.vue'),

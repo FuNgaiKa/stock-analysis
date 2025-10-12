@@ -57,6 +57,18 @@
 
       <el-divider />
 
+      <el-menu-item index="/slope-analysis">
+        <el-icon><TrendCharts /></el-icon>
+        <template #title>{{ $t('menu.slopeAnalysis') }}</template>
+      </el-menu-item>
+
+      <el-menu-item index="/alpha101-analysis">
+        <el-icon><DataAnalysis /></el-icon>
+        <template #title>{{ $t('menu.alpha101Analysis') }}</template>
+      </el-menu-item>
+
+      <el-divider />
+
       <el-menu-item index="/docs">
         <el-icon><Document /></el-icon>
         <template #title>{{ $t('menu.docs') }}</template>
