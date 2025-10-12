@@ -799,6 +799,215 @@ async def run_sr_breakout_backtest(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== K线图数据API ====================
+
+@app.get("/api/kline/data")
+async def get_kline_data(
+    symbol: str = Query(..., description="资产代码"),
+    period: str = Query("3mo", description="时间周期(1mo/3mo/6mo/1y/2y/5y)"),
+    interval: str = Query("1d", description="K线间隔(1d/1wk/1mo)")
+):
+    """
+    获取K线图OHLC数据 + 技术指标
+
+    Args:
+        symbol: 资产代码 (支持美股/港股/A股/加密货币)
+            - 美股指数: ^IXIC, ^GSPC, ^DJI
+            - 港股指数: ^HSI, ^HSCE
+            - A股指数: 000001.SS, 399001.SZ
+            - ETF: SPY, QQQ, DIA
+            - 个股: AAPL, TSLA, BABA
+            - 加密货币: BTC-USD, ETH-USD
+        period: 时间周期
+            - 1mo: 1个月
+            - 3mo: 3个月 (默认)
+            - 6mo: 6个月
+            - 1y: 1年
+            - 2y: 2年
+            - 5y: 5年
+        interval: K线间隔
+            - 1d: 日线 (默认)
+            - 1wk: 周线
+            - 1mo: 月线
+
+    Returns:
+        {
+            "success": true,
+            "data": {
+                "symbol": "^IXIC",
+                "name": "纳斯达克综合指数",
+                "ohlc": [  // OHLC数据
+                    {
+                        "date": "2025-01-15",
+                        "open": 19000.5,
+                        "high": 19500.0,
+                        "low": 18900.0,
+                        "close": 19300.0,
+                        "volume": 4500000000
+                    },
+                    ...
+                ],
+                "indicators": {  // 技术指标
+                    "ma5": [...],
+                    "ma20": [...],
+                    "ma60": [...],
+                    "kdj": {
+                        "k": [...],
+                        "d": [...],
+                        "j": [...]
+                    },
+                    "dmi_adx": {
+                        "adx": [...],
+                        "+di": [...],
+                        "-di": [...]
+                    },
+                    "macd": {
+                        "macd": [...],
+                        "signal": [...],
+                        "histogram": [...]
+                    },
+                    "volume_ma": [...]
+                },
+                "current_indicators": {  // 当前最新指标值
+                    "latest_price": 19300.0,
+                    "rsi": 55.5,
+                    "kdj_k": 46.5,
+                    "kdj_d": 67.9,
+                    "kdj_j": 3.7,
+                    "adx": 22.6,
+                    "+di": 21.5,
+                    "-di": 31.7
+                }
+            }
+        }
+    """
+    try:
+        import pandas as pd
+        import yfinance as yf
+        from trading_strategies.signal_generators.technical_indicators import TechnicalIndicators
+
+        # 资产名称映射 (用于显示)
+        asset_names = {
+            '^IXIC': '纳斯达克综合指数',
+            '^GSPC': '标普500指数',
+            '^DJI': '道琼斯工业指数',
+            '^NDX': '纳斯达克100指数',
+            '^VIX': 'VIX恐慌指数',
+            '000001.SS': '上证指数',
+            '399001.SZ': '深证成指',
+            '399006.SZ': '创业板指',
+            '000300.SS': '沪深300',
+            '^HSI': '恒生指数',
+            '^HSCE': '恒生国企指数',
+            'SPY': '标普500 ETF',
+            'QQQ': '纳斯达克100 ETF',
+            'DIA': '道琼斯工业 ETF',
+            'BTC-USD': '比特币',
+            'ETH-USD': '以太坊'
+        }
+
+        # 获取历史数据
+        ticker = yf.Ticker(symbol)
+        df = ticker.history(period=period, interval=interval)
+
+        if df.empty:
+            raise HTTPException(status_code=500, detail=f"无法获取{symbol}的数据")
+
+        # 重命名列为小写
+        df = df.rename(columns={
+            'Open': 'open',
+            'High': 'high',
+            'Low': 'low',
+            'Close': 'close',
+            'Volume': 'volume'
+        })
+
+        # 准备OHLC数据
+        ohlc_data = []
+        for idx, row in df.iterrows():
+            ohlc_data.append({
+                'date': idx.strftime('%Y-%m-%d'),
+                'open': round(float(row['open']), 2),
+                'high': round(float(row['high']), 2),
+                'low': round(float(row['low']), 2),
+                'close': round(float(row['close']), 2),
+                'volume': int(row['volume']) if not pd.isna(row['volume']) else 0
+            })
+
+        # 计算技术指标
+        calc = TechnicalIndicators()
+        df_with_indicators = calc.calculate_all_indicators(
+            df.copy(),
+            include_dmi_adx=True
+        )
+
+        # 单独计算KDJ (目前不在calculate_all_indicators中)
+        df_with_indicators = calc.calculate_kdj(df_with_indicators)
+
+        # 提取指标序列
+        indicators = {}
+
+        # 移动平均线
+        if 'ma5' in df_with_indicators.columns:
+            indicators['ma5'] = df_with_indicators['ma5'].round(2).fillna(0).tolist()
+        if 'ma20' in df_with_indicators.columns:
+            indicators['ma20'] = df_with_indicators['ma20'].round(2).fillna(0).tolist()
+        if 'ma60' in df_with_indicators.columns:
+            indicators['ma60'] = df_with_indicators['ma60'].round(2).fillna(0).tolist()
+
+        # KDJ指标
+        if all(col in df_with_indicators.columns for col in ['kdj_k', 'kdj_d', 'kdj_j']):
+            indicators['kdj'] = {
+                'k': df_with_indicators['kdj_k'].round(2).fillna(0).tolist(),
+                'd': df_with_indicators['kdj_d'].round(2).fillna(0).tolist(),
+                'j': df_with_indicators['kdj_j'].round(2).fillna(0).tolist()
+            }
+
+        # DMI/ADX指标
+        if all(col in df_with_indicators.columns for col in ['adx', '+di', '-di']):
+            indicators['dmi_adx'] = {
+                'adx': df_with_indicators['adx'].round(2).fillna(0).tolist(),
+                '+di': df_with_indicators['+di'].round(2).fillna(0).tolist(),
+                '-di': df_with_indicators['-di'].round(2).fillna(0).tolist()
+            }
+
+        # MACD指标
+        if all(col in df_with_indicators.columns for col in ['macd', 'macd_signal', 'macd_hist']):
+            indicators['macd'] = {
+                'macd': df_with_indicators['macd'].round(4).fillna(0).tolist(),
+                'signal': df_with_indicators['macd_signal'].round(4).fillna(0).tolist(),
+                'histogram': df_with_indicators['macd_hist'].round(4).fillna(0).tolist()
+            }
+
+        # 成交量均线
+        if 'volume' in df_with_indicators.columns:
+            volume_ma = df_with_indicators['volume'].rolling(window=20).mean()
+            indicators['volume_ma'] = volume_ma.fillna(0).tolist()
+
+        # 获取当前最新指标值
+        from data_sources.us_stock_source import USStockDataSource
+        data_source = USStockDataSource()
+        current_indicators = data_source.calculate_technical_indicators(df)
+
+        return {
+            "success": True,
+            "data": {
+                "symbol": symbol,
+                "name": asset_names.get(symbol, symbol),
+                "period": period,
+                "interval": interval,
+                "ohlc": ohlc_data,
+                "indicators": indicators,
+                "current_indicators": current_indicators,
+                "data_points": len(ohlc_data)
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ==================== WebSocket实时数据推送 ====================
 
 # 存储所有活跃的WebSocket连接
