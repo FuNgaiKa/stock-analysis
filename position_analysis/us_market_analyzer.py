@@ -471,6 +471,40 @@ class USMarketAnalyzer:
 
         return pd.DataFrame(results)
 
+    def calculate_max_drawdown(self, index_code: str, similar_periods: pd.DataFrame, period: int = 20) -> Dict:
+        """计算相似时期的最大回撤统计"""
+        df = self.get_index_data(index_code, period="10y")
+
+        if df.empty:
+            return {'max_dd': 0.0, 'avg_dd': 0.0, 'dd_prob': 0.0}
+
+        drawdowns = []
+
+        for date in similar_periods.index:
+            future_data = df[df.index > date]
+
+            if len(future_data) >= period:
+                # 获取未来N天的价格序列
+                prices = future_data['close'].iloc[:period]
+                current_price = similar_periods.loc[date, 'close']
+
+                # 计算相对于买入点的累计最大回撤
+                cummax = prices.expanding().max()
+                dd = ((prices - cummax) / current_price).min()
+                drawdowns.append(dd)
+
+        if len(drawdowns) == 0:
+            return {'max_dd': 0.0, 'avg_dd': 0.0, 'dd_prob': 0.0}
+
+        drawdowns = pd.Series(drawdowns)
+
+        return {
+            'max_dd': float(drawdowns.min()),  # 最大回撤(负值)
+            'avg_dd': float(drawdowns.mean()),  # 平均回撤
+            'dd_prob': float((drawdowns < -0.05).sum() / len(drawdowns)),  # 回撤超过5%的概率
+            'dd_std': float(drawdowns.std())  # 回撤标准差
+        }
+
     def calculate_probability_statistics(
         self,
         returns: pd.Series
@@ -504,6 +538,15 @@ class USMarketAnalyzer:
         down_count = (valid_returns < 0).sum()
         total = len(valid_returns)
 
+        # 计算胜率和盈亏比
+        winning_returns = valid_returns[valid_returns > 0]
+        losing_returns = valid_returns[valid_returns < 0]
+
+        win_rate = float(len(winning_returns) / total if total > 0 else 0)
+        avg_win = float(winning_returns.mean() if len(winning_returns) > 0 else 0)
+        avg_loss = float(losing_returns.mean() if len(losing_returns) > 0 else 0)
+        profit_loss_ratio = float(abs(avg_win / avg_loss) if avg_loss != 0 else 0)
+
         return {
             'sample_size': total,
             'up_prob': float(up_count / total if total > 0 else 0),
@@ -517,6 +560,12 @@ class USMarketAnalyzer:
             'std': float(valid_returns.std()),
             'percentile_25': float(valid_returns.quantile(0.25)),
             'percentile_75': float(valid_returns.quantile(0.75)),
+            # 新增指标
+            'win_rate': win_rate,
+            'avg_win': avg_win,
+            'avg_loss': avg_loss,
+            'profit_loss_ratio': profit_loss_ratio,
+            'volatility': float(valid_returns.std() * np.sqrt(252))  # 年化波动率
         }
 
     def calculate_confidence(
@@ -841,6 +890,10 @@ class USMarketAnalyzer:
                     consistency = max(stats['up_prob'], stats['down_prob'])
                     confidence = self.calculate_confidence(stats['sample_size'], consistency)
                     stats['confidence'] = confidence
+
+                    # 计算最大回撤
+                    drawdown_stats = self.calculate_max_drawdown(index_code, similar, period)
+                    stats.update(drawdown_stats)
 
                     # 计算仓位建议 (Phase 2会考虑市场环境调整)
                     if stats['sample_size'] > 0:

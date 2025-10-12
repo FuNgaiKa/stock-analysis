@@ -104,13 +104,233 @@ class HKMarketAnalyzer:
 
         return positions
 
+    def find_similar_periods(
+        self,
+        index_code: str,
+        current_price: float = None,
+        tolerance: float = 0.05,
+        min_gap_days: int = 5,
+        period: str = "5y"
+    ) -> pd.DataFrame:
+        """查找历史相似点位时期"""
+        df = self.get_index_data(index_code, period=period)
+
+        if df.empty:
+            logger.warning(f"{index_code}数据为空")
+            return pd.DataFrame()
+
+        if current_price is None:
+            current_price = df['close'].iloc[-1]
+
+        # 定义相似区间
+        lower_bound = current_price * (1 - tolerance)
+        upper_bound = current_price * (1 + tolerance)
+
+        # 筛选相似点位
+        similar = df[
+            (df['close'] >= lower_bound) &
+            (df['close'] <= upper_bound)
+        ].copy()
+
+        # 过滤: 排除最近的数据点
+        cutoff_date = df.index[-1] - timedelta(days=min_gap_days)
+        similar = similar[similar.index <= cutoff_date]
+
+        logger.info(
+            f"{HK_INDICES[index_code].name} "
+            f"在 {lower_bound:.2f}-{upper_bound:.2f} 区间 "
+            f"共找到 {len(similar)} 个相似点位"
+        )
+
+        return similar
+
+    def calculate_future_returns(
+        self,
+        index_code: str,
+        similar_periods: pd.DataFrame,
+        periods: List[int] = [5, 10, 20, 60]
+    ) -> pd.DataFrame:
+        """计算相似时期的后续收益率"""
+        df = self.get_index_data(index_code, period="10y")
+
+        if df.empty:
+            return pd.DataFrame()
+
+        results = []
+
+        for date in similar_periods.index:
+            row = {
+                'date': date,
+                'price': similar_periods.loc[date, 'close']
+            }
+
+            for period in periods:
+                future_data = df[df.index > date]
+
+                if len(future_data) >= period:
+                    future_price = future_data['close'].iloc[period - 1]
+                    current_price = similar_periods.loc[date, 'close']
+                    ret = (future_price - current_price) / current_price
+                    row[f'return_{period}d'] = ret
+                else:
+                    row[f'return_{period}d'] = np.nan
+
+            results.append(row)
+
+        return pd.DataFrame(results)
+
+    def calculate_max_drawdown(self, index_code: str, similar_periods: pd.DataFrame, period: int = 20) -> Dict:
+        """计算相似时期的最大回撤统计"""
+        df = self.get_index_data(index_code, period="10y")
+
+        if df.empty:
+            return {'max_dd': 0.0, 'avg_dd': 0.0, 'dd_prob': 0.0}
+
+        drawdowns = []
+
+        for date in similar_periods.index:
+            future_data = df[df.index > date]
+
+            if len(future_data) >= period:
+                # 获取未来N天的价格序列
+                prices = future_data['close'].iloc[:period]
+                current_price = similar_periods.loc[date, 'close']
+
+                # 计算相对于买入点的累计最大回撤
+                cummax = prices.expanding().max()
+                dd = ((prices - cummax) / current_price).min()
+                drawdowns.append(dd)
+
+        if len(drawdowns) == 0:
+            return {'max_dd': 0.0, 'avg_dd': 0.0, 'dd_prob': 0.0}
+
+        drawdowns = pd.Series(drawdowns)
+
+        return {
+            'max_dd': float(drawdowns.min()),  # 最大回撤(负值)
+            'avg_dd': float(drawdowns.mean()),  # 平均回撤
+            'dd_prob': float((drawdowns < -0.05).sum() / len(drawdowns)),  # 回撤超过5%的概率
+            'dd_std': float(drawdowns.std())  # 回撤标准差
+        }
+
+    def calculate_probability_statistics(self, returns: pd.Series) -> Dict:
+        """计算涨跌概率及统计指标"""
+        valid_returns = returns.dropna()
+
+        if len(valid_returns) == 0:
+            return {
+                'sample_size': 0,
+                'up_prob': 0.0,
+                'down_prob': 0.0,
+                'mean_return': 0.0,
+                'median_return': 0.0,
+                'max_return': 0.0,
+                'min_return': 0.0,
+                'std': 0.0,
+                'warning': '样本量不足'
+            }
+
+        up_count = (valid_returns > 0).sum()
+        down_count = (valid_returns < 0).sum()
+        total = len(valid_returns)
+
+        # 计算胜率和盈亏比
+        winning_returns = valid_returns[valid_returns > 0]
+        losing_returns = valid_returns[valid_returns < 0]
+
+        win_rate = float(len(winning_returns) / total if total > 0 else 0)
+        avg_win = float(winning_returns.mean() if len(winning_returns) > 0 else 0)
+        avg_loss = float(losing_returns.mean() if len(losing_returns) > 0 else 0)
+        profit_loss_ratio = float(abs(avg_win / avg_loss) if avg_loss != 0 else 0)
+
+        return {
+            'sample_size': total,
+            'up_prob': float(up_count / total if total > 0 else 0),
+            'down_prob': float(down_count / total if total > 0 else 0),
+            'up_count': int(up_count),
+            'down_count': int(down_count),
+            'mean_return': float(valid_returns.mean()),
+            'median_return': float(valid_returns.median()),
+            'max_return': float(valid_returns.max()),
+            'min_return': float(valid_returns.min()),
+            'std': float(valid_returns.std()),
+            'percentile_25': float(valid_returns.quantile(0.25)),
+            'percentile_75': float(valid_returns.quantile(0.75)),
+            # 新增指标
+            'win_rate': win_rate,
+            'avg_win': avg_win,
+            'avg_loss': avg_loss,
+            'profit_loss_ratio': profit_loss_ratio,
+            'volatility': float(valid_returns.std() * np.sqrt(252))  # 年化波动率
+        }
+
+    def calculate_confidence(self, sample_size: int, consistency: float) -> float:
+        """计算置信度"""
+        size_score = 1 / (1 + np.exp(-(sample_size - 20) / 10))
+        consistency_score = max(0, (consistency - 0.5) / 0.5)
+        confidence = 0.6 * size_score + 0.4 * consistency_score
+        return min(1.0, max(0.0, confidence))
+
+    def calculate_position_advice(
+        self,
+        up_prob: float,
+        confidence: float,
+        mean_return: float,
+        std: float
+    ) -> Dict:
+        """计算仓位建议"""
+        # 基础仓位
+        if up_prob >= 0.75 and confidence >= 0.8:
+            base_position = 0.8
+            signal = "强买入"
+        elif up_prob >= 0.65 and confidence >= 0.7:
+            base_position = 0.65
+            signal = "买入"
+        elif up_prob <= 0.35 and confidence >= 0.7:
+            base_position = 0.3
+            signal = "卖出"
+        elif up_prob <= 0.25 and confidence >= 0.8:
+            base_position = 0.2
+            signal = "强卖出"
+        else:
+            base_position = 0.5
+            signal = "中性"
+
+        # Kelly公式调整
+        if mean_return > 0 and std > 0:
+            kelly = mean_return / (std ** 2) if std > 0 else 0
+            kelly = max(0, min(1, kelly * 0.5))
+            final_position = 0.7 * base_position + 0.3 * kelly
+        else:
+            final_position = base_position
+
+        final_position = max(0.1, min(0.9, final_position))
+
+        return {
+            'signal': signal,
+            'recommended_position': float(final_position),
+            'base_position': float(base_position),
+            'description': self._get_position_description(final_position, signal)
+        }
+
+    def _get_position_description(self, position: float, signal: str) -> str:
+        """获取仓位描述"""
+        if position >= 0.8:
+            return f"{signal}:建议重仓配置({position*100:.0f}%左右)"
+        elif position >= 0.6:
+            return f"{signal}:建议标准配置({position*100:.0f}%左右)"
+        elif position >= 0.4:
+            return f"{signal}:建议轻仓观望({position*100:.0f}%左右)"
+        else:
+            return f"{signal}:建议低仓防守({position*100:.0f}%左右)"
+
     def analyze_single_index(
         self,
         index_code: str,
         tolerance: float = 0.05,
         periods: List[int] = [5, 10, 20, 60]
     ) -> Dict:
-        """单指数完整分析（简化版，复用美股分析逻辑）"""
+        """单指数完整分析"""
         logger.info(f"开始分析港股 {HK_INDICES[index_code].name}...")
 
         result = {
@@ -121,7 +341,7 @@ class HKMarketAnalyzer:
         }
 
         try:
-            # 获取当前点位
+            # 1. 获取当前点位
             positions = self.get_current_positions([index_code])
             if index_code not in positions:
                 result['error'] = '获取当前点位失败'
@@ -131,6 +351,47 @@ class HKMarketAnalyzer:
             result['current_price'] = current_info['price']
             result['current_date'] = current_info['date']
             result['current_change_pct'] = current_info['change_pct']
+
+            # 2. 查找相似时期
+            similar = self.find_similar_periods(index_code, tolerance=tolerance)
+
+            if similar.empty:
+                result['warning'] = '未找到相似历史点位'
+                return result
+
+            result['similar_periods_count'] = len(similar)
+
+            # 3. 计算未来收益率
+            future_returns = self.calculate_future_returns(index_code, similar, periods)
+
+            # 4. 对每个周期计算概率统计
+            result['period_analysis'] = {}
+
+            for period in periods:
+                col = f'return_{period}d'
+                if col in future_returns.columns:
+                    stats = self.calculate_probability_statistics(future_returns[col])
+
+                    # 计算置信度
+                    consistency = max(stats['up_prob'], stats['down_prob'])
+                    confidence = self.calculate_confidence(stats['sample_size'], consistency)
+                    stats['confidence'] = confidence
+
+                    # 计算最大回撤
+                    drawdown_stats = self.calculate_max_drawdown(index_code, similar, period)
+                    stats.update(drawdown_stats)
+
+                    # 计算仓位建议
+                    if stats['sample_size'] > 0:
+                        position_advice = self.calculate_position_advice(
+                            stats['up_prob'],
+                            confidence,
+                            stats['mean_return'],
+                            stats['std']
+                        )
+                        stats['position_advice'] = position_advice
+
+                    result['period_analysis'][f'{period}d'] = stats
 
             logger.info(f"{HK_INDICES[index_code].name} 分析完成")
 
@@ -148,7 +409,24 @@ if __name__ == "__main__":
     analyzer = HKMarketAnalyzer()
 
     print("\n=== 港股市场分析器测试 ===")
-    positions = analyzer.get_current_positions()
 
-    for code, info in positions.items():
-        print(f"{info['name']}: {info['price']:.2f} ({info['change_pct']:+.2f}%)")
+    # 测试完整分析
+    result = analyzer.analyze_single_index('HSI', tolerance=0.05)
+
+    if 'error' not in result:
+        print(f"\n{result['index_name']}:")
+        print(f"当前点位: {result['current_price']:.2f}")
+        print(f"相似时期: {result.get('similar_periods_count', 0)} 个")
+
+        if 'period_analysis' in result and '20d' in result['period_analysis']:
+            stats = result['period_analysis']['20d']
+            print(f"20日后上涨概率: {stats['up_prob']:.1%}")
+            print(f"平均收益率: {stats['mean_return']:.2%}")
+            print(f"置信度: {stats.get('confidence', 0):.1%}")
+
+            if 'position_advice' in stats:
+                advice = stats['position_advice']
+                print(f"建议仓位: {advice['recommended_position']:.1%}")
+                print(f"操作信号: {advice['signal']}")
+    else:
+        print(f"分析失败: {result.get('error', '未知错误')}")
