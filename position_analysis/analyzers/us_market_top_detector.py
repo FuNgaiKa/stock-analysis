@@ -58,6 +58,15 @@ class USMarketTopDetector:
                 'optimism': 0.7,
                 'normal': 0.8,
                 'pessimism': 1.0         # 看跌
+            },
+            # 美元指数(DXY强=跨国公司盈利受损+新兴市场资金回流美债)
+            'dxy': {
+                'extreme_high': 110,  # 极强美元(2022年114暴跌)
+                'high': 105,          # 强势美元(美股压力)
+                'elevated': 103,      # 偏强
+                'normal_high': 100,   # 中性偏强
+                'normal_low': 95,     # 中性
+                'low': 90             # 弱势美元(美股受益)
             }
         }
 
@@ -164,6 +173,28 @@ class USMarketTopDetector:
             return None
         except Exception as e:
             logger.error(f"获取VIX失败: {str(e)}")
+            return None
+
+    def get_dxy(self) -> Optional[float]:
+        """
+        获取美元指数DXY
+        强美元→美股压力(跨国公司盈利受损+资金回流美债)
+
+        Returns:
+            DXY值
+        """
+        try:
+            dxy = yf.Ticker("DX-Y.NYB")
+            hist = dxy.history(period="1d")
+
+            if not hist.empty:
+                dxy_value = float(hist['Close'].iloc[-1])
+                logger.info(f"美元指数DXY: {dxy_value:.2f}")
+                return dxy_value
+
+            return None
+        except Exception as e:
+            logger.error(f"获取美元指数失败: {str(e)}")
             return None
 
     def calculate_valuation_risk(self) -> Dict[str, Any]:
@@ -344,6 +375,69 @@ class USMarketTopDetector:
 
         return result
 
+    def calculate_liquidity_risk(self) -> Dict[str, Any]:
+        """
+        流动性风险评估(美元指数)
+
+        Returns:
+            流动性风险分析
+        """
+        result = {
+            'indicators': {},
+            'risk_score': 0,
+            'risk_level': '',
+        }
+
+        total_score = 0
+        valid_count = 0
+
+        # DXY美元指数
+        dxy = self.get_dxy()
+        if dxy:
+            if dxy > self.thresholds['dxy']['extreme_high']:
+                dxy_score = 100
+                dxy_level = '极强美元'
+            elif dxy > self.thresholds['dxy']['high']:
+                dxy_score = 75
+                dxy_level = '强势美元'
+            elif dxy > self.thresholds['dxy']['elevated']:
+                dxy_score = 50
+                dxy_level = '偏强美元'
+            elif dxy > self.thresholds['dxy']['normal_high']:
+                dxy_score = 30
+                dxy_level = '中性偏强'
+            elif dxy > self.thresholds['dxy']['normal_low']:
+                dxy_score = 10
+                dxy_level = '中性'
+            else:
+                dxy_score = 0
+                dxy_level = '弱势美元'
+
+            result['indicators']['dxy'] = {
+                'value': dxy,
+                'score': dxy_score,
+                'level': dxy_level,
+                'signal': f"DXY={dxy:.1f}, {dxy_level}(强美元→美股压力)"
+            }
+            total_score += dxy_score
+            valid_count += 1
+
+        # 计算综合得分
+        if valid_count > 0:
+            avg_score = total_score / valid_count
+            result['risk_score'] = avg_score
+
+            if avg_score >= 85:
+                result['risk_level'] = '极度紧缩'
+            elif avg_score >= 70:
+                result['risk_level'] = '紧缩'
+            elif avg_score >= 50:
+                result['risk_level'] = '偏紧'
+            else:
+                result['risk_level'] = '正常'
+
+        return result
+
     def detect_top_risk(self) -> Dict[str, Any]:
         """
         综合检测美股见顶风险
@@ -356,6 +450,7 @@ class USMarketTopDetector:
             'market': 'US',
             'valuation': {},
             'sentiment': {},
+            'liquidity': {},
             'overall_risk': {},
         }
 
@@ -367,17 +462,23 @@ class USMarketTopDetector:
         sentiment = self.calculate_sentiment_risk()
         result['sentiment'] = sentiment
 
-        # 3. 综合评估
+        # 3. 流动性风险
+        liquidity = self.calculate_liquidity_risk()
+        result['liquidity'] = liquidity
+
+        # 4. 综合评估
         scores = []
         if valuation.get('risk_score', 0) > 0:
             scores.append(('估值', valuation['risk_score']))
         if sentiment.get('risk_score', 0) > 0:
             scores.append(('情绪', sentiment['risk_score']))
+        if liquidity.get('risk_score', 0) > 0:
+            scores.append(('流动性', liquidity['risk_score']))
 
         if scores:
-            # 加权: 估值70%, 情绪30%
-            weights = {'估值': 0.7, '情绪': 0.3}
-            total_weighted_score = sum(score * weights.get(name, 0.5) for name, score in scores)
+            # 加权: 估值60%, 情绪20%, 流动性20%
+            weights = {'估值': 0.6, '情绪': 0.2, '流动性': 0.2}
+            total_weighted_score = sum(score * weights.get(name, 0.33) for name, score in scores)
 
             overall_score = total_weighted_score
 
@@ -402,12 +503,12 @@ class USMarketTopDetector:
                 'score': overall_score,
                 'level': overall_level,
                 'recommendation': recommendation,
-                'summary': self._generate_summary(valuation, sentiment)
+                'summary': self._generate_summary(valuation, sentiment, liquidity)
             }
 
         return result
 
-    def _generate_summary(self, valuation: Dict, sentiment: Dict) -> str:
+    def _generate_summary(self, valuation: Dict, sentiment: Dict, liquidity: Dict) -> str:
         """生成风险总结"""
         summary_parts = []
 
@@ -419,8 +520,12 @@ class USMarketTopDetector:
         if sentiment.get('risk_level') in ['极度过热', '过热']:
             summary_parts.append(f"情绪{sentiment['risk_level']}")
 
+        # 流动性总结
+        if liquidity.get('risk_level') in ['极度紧缩', '紧缩']:
+            summary_parts.append(f"流动性{liquidity['risk_level']}")
+
         if not summary_parts:
-            return "美股估值和情绪处于正常区间"
+            return "美股估值、情绪和流动性处于正常区间"
 
         return "; ".join(summary_parts) + " - 建议谨慎"
 
@@ -450,6 +555,10 @@ if __name__ == '__main__':
 
         print(f"\n情绪分析:")
         for name, data in result['sentiment'].get('indicators', {}).items():
+            print(f"  {name}: {data['signal']}")
+
+        print(f"\n流动性分析:")
+        for name, data in result['liquidity'].get('indicators', {}).items():
             print(f"  {name}: {data['signal']}")
     else:
         print("检测失败")

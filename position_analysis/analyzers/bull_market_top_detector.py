@@ -4,6 +4,7 @@
 综合8个指标判断A股/港股牛市见顶风险
 """
 import akshare as ak
+import yfinance as yf
 import pandas as pd
 import numpy as np
 from typing import Dict, Any, Optional, List
@@ -58,6 +59,15 @@ class BullMarketTopDetector:
                 'normal': 0.02,     # 2%: 正常
                 'elevated': 0.03,   # 3%: 警惕
                 'extreme': 0.04     # 4%: 极度过热
+            },
+            # 信号七: 美元指数DXY(对A股偏弱影响,但强美元→新兴市场资金外流)
+            'dxy': {
+                'extreme_high': 110,  # 极强美元(新兴市场风险)
+                'high': 105,          # 强势美元(A股压力)
+                'elevated': 103,      # 偏强
+                'normal_high': 100,   # 中性偏强
+                'normal_low': 95,     # 中性
+                'low': 90             # 弱势美元(A股受益)
             }
         }
 
@@ -501,6 +511,86 @@ class BullMarketTopDetector:
         else:
             return f"融资融券/居民存款={ratio_pct:.2f}%,杠杆使用合理"
 
+    def get_dxy(self) -> Optional[float]:
+        """
+        获取美元指数DXY
+        强美元→新兴市场资金外流+人民币贬值压力
+
+        Returns:
+            DXY值
+        """
+        try:
+            dxy = yf.Ticker("DX-Y.NYB")
+            hist = dxy.history(period="1d")
+
+            if not hist.empty:
+                dxy_value = float(hist['Close'].iloc[-1])
+                logger.info(f"美元指数DXY: {dxy_value:.2f}")
+                return dxy_value
+
+            return None
+        except Exception as e:
+            logger.error(f"获取美元指数失败: {str(e)}")
+            return None
+
+    def calculate_dxy_risk(self) -> Dict[str, Any]:
+        """
+        信号七: 美元指数风险
+        强美元→新兴市场资金外流,A股面临外资流出压力
+
+        Returns:
+            DXY风险分析结果
+        """
+        try:
+            dxy = self.get_dxy()
+            if not dxy:
+                return {'error': '无法获取美元指数数据'}
+
+            # 风险评级(强美元对A股不利)
+            if dxy > self.thresholds['dxy']['extreme_high']:
+                risk_level = '极度危险'
+                score = 100
+            elif dxy > self.thresholds['dxy']['high']:
+                risk_level = '高风险'
+                score = 75
+            elif dxy > self.thresholds['dxy']['elevated']:
+                risk_level = '警惕'
+                score = 50
+            elif dxy > self.thresholds['dxy']['normal_high']:
+                risk_level = '偏高'
+                score = 30
+            elif dxy > self.thresholds['dxy']['normal_low']:
+                risk_level = '正常'
+                score = 10
+            else:
+                risk_level = '低风险'
+                score = 0
+
+            return {
+                'dxy': dxy,
+                'risk_level': risk_level,
+                'score': score,
+                'threshold_extreme': self.thresholds['dxy']['extreme_high'],
+                'signal': f"DXY={dxy:.1f}, {risk_level}",
+                'interpretation': self._interpret_dxy(dxy)
+            }
+        except Exception as e:
+            logger.error(f"计算DXY风险失败: {str(e)}")
+            return {'error': str(e)}
+
+    def _interpret_dxy(self, dxy: float) -> str:
+        """解读美元指数"""
+        if dxy > 110:
+            return f"DXY={dxy:.1f},极强美元,新兴市场资金大量外流,A股外资流出压力极大"
+        elif dxy > 105:
+            return f"DXY={dxy:.1f},强势美元,新兴市场承压,警惕外资流出"
+        elif dxy > 100:
+            return f"DXY={dxy:.1f},美元偏强,对A股有一定压力"
+        elif dxy < 95:
+            return f"DXY={dxy:.1f},弱势美元,资金流向新兴市场,对A股有利"
+        else:
+            return f"DXY={dxy:.1f},美元中性,影响有限"
+
     def calculate_bbi_signal(self, index_code: str = "000001") -> Dict[str, Any]:
         """
         信号六: BBI多空线
@@ -612,6 +702,7 @@ class BullMarketTopDetector:
             ('buffett_indicator', self.calculate_buffett_indicator),
             ('margin_ratio', self.calculate_margin_ratio),
             ('bbi_signal', lambda: self.calculate_bbi_signal(index_code)),
+            ('dxy_risk', self.calculate_dxy_risk),
         ]
 
         total_score = 0
