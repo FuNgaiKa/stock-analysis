@@ -18,6 +18,10 @@ from dataclasses import dataclass
 
 from data_sources.us_stock_source import USStockDataSource  # 可复用yfinance
 
+# Phase 3.2: 导入专业分析器
+from .analyzers.ah_premium_analyzer import AHPremiumAnalyzer
+from .analyzers.southbound_funds_analyzer import SouthboundFundsAnalyzer
+
 logger = logging.getLogger(__name__)
 
 
@@ -46,7 +50,12 @@ class HKMarketAnalyzer:
     def __init__(self):
         self.data_source = USStockDataSource()  # 使用yfinance获取港股数据
         self.data_cache = {}
-        logger.info("港股市场分析器初始化完成")
+
+        # Phase 3.2: 初始化机构级专业分析器
+        self.ah_premium_analyzer = AHPremiumAnalyzer()
+        self.southbound_funds_analyzer = SouthboundFundsAnalyzer()
+
+        logger.info("港股市场分析器初始化完成(含AH溢价/南向资金)")
 
     def get_index_data(self, index_code: str, period: str = "5y") -> pd.DataFrame:
         """获取港股指数历史数据"""
@@ -436,7 +445,28 @@ class HKMarketAnalyzer:
 
                     result['period_analysis'][f'{period}d'] = stats
 
-            logger.info(f"{HK_INDICES[index_code].name} 分析完成")
+            # Phase 3.2: 深度分析 - 机构级专业指标
+            result['phase3_analysis'] = {}
+
+            # 1. AH溢价分析(港股特色指标,反映A/H市场相对估值)
+            try:
+                ah_premium_result = self.ah_premium_analyzer.analyze_ah_premium()
+                if 'error' not in ah_premium_result:
+                    result['phase3_analysis']['ah_premium'] = ah_premium_result
+                    logger.info("AH溢价分析完成")
+            except Exception as e:
+                logger.warning(f"AH溢价分析失败: {str(e)}")
+
+            # 2. 南向资金分析(内资流向,港股市场核心指标)
+            try:
+                southbound_result = self.southbound_funds_analyzer.analyze_southbound_funds()
+                if 'error' not in southbound_result:
+                    result['phase3_analysis']['southbound_funds'] = southbound_result
+                    logger.info("南向资金分析完成")
+            except Exception as e:
+                logger.warning(f"南向资金分析失败: {str(e)}")
+
+            logger.info(f"{HK_INDICES[index_code].name} 分析完成(含深度分析)")
 
         except Exception as e:
             logger.error(f"分析{index_code}失败: {str(e)}")

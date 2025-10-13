@@ -16,6 +16,10 @@ import logging
 from typing import Dict, List, Optional
 from dataclasses import dataclass
 
+# Phase 3.2: 导入专业分析器
+from .analyzers.turnover_analyzer import TurnoverAnalyzer
+from .analyzers.ah_premium_analyzer import AHPremiumAnalyzer
+
 logger = logging.getLogger(__name__)
 
 
@@ -56,7 +60,12 @@ class CNMarketAnalyzer:
             self.get_price = None
 
         self.data_cache = {}
-        logger.info("A股市场分析器初始化完成")
+
+        # Phase 3.2: 初始化机构级专业分析器
+        self.turnover_analyzer = TurnoverAnalyzer()
+        self.ah_premium_analyzer = AHPremiumAnalyzer()
+
+        logger.info("A股市场分析器初始化完成(含换手率/AH溢价)")
 
     def get_index_data(self, index_code: str, period: str = "5y") -> pd.DataFrame:
         """获取A股指数历史数据"""
@@ -475,7 +484,31 @@ class CNMarketAnalyzer:
 
                     result['period_analysis'][f'{period}d'] = stats
 
-            logger.info(f"{CN_INDICES[index_code].name} 分析完成")
+            # Phase 3.2: 深度分析 - 机构级专业指标
+            result['phase3_analysis'] = {}
+
+            # 1. 换手率分析
+            try:
+                turnover_result = self.turnover_analyzer.analyze_turnover(
+                    index_symbol=CN_INDICES[index_code].symbol,
+                    period=60  # 60天历史数据
+                )
+                if 'error' not in turnover_result:
+                    result['phase3_analysis']['turnover'] = turnover_result
+                    logger.info("换手率分析完成")
+            except Exception as e:
+                logger.warning(f"换手率分析失败: {str(e)}")
+
+            # 2. AH溢价分析(对所有A股指数都适用,反映市场整体情绪)
+            try:
+                ah_premium_result = self.ah_premium_analyzer.analyze_ah_premium()
+                if 'error' not in ah_premium_result:
+                    result['phase3_analysis']['ah_premium'] = ah_premium_result
+                    logger.info("AH溢价分析完成")
+            except Exception as e:
+                logger.warning(f"AH溢价分析失败: {str(e)}")
+
+            logger.info(f"{CN_INDICES[index_code].name} 分析完成(含深度分析)")
 
         except Exception as e:
             logger.error(f"分析{index_code}失败: {str(e)}")
