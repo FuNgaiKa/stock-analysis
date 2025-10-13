@@ -87,7 +87,9 @@ class EmailNotifier:
         message = MIMEMultipart('alternative')
         # QQ邮箱要求From必须是有效的邮箱地址格式
         message['From'] = self.config['sender']['email']
-        message['To'] = ', '.join(self.config['recipients'])
+        # 过滤None值
+        recipients = [r for r in self.config['recipients'] if r is not None and r.strip()]
+        message['To'] = ', '.join(recipients)
         message['Subject'] = Header(subject, 'utf-8')
         message['X-Priority'] = priority
 
@@ -109,7 +111,7 @@ class EmailNotifier:
             )
             smtp.sendmail(
                 self.config['sender']['email'],
-                self.config['recipients'],
+                recipients,
                 message.as_string()
             )
             smtp.quit()
@@ -181,7 +183,9 @@ class EmailNotifier:
         message = MIMEMultipart('alternative')
         # QQ邮箱要求From必须是有效的邮箱地址格式
         message['From'] = self.config['sender']['email']
-        message['To'] = ', '.join(self.config['recipients'])
+        # 过滤None值
+        recipients = [r for r in self.config['recipients'] if r is not None and r.strip()]
+        message['To'] = ', '.join(recipients)
         message['Subject'] = Header(subject, 'utf-8')
 
         text_part = MIMEText(content, 'plain', 'utf-8')
@@ -200,7 +204,7 @@ class EmailNotifier:
             )
             smtp.sendmail(
                 self.config['sender']['email'],
-                self.config['recipients'],
+                recipients,
                 message.as_string()
             )
             smtp.quit()
@@ -244,7 +248,9 @@ class EmailNotifier:
         # 创建邮件
         message = MIMEMultipart('alternative')
         message['From'] = self.config['sender']['email']
-        message['To'] = ', '.join(self.config['recipients'])
+        # 过滤None值
+        recipients = [r for r in self.config['recipients'] if r is not None and r.strip()]
+        message['To'] = ', '.join(recipients)
         message['Subject'] = Header(subject, 'utf-8')
         message['X-Priority'] = priority
 
@@ -270,7 +276,7 @@ class EmailNotifier:
             )
             smtp.sendmail(
                 self.config['sender']['email'],
-                self.config['recipients'],
+                recipients,
                 message.as_string()
             )
             smtp.quit()
