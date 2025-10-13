@@ -19,6 +19,9 @@ from dataclasses import dataclass
 
 from data_sources.us_stock_source import USStockDataSource
 from .analyzers import VIXAnalyzer, SectorRotationAnalyzer, VolumeAnalyzer
+from .analyzers.skew_analyzer import SKEWAnalyzer
+from .analyzers.treasury_yield_analyzer import TreasuryYieldAnalyzer
+from .analyzers.dxy_analyzer import DXYAnalyzer
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +60,12 @@ class USMarketAnalyzer:
         self.sector_analyzer = SectorRotationAnalyzer(self.data_source)
         self.volume_analyzer = VolumeAnalyzer()
 
-        logger.info("美股市场分析器初始化完成")
+        # Phase 3.2: 机构级专业指标分析器
+        self.skew_analyzer = SKEWAnalyzer()
+        self.treasury_analyzer = TreasuryYieldAnalyzer()
+        self.dxy_analyzer = DXYAnalyzer()
+
+        logger.info("美股市场分析器初始化完成(含SKEW/美债/美元指数)")
 
     def get_index_data(
         self,
@@ -986,6 +994,34 @@ class USMarketAnalyzer:
                                 logger.info(f"{US_INDICES[index_code].name}成交量分析完成")
                     except Exception as e:
                         logger.warning(f"成交量分析失败: {str(e)}")
+
+                # Phase 3.2: 机构级专业指标分析(对所有指数执行)
+                # 4. SKEW黑天鹅风险分析
+                try:
+                    skew_result = self.skew_analyzer.analyze_skew(period="1y")
+                    if 'error' not in skew_result:
+                        result['phase3_analysis']['skew'] = skew_result
+                        logger.info("SKEW黑天鹅风险分析完成")
+                except Exception as e:
+                    logger.warning(f"SKEW分析失败: {str(e)}")
+
+                # 5. 美债收益率曲线分析(经济衰退预警)
+                try:
+                    treasury_result = self.treasury_analyzer.analyze_yield_curve(period="1y")
+                    if 'error' not in treasury_result:
+                        result['phase3_analysis']['treasury_yield'] = treasury_result
+                        logger.info("美债收益率曲线分析完成")
+                except Exception as e:
+                    logger.warning(f"美债分析失败: {str(e)}")
+
+                # 6. 美元指数分析(跨资产配置)
+                try:
+                    dxy_result = self.dxy_analyzer.analyze_dxy(period="1y")
+                    if 'error' not in dxy_result:
+                        result['phase3_analysis']['dxy'] = dxy_result
+                        logger.info("美元指数分析完成")
+                except Exception as e:
+                    logger.warning(f"美元指数分析失败: {str(e)}")
 
             logger.info(f"{US_INDICES[index_code].name} 分析完成 [{phase_label}]")
 
