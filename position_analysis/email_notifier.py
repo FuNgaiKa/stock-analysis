@@ -479,14 +479,14 @@ class EmailNotifier:
         {f'''
         <div class="signal-list">
             <strong>✅ 看多信号 ({len(suggestion.get('bullish_signals', []))}个):</strong>
-            {''.join([f'<div class="signal-item">• {s}</div>' for s in suggestion.get('bullish_signals', [])])}
+            {''.join([f'<div class="signal-item">• {s}</div>' for s in suggestion.get('bullish_signals', []) if s is not None])}
         </div>
         ''' if suggestion.get('bullish_signals') else ''}
 
         {f'''
         <div class="signal-list">
             <strong>⚠️ 风险提示 ({len(suggestion.get('bearish_signals', []))}个):</strong>
-            {''.join([f'<div class="signal-item">• {s}</div>' for s in suggestion.get('bearish_signals', [])])}
+            {''.join([f'<div class="signal-item">• {s}</div>' for s in suggestion.get('bearish_signals', []) if s is not None])}
         </div>
         ''' if suggestion.get('bearish_signals') else ''}
 
