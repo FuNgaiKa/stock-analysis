@@ -21,6 +21,7 @@ from data_sources.us_stock_source import USStockDataSource  # 可复用yfinance
 # Phase 3.2: 导入专业分析器
 from .analyzers.ah_premium_analyzer import AHPremiumAnalyzer
 from .analyzers.southbound_funds_analyzer import SouthboundFundsAnalyzer
+from .analyzers.hk_market_top_detector import HKMarketTopDetector
 
 logger = logging.getLogger(__name__)
 
@@ -54,8 +55,9 @@ class HKMarketAnalyzer:
         # Phase 3.2: 初始化机构级专业分析器
         self.ah_premium_analyzer = AHPremiumAnalyzer()
         self.southbound_funds_analyzer = SouthboundFundsAnalyzer()
+        self.hk_market_top_detector = HKMarketTopDetector()
 
-        logger.info("港股市场分析器初始化完成(含AH溢价/南向资金)")
+        logger.info("港股市场分析器初始化完成(含AH溢价/南向资金/见顶检测)")
 
     def get_index_data(self, index_code: str, period: str = "5y") -> pd.DataFrame:
         """获取港股指数历史数据"""
@@ -465,6 +467,15 @@ class HKMarketAnalyzer:
                     logger.info("南向资金分析完成")
             except Exception as e:
                 logger.warning(f"南向资金分析失败: {str(e)}")
+
+            # 3. 港股见顶风险检测(综合估值/流动性/情绪/基本面)
+            try:
+                top_risk_result = self.hk_market_top_detector.detect_top_risk()
+                if 'overall_risk' in top_risk_result:
+                    result['phase3_analysis']['market_top_risk'] = top_risk_result
+                    logger.info("港股见顶风险检测完成")
+            except Exception as e:
+                logger.warning(f"港股见顶风险检测失败: {str(e)}")
 
             logger.info(f"{HK_INDICES[index_code].name} 分析完成(含深度分析)")
 
