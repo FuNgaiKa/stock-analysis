@@ -22,6 +22,7 @@ from .analyzers import VIXAnalyzer, SectorRotationAnalyzer, VolumeAnalyzer
 from .analyzers.skew_analyzer import SKEWAnalyzer
 from .analyzers.treasury_yield_analyzer import TreasuryYieldAnalyzer
 from .analyzers.dxy_analyzer import DXYAnalyzer
+from .analyzers.credit_spread_analyzer import CreditSpreadAnalyzer
 
 logger = logging.getLogger(__name__)
 
@@ -64,8 +65,9 @@ class USMarketAnalyzer:
         self.skew_analyzer = SKEWAnalyzer()
         self.treasury_analyzer = TreasuryYieldAnalyzer()
         self.dxy_analyzer = DXYAnalyzer()
+        self.credit_spread_analyzer = CreditSpreadAnalyzer()
 
-        logger.info("美股市场分析器初始化完成(含SKEW/美债/美元指数)")
+        logger.info("美股市场分析器初始化完成(含SKEW/美债/美元指数/信用利差)")
 
     def get_index_data(
         self,
@@ -1022,6 +1024,15 @@ class USMarketAnalyzer:
                         logger.info("美元指数分析完成")
                 except Exception as e:
                     logger.warning(f"美元指数分析失败: {str(e)}")
+
+                # 7. 信用利差分析(信用风险监控)
+                try:
+                    credit_result = self.credit_spread_analyzer.analyze_credit_spread(period="1y")
+                    if 'error' not in credit_result:
+                        result['phase3_analysis']['credit_spread'] = credit_result
+                        logger.info("信用利差分析完成")
+                except Exception as e:
+                    logger.warning(f"信用利差分析失败: {str(e)}")
 
             logger.info(f"{US_INDICES[index_code].name} 分析完成 [{phase_label}]")
 
