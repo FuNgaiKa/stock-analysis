@@ -65,25 +65,21 @@ class DailyMarketReporter:
         try:
             logger.info("分析美股市场...")
 
-            # 分析纳斯达克和标普500
-            nasdaq_result = self.us_analyzer.analyze_single_index('^IXIC', 'NASDAQ')
-            sp500_result = self.us_analyzer.analyze_single_index('^GSPC', 'S&P 500')
-
-            # 提取关键指标
-            nasdaq_data = nasdaq_result.get('current_position', {})
-            sp500_data = sp500_result.get('current_position', {})
+            # 分析纳斯达克和标普500 (使用指数代码,不是ticker符号)
+            nasdaq_result = self.us_analyzer.analyze_single_index('NASDAQ')
+            sp500_result = self.us_analyzer.analyze_single_index('SPX')
 
             return {
                 'nasdaq': {
-                    'close': nasdaq_data.get('current_price', 0),
-                    'change_pct': nasdaq_data.get('ma_deviation_pct', 0),
-                    'technical': nasdaq_result.get('technical_indicators', {}),
+                    'close': nasdaq_result.get('current_price', 0),
+                    'change_pct': nasdaq_result.get('current_change_pct', 0),
+                    'technical': {},
                     'signals': {}
                 },
                 'sp500': {
-                    'close': sp500_data.get('current_price', 0),
-                    'change_pct': sp500_data.get('ma_deviation_pct', 0),
-                    'technical': sp500_result.get('technical_indicators', {}),
+                    'close': sp500_result.get('current_price', 0),
+                    'change_pct': sp500_result.get('current_change_pct', 0),
+                    'technical': {},
                     'signals': {}
                 }
             }
@@ -96,19 +92,17 @@ class DailyMarketReporter:
         try:
             logger.info("分析港股市场...")
 
-            # 分析恒生指数
-            hsi_result = self.hk_analyzer.analyze_single_index('^HSI', '恒生指数')
-
-            hsi_data = hsi_result.get('current_position', {})
+            # 分析恒生指数 (使用指数代码)
+            hsi_result = self.hk_analyzer.analyze_single_index('HSI')
 
             # 南向资金分析
             south_capital = self.hk_connect_analyzer.comprehensive_analysis(direction='south')
 
             return {
                 'hsi': {
-                    'close': hsi_data.get('current_price', 0),
-                    'change_pct': hsi_data.get('ma_deviation_pct', 0),
-                    'technical': hsi_result.get('technical_indicators', {}),
+                    'close': hsi_result.get('current_price', 0),
+                    'change_pct': hsi_result.get('current_change_pct', 0),
+                    'technical': {},
                     'signals': {}
                 },
                 'south_capital': south_capital.get('sentiment_analysis', {})
@@ -122,12 +116,9 @@ class DailyMarketReporter:
         try:
             logger.info("分析A股市场...")
 
-            # 分析上证指数和深证成指
-            sse_result = self.cn_analyzer.analyze_single_index('000001.SS', '上证指数')
-            szse_result = self.cn_analyzer.analyze_single_index('399001.SZ', '深证成指')
-
-            sse_data = sse_result.get('current_position', {})
-            szse_data = szse_result.get('current_position', {})
+            # 分析上证指数和深证成指 (使用指数代码)
+            sse_result = self.cn_analyzer.analyze_single_index('SSE')
+            szse_result = self.cn_analyzer.analyze_single_index('SZSE')
 
             # 北向资金分析
             north_capital = self.hk_connect_analyzer.comprehensive_analysis(direction='north')
@@ -140,15 +131,15 @@ class DailyMarketReporter:
 
             return {
                 'sse': {
-                    'close': sse_data.get('current_price', 0),
-                    'change_pct': sse_data.get('ma_deviation_pct', 0),
-                    'technical': sse_result.get('technical_indicators', {}),
+                    'close': sse_result.get('current_price', 0),
+                    'change_pct': sse_result.get('current_change_pct', 0),
+                    'technical': {},
                     'signals': {}
                 },
                 'szse': {
-                    'close': szse_data.get('current_price', 0),
-                    'change_pct': szse_data.get('ma_deviation_pct', 0),
-                    'technical': szse_result.get('technical_indicators', {})
+                    'close': szse_result.get('current_price', 0),
+                    'change_pct': szse_result.get('current_change_pct', 0),
+                    'technical': {}
                 },
                 'north_capital': north_capital.get('sentiment_analysis', {}),
                 'margin_trading': margin_trading.get('sentiment_analysis', {}),
