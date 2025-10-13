@@ -23,6 +23,7 @@ from .analyzers.skew_analyzer import SKEWAnalyzer
 from .analyzers.treasury_yield_analyzer import TreasuryYieldAnalyzer
 from .analyzers.dxy_analyzer import DXYAnalyzer
 from .analyzers.credit_spread_analyzer import CreditSpreadAnalyzer
+from .analyzers.us_market_top_detector import USMarketTopDetector
 
 logger = logging.getLogger(__name__)
 
@@ -66,8 +67,9 @@ class USMarketAnalyzer:
         self.treasury_analyzer = TreasuryYieldAnalyzer()
         self.dxy_analyzer = DXYAnalyzer()
         self.credit_spread_analyzer = CreditSpreadAnalyzer()
+        self.us_market_top_detector = USMarketTopDetector()
 
-        logger.info("美股市场分析器初始化完成(含SKEW/美债/美元指数/信用利差)")
+        logger.info("美股市场分析器初始化完成(含SKEW/美债/美元指数/信用利差/见顶检测)")
 
     def get_index_data(
         self,
@@ -1033,6 +1035,15 @@ class USMarketAnalyzer:
                         logger.info("信用利差分析完成")
                 except Exception as e:
                     logger.warning(f"信用利差分析失败: {str(e)}")
+
+                # 8. 美股见顶风险检测(综合估值/情绪/流动性)
+                try:
+                    top_risk_result = self.us_market_top_detector.detect_top_risk()
+                    if 'overall_risk' in top_risk_result:
+                        result['phase3_analysis']['market_top_risk'] = top_risk_result
+                        logger.info("美股见顶风险检测完成")
+                except Exception as e:
+                    logger.warning(f"美股见顶风险检测失败: {str(e)}")
 
             logger.info(f"{US_INDICES[index_code].name} 分析完成 [{phase_label}]")
 
