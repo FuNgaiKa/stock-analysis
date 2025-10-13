@@ -15,10 +15,10 @@ jobs:
 
     steps:
     - name: 检出代码
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: 设置 Python 环境
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.11'
 
@@ -73,5 +73,8 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: monitor-logs
-        path: logs/
+        path: |
+          logs/
+          *.log
         retention-days: 7
+        if-no-files-found: ignore
