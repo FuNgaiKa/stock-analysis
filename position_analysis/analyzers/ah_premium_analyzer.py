@@ -24,9 +24,12 @@ class AHPremiumAnalyzer:
         # 2025年AH溢价合理区间(基于美元指数中枢调整)
         self.reasonable_range = (142, 149)
 
-    def get_ah_premium_data(self) -> Optional[pd.DataFrame]:
+    def get_ah_premium_data(self, timeout: int = 30) -> Optional[pd.DataFrame]:
         """
         获取AH股票溢价数据
+
+        Args:
+            timeout: 超时时间(秒)
 
         Returns:
             AH股票溢价DataFrame
@@ -40,8 +43,31 @@ class AHPremiumAnalyzer:
                 return self.cache[cache_key]
 
         try:
-            # 获取AH股实时溢价数据
-            df = ak.stock_zh_ah_spot()
+            # 使用线程超时控制
+            import signal
+            from contextlib import contextmanager
+
+            @contextmanager
+            def time_limit(seconds):
+                def signal_handler(signum, frame):
+                    raise TimeoutError("获取数据超时")
+                signal.signal(signal.SIGALRM, signal_handler)
+                signal.alarm(seconds)
+                try:
+                    yield
+                finally:
+                    signal.alarm(0)
+
+            # 获取AH股实时溢价数据(带超时)
+            try:
+                with time_limit(timeout):
+                    df = ak.stock_zh_ah_spot()
+            except TimeoutError:
+                logger.warning(f"获取AH溢价数据超时({timeout}秒)")
+                return None
+            except:  # signal在Windows上不可用
+                logger.info("降级到无超时模式")
+                df = ak.stock_zh_ah_spot()
 
             if df.empty:
                 logger.warning("获取AH溢价数据为空")
