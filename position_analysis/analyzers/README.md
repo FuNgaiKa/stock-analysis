@@ -6,9 +6,30 @@
 
 ## 📁 模块概览
 
-本目录包含16个专业级分析器,涵盖从技术指标到基本面分析的完整量化体系。
+本目录包含19个专业级分析器,涵盖从技术指标到基本面分析的完整量化体系。
 
 ### 🔥 核心分析器
+
+#### 🎯 市场见顶检测器 (NEW)
+- **us_market_top_detector.py** - 美股见顶检测器 ⭐
+  - 估值风险(Shiller CAPE/Forward PE/股息率)
+  - 情绪风险(VIX恐慌指数)
+  - 流动性风险(DXY美元指数)
+  - 三维度加权: 估值60% + 情绪20% + 流动性20%
+
+- **bull_market_top_detector.py** - A股牛市见顶检测器 ⭐
+  - 8大信号指标投票系统
+  - 成交量/存款、股债利差、PE分位数
+  - 巴菲特指标、两融余额、BBI多空线
+  - 美元指数DXY(新兴市场资金流)
+
+- **hk_market_top_detector.py** - 港股见顶检测器 ⭐
+  - 估值(恒指PE/PB/股息率)
+  - 流动性(DXY/人民币汇率/南向资金)
+  - 情绪(换手率/VHSI)
+  - 加权: 估值60% + 流动性40%
+
+### 🔥 传统核心分析器
 
 #### 1️⃣ 因子分析
 - **alpha101_factors.py** - WorldQuant Alpha101因子库
@@ -113,6 +134,40 @@
 ---
 
 ## 🚀 使用示例
+
+### 0. 市场见顶检测器 (NEW)
+```python
+# 美股见顶检测
+from position_analysis.analyzers.us_market_top_detector import USMarketTopDetector
+
+detector = USMarketTopDetector()
+result = detector.detect_top_risk()
+
+print(f"综合风险评分: {result['overall_risk']['score']:.1f}/100")
+print(f"风险等级: {result['overall_risk']['level']}")
+print(f"建议: {result['overall_risk']['recommendation']}")
+print(f"DXY美元指数: {result['liquidity']['indicators']['dxy']['value']:.2f}")
+
+# A股牛市见顶检测
+from position_analysis.analyzers.bull_market_top_detector import BullMarketTopDetector
+
+detector = BullMarketTopDetector()
+result = detector.detect_top_risk()
+
+print(f"综合风险评分: {result['overall_risk']['score']:.1f}/100")
+print(f"风险等级: {result['overall_risk']['level']}")
+print(f"巴菲特指标: {result['signals']['buffett_indicator']['buffett_ratio']:.1f}%")
+
+# 港股见顶检测
+from position_analysis.analyzers.hk_market_top_detector import HKMarketTopDetector
+
+detector = HKMarketTopDetector()
+result = detector.detect_top_risk()
+
+print(f"综合风险评分: {result['overall_risk']['score']:.1f}/100")
+print(f"恒指PB: {result['valuation']['indicators']['hsi_pb']['value']:.2f}")
+print(f"DXY: {result['liquidity']['indicators']['dxy']['value']:.2f}")
+```
 
 ### 1. VIX恐慌指数分析
 ```python
@@ -269,6 +324,11 @@ def get_data(self):
 
 ## 🎖️ 版本历史
 
+- **v4.1** (2025-10-13) - 🆕 新增市场见顶检测器+DXY美元指数监控
+  - 美股见顶检测器(估值+情绪+流动性三维度)
+  - A股牛市见顶检测器(8大信号投票+DXY)
+  - 港股见顶检测器(估值+流动性+情绪)
+  - DXY美元指数集成到三大市场
 - **v4.0** (2025-10-12) - 新增6个A股特色分析器
 - **v3.0** (2025-10-10) - 新增斜率和微观结构分析器
 - **v2.0** (2025-10-09) - 新增VIX和行业轮动分析器
@@ -277,4 +337,4 @@ def get_data(self):
 ---
 
 **Made with ❤️ by Claude Code**
-最后更新: 2025-10-12
+最后更新: 2025-10-13
