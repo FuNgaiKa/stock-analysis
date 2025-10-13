@@ -32,7 +32,7 @@ jobs:
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
           SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
           SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
-          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+          RECIPIENT_EMAILS: ${{ secrets.RECIPIENT_EMAILS }}
         run: |
           # 创建临时配置文件
           cat > email_config.yaml <<EOF
@@ -45,9 +45,16 @@ jobs:
             password: ${SENDER_PASSWORD}
 
           recipients:
-            - 1264947688@qq.com
-            - 2645826123@qq.com
-            - 1194714620@qq.com
+          EOF
+
+          # 解析逗号分隔的邮箱地址并追加到配置文件
+          IFS=',' read -ra EMAILS <<< "${RECIPIENT_EMAILS}"
+          for email in "${EMAILS[@]}"; do
+            echo "  - ${email}" >> email_config.yaml
+          done
+
+          # 追加其他配置
+          cat >> email_config.yaml <<EOF
 
           send_no_alert_email: false
           EOF
