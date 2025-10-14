@@ -224,7 +224,8 @@ stock-analysis/
 │   │   ├── market_state_detector.py       # 市场状态检测器 (Phase 3.1)
 │   │   ├── enhanced_data_provider.py      # 九维度数据提供器 (Phase 2)
 │   │   ├── valuation_analyzer.py          # 估值分析器
-│   │   ├── analyzers/                     # 专业分析器
+│   │   ├── analyzers/                     # 专业分析器 (20个)
+│   │   │   ├── divergence_analyzer.py     # 背离分析器 ⭐ (NEW)
 │   │   │   ├── vix_analyzer.py            # VIX恐慌指数分析 ⭐
 │   │   │   ├── sector_rotation_analyzer.py # 行业轮动分析 ⭐
 │   │   │   └── volume_analyzer.py         # 成交量分析
@@ -655,7 +656,17 @@ pip install TA-Lib
 
 ## 📊 版本历史
 
-### v4.0 (2025-10-12) - 🚀 量化分析系统全面升级 **[最新]**
+### v4.3 (2025-10-14) - 🔥 背离分析器 **[最新]**
+- 🆕 **背离分析器** - 支持A股/H股/美股三大市场
+  - 量价背离检测(顶背离/底背离)
+  - MACD背驰检测(柱状图/DIF线)
+  - RSI背离检测
+  - 自动峰谷识别算法
+  - 背离强度评分系统(0-100)
+  - 置信度分级(高/中/低)
+  - 综合分析+操作建议
+
+### v4.0 (2025-10-12) - 🚀 量化分析系统全面升级
 #### 核心新功能
 - 🆕 **DMI/ADX趋势强度指标** - 识别强趋势(>25)和弱趋势(<20)
 - 🆕 **KDJ超买超卖指标** - 精准的短期交易信号
@@ -762,6 +773,7 @@ pip install TA-Lib
 
 ### 核心功能文档
 - [历史点位对比分析系统 README](position_analysis/README.md) - Phase 1/2/3完整文档
+- [背离分析器使用文档](position_analysis/analyzers/DIVERGENCE_ANALYZER_README.md) - 量价背离/MACD背驰/RSI背离完整指南 🆕
 - [港股分析模块使用指南](docs/HK_STOCK_README.md) - 港股数据源和分析器说明
 - [估值分析指南](docs/VALUATION_ANALYSIS_GUIDE.md) - 估值分析使用方法
 - [均线偏离度监控系统](docs/均线偏离度监控系统.md) - 监控系统完整说明
