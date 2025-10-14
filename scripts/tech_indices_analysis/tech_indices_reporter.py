@@ -207,6 +207,49 @@ class TechIndicesReporter:
             ma20 = df['close'].rolling(window=20).mean()
             ma60 = df['close'].rolling(window=60).mean()
 
+            # 计算KDJ
+            low_9 = df['low'].rolling(window=9).min()
+            high_9 = df['high'].rolling(window=9).max()
+            rsv = (df['close'] - low_9) / (high_9 - low_9) * 100
+            kdj_k = rsv.ewm(span=3, adjust=False).mean()
+            kdj_d = kdj_k.ewm(span=3, adjust=False).mean()
+            kdj_j = 3 * kdj_k - 2 * kdj_d
+
+            # 计算布林带
+            boll_mid = df['close'].rolling(window=20).mean()
+            boll_std = df['close'].rolling(window=20).std()
+            boll_upper = boll_mid + (boll_std * 2)
+            boll_lower = boll_mid - (boll_std * 2)
+            # 计算价格在布林带中的位置 (0-1之间)
+            boll_position = (df['close'] - boll_lower) / (boll_upper - boll_lower)
+
+            # 计算ATR
+            high_low = df['high'] - df['low']
+            high_close = abs(df['high'] - df['close'].shift(1))
+            low_close = abs(df['low'] - df['close'].shift(1))
+            true_range = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+            atr = true_range.rolling(window=14).mean()
+
+            # 计算DMI/ADX
+            # +DM和-DM
+            high_diff = df['high'].diff()
+            low_diff = -df['low'].diff()
+            plus_dm = high_diff.where((high_diff > low_diff) & (high_diff > 0), 0)
+            minus_dm = low_diff.where((low_diff > high_diff) & (low_diff > 0), 0)
+
+            # 平滑处理
+            plus_dm_smooth = plus_dm.rolling(window=14).mean()
+            minus_dm_smooth = minus_dm.rolling(window=14).mean()
+            atr_smooth = true_range.rolling(window=14).mean()
+
+            # +DI和-DI
+            plus_di = 100 * plus_dm_smooth / atr_smooth
+            minus_di = 100 * minus_dm_smooth / atr_smooth
+
+            # DX和ADX
+            dx = 100 * abs(plus_di - minus_di) / (plus_di + minus_di)
+            adx = dx.rolling(window=14).mean()
+
             return {
                 'macd': {
                     'value': float(macd.iloc[-1]),
@@ -216,6 +259,31 @@ class TechIndicesReporter:
                 'rsi': {
                     'value': float(rsi.iloc[-1]),
                     'status': 'overbought' if rsi.iloc[-1] > 70 else ('oversold' if rsi.iloc[-1] < 30 else 'normal')
+                },
+                'kdj': {
+                    'k': float(kdj_k.iloc[-1]),
+                    'd': float(kdj_d.iloc[-1]),
+                    'j': float(kdj_j.iloc[-1]),
+                    'status': 'overbought' if kdj_j.iloc[-1] > 100 else ('oversold' if kdj_j.iloc[-1] < 0 else 'normal'),
+                    'signal': 'golden_cross' if kdj_k.iloc[-1] > kdj_d.iloc[-1] else 'death_cross'
+                },
+                'boll': {
+                    'upper': float(boll_upper.iloc[-1]),
+                    'mid': float(boll_mid.iloc[-1]),
+                    'lower': float(boll_lower.iloc[-1]),
+                    'position': float(boll_position.iloc[-1]),  # 0=下轨, 0.5=中轨, 1=上轨
+                    'status': 'near_upper' if boll_position.iloc[-1] > 0.8 else ('near_lower' if boll_position.iloc[-1] < 0.2 else 'normal')
+                },
+                'atr': {
+                    'value': float(atr.iloc[-1]),
+                    'pct': float(atr.iloc[-1] / latest['close'] * 100)  # ATR占价格的百分比
+                },
+                'dmi_adx': {
+                    'plus_di': float(plus_di.iloc[-1]),
+                    'minus_di': float(minus_di.iloc[-1]),
+                    'adx': float(adx.iloc[-1]),
+                    'trend': 'strong' if adx.iloc[-1] > 25 else ('medium' if adx.iloc[-1] > 20 else 'weak'),
+                    'direction': 'bullish' if plus_di.iloc[-1] > minus_di.iloc[-1] else 'bearish'
                 },
                 'ma': {
                     'ma5': float(ma5.iloc[-1]),
@@ -633,6 +701,40 @@ class TechIndicesReporter:
                     rsi_status = tech['rsi']['status']
                     rsi_emoji = '⚠️' if rsi_status == 'overbought' else ('✅' if rsi_status == 'oversold' else '😊')
                     lines.append(f"  RSI: {rsi_val:.1f} {rsi_emoji}")
+
+                # KDJ
+                if 'kdj' in tech:
+                    kdj = tech['kdj']
+                    kdj_signal = '金叉✅' if kdj['signal'] == 'golden_cross' else '死叉🔴'
+                    kdj_status_emoji = '⚠️' if kdj['status'] == 'overbought' else ('✅' if kdj['status'] == 'oversold' else '😊')
+                    lines.append(f"  KDJ: K={kdj['k']:.1f}, D={kdj['d']:.1f}, J={kdj['j']:.1f} {kdj_signal} {kdj_status_emoji}")
+
+                # 布林带
+                if 'boll' in tech:
+                    boll = tech['boll']
+                    current_price = hist.get('current_price', 0)
+                    boll_pos_pct = boll['position'] * 100
+                    if boll['status'] == 'near_upper':
+                        boll_emoji = '⚠️ 接近上轨'
+                    elif boll['status'] == 'near_lower':
+                        boll_emoji = '✅ 接近下轨'
+                    else:
+                        boll_emoji = '😊  中轨区域'
+                    lines.append(f"  布林带: 上={boll['upper']:.2f}, 中={boll['mid']:.2f}, 下={boll['lower']:.2f}")
+                    lines.append(f"         当前位置: {boll_pos_pct:.0f}% {boll_emoji}")
+
+                # ATR (波动率)
+                if 'atr' in tech:
+                    atr = tech['atr']
+                    lines.append(f"  ATR(波动率): {atr['value']:.2f} ({atr['pct']:.2f}%)")
+
+                # DMI/ADX (趋势强度)
+                if 'dmi_adx' in tech:
+                    dmi = tech['dmi_adx']
+                    trend_emoji = '🔥' if dmi['trend'] == 'strong' else ('📊' if dmi['trend'] == 'medium' else '💤')
+                    direction_emoji = '📈' if dmi['direction'] == 'bullish' else '📉'
+                    lines.append(f"  DMI/ADX: +DI={dmi['plus_di']:.1f}, -DI={dmi['minus_di']:.1f}, ADX={dmi['adx']:.1f}")
+                    lines.append(f"          趋势强度: {dmi['trend']} {trend_emoji}, 方向: {direction_emoji}")
 
                 # 均线
                 if 'ma' in tech:
