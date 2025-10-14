@@ -58,7 +58,7 @@ jobs:
         python -c "
 import sys
 sys.path.insert(0, '.')
-from position_analysis.email_notifier import EmailNotifier
+from position_analysis.reporting.email_notifier import EmailNotifier
 print('✅ 邮件模块导入成功')
 notifier = EmailNotifier()
 print('✅ 邮件通知器初始化成功')

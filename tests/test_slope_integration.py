@@ -1,8 +1,8 @@
 """
 测试斜率维度集成到 Phase 3 市场状态检测系统
 """
-from position_analysis.market_state_detector import MarketStateDetector
-from position_analysis.analyzers.slope_analyzer import SlopeAnalyzer
+from position_analysis.core.market_state_detector import MarketStateDetector
+from position_analysis.analyzers.technical_analysis.slope_analyzer import SlopeAnalyzer
 import pandas as pd
 
 

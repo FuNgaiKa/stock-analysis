@@ -19,8 +19,8 @@ from datetime import datetime
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from position_analysis.enhanced_data_provider import EnhancedDataProvider
-from position_analysis.historical_position_analyzer import (
+from position_analysis.core.enhanced_data_provider import EnhancedDataProvider
+from position_analysis.core.historical_position_analyzer import (
     HistoricalPositionAnalyzer,
     ProbabilityAnalyzer,
     PositionManager,

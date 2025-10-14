@@ -12,7 +12,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 import argparse
 import logging
 from datetime import datetime
-from position_analysis.us_market_analyzer import USMarketAnalyzer, DEFAULT_US_INDICES, US_INDICES
+from position_analysis.market_analyzers.us_market_analyzer import USMarketAnalyzer, DEFAULT_US_INDICES, US_INDICES
 
 # 配置日志
 logging.basicConfig(

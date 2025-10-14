@@ -11,8 +11,8 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from position_analysis.ma_deviation_monitor import MADeviationMonitor
-from position_analysis.email_notifier import EmailNotifier
+from position_analysis.monitoring.ma_deviation_monitor import MADeviationMonitor
+from position_analysis.reporting.email_notifier import EmailNotifier
 import logging
 import argparse
 import time

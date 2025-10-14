@@ -18,14 +18,14 @@ from typing import Dict, List
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from position_analysis.historical_position_analyzer import (
+from position_analysis.core.historical_position_analyzer import (
     HistoricalPositionAnalyzer,
     ProbabilityAnalyzer,
     PositionManager,
     SUPPORTED_INDICES
 )
-from position_analysis.report_generator import TextReportGenerator, HTMLReportGenerator
-from position_analysis.chart_generator import ChartGenerator
+from position_analysis.reporting.report_generator import TextReportGenerator, HTMLReportGenerator
+from position_analysis.reporting.chart_generator import ChartGenerator
 
 # 配置日志
 logging.basicConfig(

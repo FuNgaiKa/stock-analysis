@@ -27,12 +27,12 @@ import pandas as pd
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from position_analysis.us_market_analyzer import USMarketAnalyzer
-from position_analysis.hk_market_analyzer import HKMarketAnalyzer
-from position_analysis.cn_market_analyzer import CNMarketAnalyzer
-from position_analysis.analyzers.margin_trading_analyzer import MarginTradingAnalyzer
-from position_analysis.analyzers.hk_connect_analyzer import HKConnectAnalyzer
-from position_analysis.analyzers.market_breadth_analyzer import MarketBreadthAnalyzer
+from position_analysis.market_analyzers.us_market_analyzer import USMarketAnalyzer
+from position_analysis.market_analyzers.hk_market_analyzer import HKMarketAnalyzer
+from position_analysis.market_analyzers.cn_market_analyzer import CNMarketAnalyzer
+from position_analysis.analyzers.market_specific.margin_trading_analyzer import MarginTradingAnalyzer
+from position_analysis.analyzers.market_specific.hk_connect_analyzer import HKConnectAnalyzer
+from position_analysis.analyzers.market_structure.market_breadth_analyzer import MarketBreadthAnalyzer
 
 logger = logging.getLogger(__name__)
 

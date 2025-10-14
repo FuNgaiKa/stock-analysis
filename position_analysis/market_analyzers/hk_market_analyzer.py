@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-A股市场分析器
-支持上证指数、深证成指、创业板指等A股指数的点位分析
+港股市场分析器
+支持恒生指数、恒生科技指数等港股指数的点位分析
 """
 
 import sys
@@ -16,121 +16,84 @@ import logging
 from typing import Dict, List, Optional
 from dataclasses import dataclass
 
+from data_sources.us_stock_source import USStockDataSource  # 可复用yfinance
+
 # Phase 3.2: 导入专业分析器
-from .analyzers.turnover_analyzer import TurnoverAnalyzer
-from .analyzers.ah_premium_analyzer import AHPremiumAnalyzer
+from ..analyzers.market_specific.ah_premium_analyzer import AHPremiumAnalyzer
+from ..analyzers.market_specific.southbound_funds_analyzer import SouthboundFundsAnalyzer
+from ..analyzers.risk_detection.hk_market_top_detector import HKMarketTopDetector
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
-class CNIndexConfig:
-    """A股指数配置"""
+class HKIndexConfig:
+    """港股指数配置"""
     code: str
     name: str
     symbol: str  # yfinance symbol
 
 
-# 支持的A股指数
-CN_INDICES = {
-    'SSE': CNIndexConfig('SSE', '上证指数', '000001'),
-    'SZSE': CNIndexConfig('SZSE', '深证成指', '399001'),
-    'CYBZ': CNIndexConfig('CYBZ', '创业板指', '399006'),
-    'HS300': CNIndexConfig('HS300', '沪深300', '000300'),
-    'ZZ500': CNIndexConfig('ZZ500', '中证500', '000905'),
-    'KECHUANG50': CNIndexConfig('KECHUANG50', '科创50', '000688'),
+# 支持的港股指数
+HK_INDICES = {
+    'HSI': HKIndexConfig('HSI', '恒生指数', '^HSI'),
+    'HSCEI': HKIndexConfig('HSCEI', '国企指数', '^HSCE'),
+    'HSTECH': HKIndexConfig('HSTECH', '恒生科技指数', '3032.HK'),  # 使用恒生科技ETF代替指数
 }
 
 # 默认分析的指数
-DEFAULT_CN_INDICES = ['SSE', 'SZSE', 'CYBZ']
+DEFAULT_HK_INDICES = ['HSI', 'HSCEI', 'HSTECH']
 
 
-class CNMarketAnalyzer:
-    """A股市场分析器"""
+class HKMarketAnalyzer:
+    """港股市场分析器"""
 
     def __init__(self):
-        """初始化A股市场分析器"""
-        try:
-            # 导入Ashare数据源(腾讯+新浪双核心)
-            from data_sources.Ashare import get_price
-            self.get_price = get_price
-            logger.info("使用Ashare数据源(腾讯+新浪双核心)")
-        except:
-            logger.error("无法导入Ashare数据源")
-            self.get_price = None
-
+        self.data_source = USStockDataSource()  # 使用yfinance获取港股数据
         self.data_cache = {}
 
         # Phase 3.2: 初始化机构级专业分析器
-        self.turnover_analyzer = TurnoverAnalyzer()
         self.ah_premium_analyzer = AHPremiumAnalyzer()
+        self.southbound_funds_analyzer = SouthboundFundsAnalyzer()
+        self.hk_market_top_detector = HKMarketTopDetector()
 
-        logger.info("A股市场分析器初始化完成(含换手率/AH溢价)")
+        logger.info("港股市场分析器初始化完成(含AH溢价/南向资金/见顶检测)")
 
     def get_index_data(self, index_code: str, period: str = "5y") -> pd.DataFrame:
-        """获取A股指数历史数据"""
-        cache_key = f"CN_{index_code}_{period}"
+        """获取港股指数历史数据"""
+        cache_key = f"HK_{index_code}_{period}"
         if cache_key in self.data_cache:
             logger.info(f"使用缓存的{index_code}数据")
             return self.data_cache[cache_key]
 
-        if index_code not in CN_INDICES:
-            logger.error(f"不支持的A股指数: {index_code}")
+        if index_code not in HK_INDICES:
+            logger.error(f"不支持的港股指数: {index_code}")
             return pd.DataFrame()
 
-        if not self.get_price:
-            logger.error("Ashare数据源未初始化")
-            return pd.DataFrame()
+        config = HK_INDICES[index_code]
+        # 使用yfinance获取港股数据
+        df = self.data_source.get_us_index_daily(config.symbol, period=period)
 
-        config = CN_INDICES[index_code]
-
-        try:
-            # 计算需要获取的数据条数
-            if period == "5y":
-                count = 5 * 250  # 5年交易日
-            elif period == "10y":
-                count = 10 * 250  # 10年交易日
-            elif period == "5d":
-                count = 10  # 5个交易日(多取几天防止节假日)
-            else:
-                count = 5 * 250  # 默认5年
-
-            # 使用Ashare获取指数数据
-            # sh + 代码 对应上海交易所指数, sz + 代码 对应深圳交易所指数
-            code_prefix = 'sh' if config.symbol.startswith('000') else 'sz'
-            full_code = code_prefix + config.symbol
-
-            df = self.get_price(full_code, count=count, frequency='1d')
-
-            if df.empty:
-                logger.warning(f"{config.name}数据为空")
-                return pd.DataFrame()
-
-            # 数据已经是标准格式,只需添加return列
+        if not df.empty:
             df['return'] = df['close'].pct_change()
             self.data_cache[cache_key] = df
 
-            logger.info(f"{config.name}数据获取成功: {len(df)} 条记录")
-            return df
-
-        except Exception as e:
-            logger.error(f"获取{config.name}数据失败: {str(e)}")
-            return pd.DataFrame()
+        return df
 
     def get_current_positions(self, indices: List[str] = None) -> Dict[str, Dict]:
         """获取当前各指数点位"""
         if indices is None:
-            indices = DEFAULT_CN_INDICES
+            indices = DEFAULT_HK_INDICES
 
         positions = {}
 
         for code in indices:
-            if code not in CN_INDICES:
-                logger.warning(f"不支持的A股指数代码: {code}")
+            if code not in HK_INDICES:
+                logger.warning(f"不支持的港股指数代码: {code}")
                 continue
 
             try:
-                config = CN_INDICES[code]
+                config = HK_INDICES[code]
                 df = self.get_index_data(code, period="5d")
 
                 if df.empty:
@@ -185,7 +148,7 @@ class CNMarketAnalyzer:
         similar = similar[similar.index <= cutoff_date]
 
         logger.info(
-            f"{CN_INDICES[index_code].name} "
+            f"{HK_INDICES[index_code].name} "
             f"在 {lower_bound:.2f}-{upper_bound:.2f} 区间 "
             f"共找到 {len(similar)} 个相似点位"
         )
@@ -414,13 +377,13 @@ class CNMarketAnalyzer:
         periods: List[int] = [5, 10, 20, 30, 60]
     ) -> Dict:
         """单指数完整分析"""
-        logger.info(f"开始分析A股 {CN_INDICES[index_code].name}...")
+        logger.info(f"开始分析港股 {HK_INDICES[index_code].name}...")
 
         result = {
             'index_code': index_code,
-            'index_name': CN_INDICES[index_code].name,
+            'index_name': HK_INDICES[index_code].name,
             'timestamp': datetime.now(),
-            'market': 'CN'
+            'market': 'HK'
         }
 
         try:
@@ -487,19 +450,7 @@ class CNMarketAnalyzer:
             # Phase 3.2: 深度分析 - 机构级专业指标
             result['phase3_analysis'] = {}
 
-            # 1. 换手率分析
-            try:
-                turnover_result = self.turnover_analyzer.analyze_turnover(
-                    index_symbol=CN_INDICES[index_code].symbol,
-                    period=60  # 60天历史数据
-                )
-                if 'error' not in turnover_result:
-                    result['phase3_analysis']['turnover'] = turnover_result
-                    logger.info("换手率分析完成")
-            except Exception as e:
-                logger.warning(f"换手率分析失败: {str(e)}")
-
-            # 2. AH溢价分析(对所有A股指数都适用,反映市场整体情绪)
+            # 1. AH溢价分析(港股特色指标,反映A/H市场相对估值)
             try:
                 ah_premium_result = self.ah_premium_analyzer.analyze_ah_premium()
                 if 'error' not in ah_premium_result:
@@ -508,7 +459,25 @@ class CNMarketAnalyzer:
             except Exception as e:
                 logger.warning(f"AH溢价分析失败: {str(e)}")
 
-            logger.info(f"{CN_INDICES[index_code].name} 分析完成(含深度分析)")
+            # 2. 南向资金分析(内资流向,港股市场核心指标)
+            try:
+                southbound_result = self.southbound_funds_analyzer.analyze_southbound_funds()
+                if 'error' not in southbound_result:
+                    result['phase3_analysis']['southbound_funds'] = southbound_result
+                    logger.info("南向资金分析完成")
+            except Exception as e:
+                logger.warning(f"南向资金分析失败: {str(e)}")
+
+            # 3. 港股见顶风险检测(综合估值/流动性/情绪/基本面)
+            try:
+                top_risk_result = self.hk_market_top_detector.detect_top_risk()
+                if 'overall_risk' in top_risk_result:
+                    result['phase3_analysis']['market_top_risk'] = top_risk_result
+                    logger.info("港股见顶风险检测完成")
+            except Exception as e:
+                logger.warning(f"港股见顶风险检测失败: {str(e)}")
+
+            logger.info(f"{HK_INDICES[index_code].name} 分析完成(含深度分析)")
 
         except Exception as e:
             logger.error(f"分析{index_code}失败: {str(e)}")
@@ -521,12 +490,12 @@ if __name__ == "__main__":
     # 测试代码
     logging.basicConfig(level=logging.INFO)
 
-    analyzer = CNMarketAnalyzer()
+    analyzer = HKMarketAnalyzer()
 
-    print("\n=== A股市场分析器测试 ===")
+    print("\n=== 港股市场分析器测试 ===")
 
     # 测试完整分析
-    result = analyzer.analyze_single_index('HS300', tolerance=0.05)
+    result = analyzer.analyze_single_index('HSI', tolerance=0.05)
 
     if 'error' not in result:
         print(f"\n{result['index_name']}:")

@@ -18,12 +18,14 @@ from typing import Dict, List, Tuple, Optional
 from dataclasses import dataclass
 
 from data_sources.us_stock_source import USStockDataSource
-from .analyzers import VIXAnalyzer, SectorRotationAnalyzer, VolumeAnalyzer
-from .analyzers.skew_analyzer import SKEWAnalyzer
-from .analyzers.treasury_yield_analyzer import TreasuryYieldAnalyzer
-from .analyzers.dxy_analyzer import DXYAnalyzer
-from .analyzers.credit_spread_analyzer import CreditSpreadAnalyzer
-from .analyzers.us_market_top_detector import USMarketTopDetector
+from ..analyzers.market_indicators.vix_analyzer import VIXAnalyzer
+from ..analyzers.market_structure.sector_analyzer import SectorRotationAnalyzer
+from ..analyzers.technical_analysis.volume_analyzer import VolumeAnalyzer
+from ..analyzers.market_indicators.skew_analyzer import SKEWAnalyzer
+from ..analyzers.valuation.treasury_yield_analyzer import TreasuryYieldAnalyzer
+from ..analyzers.market_indicators.dxy_analyzer import DXYAnalyzer
+from ..analyzers.valuation.credit_spread_analyzer import CreditSpreadAnalyzer
+from ..analyzers.risk_detection.us_market_top_detector import USMarketTopDetector
 
 logger = logging.getLogger(__name__)
 

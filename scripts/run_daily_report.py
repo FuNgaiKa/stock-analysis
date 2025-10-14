@@ -14,8 +14,8 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from position_analysis.daily_market_reporter import DailyMarketReporter
-from position_analysis.email_notifier import EmailNotifier
+from position_analysis.reporting.daily_market_reporter import DailyMarketReporter
+from position_analysis.reporting.email_notifier import EmailNotifier
 
 
 def main():

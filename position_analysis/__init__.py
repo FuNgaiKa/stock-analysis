@@ -5,19 +5,19 @@ Position Analysis Package
 历史点位对比分析包
 """
 
-from .historical_position_analyzer import (
+from .core.historical_position_analyzer import (
     HistoricalPositionAnalyzer,
     ProbabilityAnalyzer,
     PositionManager,
     SUPPORTED_INDICES
 )
 
-from .report_generator import (
+from .reporting.report_generator import (
     TextReportGenerator,
     HTMLReportGenerator
 )
 
-from .chart_generator import ChartGenerator
+from .reporting.chart_generator import ChartGenerator
 
 from .main import PositionAnalysisEngine
 

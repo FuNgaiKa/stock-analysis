@@ -14,8 +14,8 @@ from datetime import datetime
 # 添加项目路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from position_analysis.enhanced_data_provider import EnhancedDataProvider
-from position_analysis.market_state_detector import MarketStateDetector
+from position_analysis.core.enhanced_data_provider import EnhancedDataProvider
+from position_analysis.core.market_state_detector import MarketStateDetector
 import akshare as ak
 import pandas as pd
 

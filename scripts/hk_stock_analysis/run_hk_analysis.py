@@ -9,7 +9,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from position_analysis.hk_market_analyzer import HKMarketAnalyzer
+from position_analysis.market_analyzers.hk_market_analyzer import HKMarketAnalyzer
 import logging
 
 

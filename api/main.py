@@ -18,7 +18,7 @@ import json
 # 添加项目根目录到路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from position_analysis.us_market_analyzer import (
+from position_analysis.market_analyzers.us_market_analyzer import (
     USMarketAnalyzer,
     US_INDICES,
     DEFAULT_US_INDICES
@@ -434,7 +434,7 @@ async def run_backtest(
 async def get_hk_indices():
     """获取支持的港股指数列表"""
     try:
-        from position_analysis.hk_market_analyzer import HK_INDICES
+        from position_analysis.market_analyzers.hk_market_analyzer import HK_INDICES
         return [
             {
                 "code": code,
@@ -454,7 +454,7 @@ async def get_hk_current_positions(
 ):
     """获取港股指数当前点位"""
     try:
-        from position_analysis.hk_market_analyzer import HKMarketAnalyzer, DEFAULT_HK_INDICES
+        from position_analysis.market_analyzers.hk_market_analyzer import HKMarketAnalyzer, DEFAULT_HK_INDICES
 
         analyzer = HKMarketAnalyzer()
 
@@ -480,7 +480,7 @@ async def get_hk_current_positions(
 async def get_cn_indices():
     """获取支持的A股指数列表"""
     try:
-        from position_analysis.cn_market_analyzer import CN_INDICES
+        from position_analysis.market_analyzers.cn_market_analyzer import CN_INDICES
         return [
             {
                 "code": code,
@@ -500,7 +500,7 @@ async def get_cn_current_positions(
 ):
     """获取A股指数当前点位"""
     try:
-        from position_analysis.cn_market_analyzer import CNMarketAnalyzer, DEFAULT_CN_INDICES
+        from position_analysis.market_analyzers.cn_market_analyzer import CNMarketAnalyzer, DEFAULT_CN_INDICES
 
         analyzer = CNMarketAnalyzer()
 
@@ -541,7 +541,7 @@ async def analyze_correlation(
         if len(symbols) < 2:
             raise HTTPException(status_code=400, detail="至少需要2个资产代码")
 
-        from position_analysis.analyzers.correlation_analyzer import CorrelationAnalyzer
+        from position_analysis.analyzers.technical_analysis.correlation_analyzer import CorrelationAnalyzer
 
         # 资产名称映射
         asset_names = {
@@ -600,7 +600,7 @@ async def analyze_support_resistance(
         支撑/压力位分析结果
     """
     try:
-        from position_analysis.analyzers.support_resistance import SupportResistanceAnalyzer
+        from position_analysis.analyzers.technical_analysis.support_resistance import SupportResistanceAnalyzer
 
         analyzer = SupportResistanceAnalyzer(symbol, lookback_days=lookback_days)
         result = analyzer.comprehensive_analysis()
@@ -633,7 +633,7 @@ async def analyze_market_sentiment():
         市场情绪指数(0-100)和各维度评分
     """
     try:
-        from position_analysis.analyzers.sentiment_index import MarketSentimentIndex
+        from position_analysis.analyzers.market_structure.sentiment_index import MarketSentimentIndex
 
         analyzer = MarketSentimentIndex()
         result = analyzer.calculate_comprehensive_sentiment()
@@ -1057,7 +1057,7 @@ async def websocket_market_data(websocket: WebSocket):
         while True:
             # 获取实时数据
             try:
-                from position_analysis.analyzers.sentiment_index import MarketSentimentIndex
+                from position_analysis.analyzers.market_structure.sentiment_index import MarketSentimentIndex
                 from data_sources.us_stock_source import USStockDataSource
 
                 # 1. 市场情绪指数

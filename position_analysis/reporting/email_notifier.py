@@ -255,7 +255,7 @@ class EmailNotifier:
         message['X-Priority'] = priority
 
         # 添加纯文本版本(简化)
-        from position_analysis.daily_market_reporter import DailyMarketReporter
+        from position_analysis.reporting.daily_market_reporter import DailyMarketReporter
         reporter = DailyMarketReporter.__new__(DailyMarketReporter)  # 不初始化分析器
         text_content = reporter.format_text_report(report)
 
