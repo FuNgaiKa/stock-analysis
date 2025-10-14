@@ -28,8 +28,8 @@ class EmailNotifier:
         """
         if config_path is None:
             # 默认配置文件路径
-            project_root = Path(__file__).parent.parent
-            config_path = project_root / 'email_config.yaml'
+            project_root = Path(__file__).parent.parent.parent
+            config_path = project_root / 'config' / 'email_config.yaml'
 
         self.config = self._load_config(config_path)
         self.logger = logging.getLogger(__name__)
@@ -42,7 +42,7 @@ class EmailNotifier:
             return config
         except FileNotFoundError:
             self.logger.error(f"配置文件未找到: {config_path}")
-            self.logger.info("请参考 email_config.yaml.template 创建配置文件")
+            self.logger.info("请参考 config/email_config.yaml.template 创建配置文件")
             raise
         except Exception as e:
             self.logger.error(f"加载配置文件失败: {str(e)}")

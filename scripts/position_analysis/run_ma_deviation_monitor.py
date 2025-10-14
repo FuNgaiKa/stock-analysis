@@ -228,7 +228,7 @@ def send_email_report(all_alerts, report, monitor):
 
     except FileNotFoundError:
         logger.error("❌ 邮件配置文件未找到!")
-        logger.info("请参考 email_config.yaml.template 创建 email_config.yaml 配置文件")
+        logger.info("请参考 config/email_config.yaml.template 创建 config/email_config.yaml 配置文件")
         return False
     except Exception as e:
         logger.error(f"❌ 发送邮件失败: {str(e)}")
@@ -241,7 +241,7 @@ def main():
     parser.add_argument(
         '--email',
         action='store_true',
-        help='发送邮件通知 (需要先配置 email_config.yaml)'
+        help='发送邮件通知 (需要先配置 config/email_config.yaml)'
     )
     parser.add_argument(
         '--retry',
