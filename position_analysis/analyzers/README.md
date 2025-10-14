@@ -6,7 +6,7 @@
 
 ## 📁 模块概览
 
-本目录包含19个专业级分析器,涵盖从技术指标到基本面分析的完整量化体系。
+本目录包含20个专业级分析器,涵盖从技术指标到基本面分析的完整量化体系。
 
 ### 🔥 核心分析器
 
@@ -72,6 +72,13 @@
   - 量比计算
   - 放量/缩量判断
   - 成交量背离检测
+
+- **divergence_analyzer.py** - 背离分析器 ⭐ (NEW)
+  - 量价背离检测(顶背离/底背离)
+  - MACD背驰检测
+  - RSI背离检测
+  - 综合背离分析
+  - 支持A股/H股/美股三大市场
 
 #### 5️⃣ 行业与板块
 - **sector_analyzer.py** - 行业轮动分析器
@@ -217,7 +224,28 @@ print(f"营收增长率: {result['revenue_growth']:.2f}%")
 print(f"综合评分: {result['total_score']:.1f}/100")
 ```
 
-### 5. 斜率分析
+### 5. 背离分析 (NEW)
+```python
+from position_analysis.analyzers.divergence_analyzer import DivergenceAnalyzer, normalize_dataframe_columns
+from data_sources.us_stock_source import USStockDataSource
+
+# 获取数据
+source = USStockDataSource()
+df = source.get_us_index_daily('SPX', period='6mo')
+df = normalize_dataframe_columns(df)
+
+# 背离分析
+analyzer = DivergenceAnalyzer()
+result = analyzer.comprehensive_analysis(df, symbol='S&P 500', market='US')
+
+print(f"发现背离: {result['has_any_divergence']}")
+if result['has_any_divergence']:
+    for signal in result['summary']:
+        print(f"{signal['type']}: {signal['description']}")
+        print(f"强度: {signal['strength']}/100 | 置信度: {signal['confidence']}")
+```
+
+### 6. 斜率分析
 ```python
 from position_analysis.analyzers.slope_analyzer import SlopeAnalyzer
 
@@ -324,7 +352,14 @@ def get_data(self):
 
 ## 🎖️ 版本历史
 
-- **v4.1** (2025-10-13) - 🆕 新增市场见顶检测器+DXY美元指数监控
+- **v4.2** (2025-10-14) - 🆕 新增背离分析器
+  - 量价背离检测(顶背离/底背离)
+  - MACD背驰检测
+  - RSI背离检测
+  - 支持A股/H股/美股三大市场
+  - 自动峰谷识别算法
+  - 背离强度评分系统
+- **v4.1** (2025-10-13) - 新增市场见顶检测器+DXY美元指数监控
   - 美股见顶检测器(估值+情绪+流动性三维度)
   - A股牛市见顶检测器(8大信号投票+DXY)
   - 港股见顶检测器(估值+流动性+情绪)
@@ -337,4 +372,4 @@ def get_data(self):
 ---
 
 **Made with ❤️ by Claude Code**
-最后更新: 2025-10-13
+最后更新: 2025-10-14
