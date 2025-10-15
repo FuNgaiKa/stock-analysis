@@ -1606,7 +1606,21 @@ class ComprehensiveAssetReporter:
                     lines.append(f"- **数据日期**: {hist.get('current_date', '')}")
                     lines.append("")
 
-                # 2. 历史点位分析
+                # 2. 综合判断 (最重要,放在最前面)
+                judgment = data.get('comprehensive_judgment', {})
+                if judgment:
+                    lines.append("#### 综合判断")
+                    lines.append(f"- **方向判断**: {judgment['direction']}")
+                    lines.append(f"- **建议仓位**: {judgment['recommended_position']}")
+
+                    if judgment.get('strategies'):
+                        lines.append("")
+                        lines.append("**操作策略**:")
+                        for strategy in judgment['strategies']:
+                            lines.append(f"  - {strategy}")
+                    lines.append("")
+
+                # 3. 历史点位分析
                 if hist and '20d' in hist:
                     lines.append("#### 历史点位分析")
                     lines.append(f"- **相似点位**: {hist.get('similar_periods_count', 0)} 个")
@@ -1759,20 +1773,6 @@ class ComprehensiveAssetReporter:
                         lines.append(f"- **市场情绪**: {sentiment} ({sentiment_score}/100)")
                         lines.append(f"- **交易信号**: {signal}")
 
-                    lines.append("")
-
-                # 4. 综合判断
-                judgment = data.get('comprehensive_judgment', {})
-                if judgment:
-                    lines.append("#### 综合判断")
-                    lines.append(f"- **方向判断**: {judgment['direction']}")
-                    lines.append(f"- **建议仓位**: {judgment['recommended_position']}")
-
-                    if judgment.get('strategies'):
-                        lines.append("")
-                        lines.append("**操作策略**:")
-                        for strategy in judgment['strategies']:
-                            lines.append(f"  - {strategy}")
                     lines.append("")
 
                 # 5. 成交量分析
