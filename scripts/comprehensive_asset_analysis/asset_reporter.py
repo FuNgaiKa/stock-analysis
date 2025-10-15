@@ -48,6 +48,9 @@ from position_analysis.analyzers.technical_analysis.support_resistance import Su
 from position_analysis.analyzers.market_structure.market_breadth_analyzer import MarketBreadthAnalyzer
 from position_analysis.analyzers.market_indicators.vix_analyzer import VIXAnalyzer
 from position_analysis.analyzers.market_indicators.vhsi_analyzer import VHSIAnalyzer
+from position_analysis.analyzers.market_structure.sentiment_index import MarketSentimentIndex
+from position_analysis.analyzers.market_indicators.cn_volatility_index import CNVolatilityIndex
+from position_analysis.analyzers.market_indicators.hk_volatility_index import HKVolatilityIndex
 
 logger = logging.getLogger(__name__)
 
@@ -138,7 +141,10 @@ class ComprehensiveAssetReporter:
         # SupportResistanceAnalyzer需要每个资产单独实例化
         self.market_breadth_analyzer = MarketBreadthAnalyzer()  # 仅A股
         self.vix_analyzer = VIXAnalyzer(self.us_source)  # 美股恐慌指数
-        self.vhsi_analyzer = VHSIAnalyzer()  # 港股恐慌指数
+        self.vhsi_analyzer = VHSIAnalyzer()  # 港股恐慌指数(可能失效)
+        self.cn_volatility_analyzer = CNVolatilityIndex()  # A股自定义波动率指数
+        self.hk_volatility_analyzer = HKVolatilityIndex()  # 港股自定义波动率指数
+        self.sentiment_analyzer = MarketSentimentIndex()  # 综合情绪指数(所有资产)
 
         logger.info("综合资产分析系统初始化完成")
 
@@ -211,11 +217,20 @@ class ComprehensiveAssetReporter:
             if config['market'] == 'CN' and config['type'] == 'index':
                 result['market_breadth'] = self._analyze_market_breadth()
 
-            # 11. 恐慌指数(美股VIX,港股VHSI)
+            # 11. 恐慌指数/市场情绪(所有资产)
+            # 11.1 综合情绪指数(适用所有资产)
+            result['market_sentiment'] = self._analyze_market_sentiment()
+
+            # 11.2 专属恐慌指数
             if config['market'] == 'US':
-                result['panic_index'] = self._analyze_panic_index('VIX')
+                # 美股使用VIX
+                result['panic_index'] = self._analyze_panic_index('VIX', config)
             elif config['market'] == 'HK':
-                result['panic_index'] = self._analyze_panic_index('VHSI')
+                # 港股优先VHSI,失败时使用自定义波动率指数
+                result['panic_index'] = self._analyze_panic_index('VHSI', config)
+            elif config['market'] == 'CN':
+                # A股使用自定义波动率指数
+                result['panic_index'] = self._analyze_panic_index('CNVI', config)
 
             logger.info(f"{config['name']} 分析完成")
 
@@ -553,7 +568,7 @@ class ComprehensiveAssetReporter:
             logger.error(f"市场宽度分析失败: {str(e)}")
             return {'error': str(e)}
 
-    def _analyze_panic_index(self, index_type: str) -> Dict:
+    def _analyze_panic_index(self, index_type: str, config: Dict) -> Dict:
         """恐慌指数分析(维度11)"""
         try:
             if index_type == 'VIX':
@@ -571,10 +586,30 @@ class ComprehensiveAssetReporter:
                 }
 
             elif index_type == 'VHSI':
-                # 港股VHSI
+                # 港股VHSI,失败时自动切换到HKVI
                 vhsi_result = self.vhsi_analyzer.analyze_vhsi(period='1y')
+
                 if 'error' in vhsi_result:
-                    return vhsi_result
+                    logger.warning(f"VHSI数据获取失败,使用港股自定义波动率指数HKVI: {vhsi_result['error']}")
+                    # 切换到HKVI
+                    df = self.hk_analyzer.get_index_data(config['code'], period="1y")
+                    if df.empty:
+                        return {'error': 'VHSI和HKVI数据都无法获取'}
+
+                    hkvi_result = self.hk_volatility_analyzer.calculate_hkvi(df)
+                    if 'error' in hkvi_result:
+                        return hkvi_result
+
+                    return {
+                        'type': 'HKVI',
+                        'index_value': hkvi_result['hkvi_value'],
+                        'status': hkvi_result['status'],
+                        'level': hkvi_result['level'],
+                        'emoji': hkvi_result['emoji'],
+                        'signal': hkvi_result['signal'],
+                        'percentile': hkvi_result.get('percentile', {}),
+                        'note': '港股自定义波动率指数(VHSI数据不可用)'
+                    }
 
                 return {
                     'type': 'VHSI',
@@ -587,11 +622,59 @@ class ComprehensiveAssetReporter:
                     'risk_alert': vhsi_result.get('risk_alert', None)
                 }
 
+            elif index_type == 'CNVI':
+                # A股自定义波动率指数
+                df = self.cn_analyzer.get_index_data(config['code'], period="1y")
+                if df.empty:
+                    return {'error': 'A股数据获取失败'}
+
+                cnvi_result = self.cn_volatility_analyzer.calculate_cnvi(df)
+                if 'error' in cnvi_result:
+                    return cnvi_result
+
+                return {
+                    'type': 'CNVI',
+                    'index_value': cnvi_result['cnvi_value'],
+                    'status': cnvi_result['status'],
+                    'level': cnvi_result['level'],
+                    'emoji': cnvi_result['emoji'],
+                    'signal': cnvi_result['signal'],
+                    'percentile': cnvi_result.get('percentile', {}),
+                    'note': 'A股自定义波动率指数'
+                }
+
             else:
                 return {'error': f'未知恐慌指数类型: {index_type}'}
 
         except Exception as e:
             logger.error(f"恐慌指数分析失败: {str(e)}")
+            return {'error': str(e)}
+
+    def _analyze_market_sentiment(self) -> Dict:
+        """综合市场情绪指数分析(维度11,所有资产)"""
+        try:
+            # 调用MarketSentimentIndex计算综合情绪
+            sentiment_result = self.sentiment_analyzer.calculate_comprehensive_sentiment()
+
+            if 'error' in sentiment_result:
+                return sentiment_result
+
+            # 提取关键数据
+            return {
+                'sentiment_score': sentiment_result.get('sentiment_score', 50),
+                'rating': sentiment_result.get('rating', '中性'),
+                'emoji': sentiment_result.get('emoji', '😐'),
+                'suggestion': sentiment_result.get('suggestion', ''),
+                'components': {
+                    'vix_score': sentiment_result.get('components', {}).get('vix_sentiment', {}).get('score', 50),
+                    'vix_level': sentiment_result.get('components', {}).get('vix_sentiment', {}).get('level', ''),
+                    'momentum_score': sentiment_result.get('components', {}).get('nasdaq_momentum', {}).get('score', 50),
+                    'volume_score': sentiment_result.get('components', {}).get('nasdaq_volume', {}).get('score', 50)
+                }
+            }
+
+        except Exception as e:
+            logger.error(f"综合市场情绪分析失败: {str(e)}")
             return {'error': str(e)}
 
     def _analyze_capital_flow(self, market: str, code: str) -> Dict:
@@ -1134,11 +1217,34 @@ class ComprehensiveAssetReporter:
                     if breadth.get('interpretation'):
                         lines.append(f"  解读: {breadth['interpretation']}")
 
-                # 10. 恐慌指数(维度11,美股VIX/港股VHSI)
+                # 10. 综合市场情绪(维度11,所有资产)
+                sentiment = data.get('market_sentiment', {})
+                if sentiment and 'error' not in sentiment:
+                    lines.append(f"\n【综合市场情绪】")
+                    lines.append(f"  情绪评分: {sentiment['sentiment_score']:.1f}/100 {sentiment.get('emoji', '😐')}")
+                    lines.append(f"  情绪等级: {sentiment.get('rating', '中性')}")
+                    if sentiment.get('suggestion'):
+                        lines.append(f"  操作建议: {sentiment['suggestion']}")
+
+                    # 显示情绪组件详情(可选)
+                    components = sentiment.get('components', {})
+                    if components and any(components.values()):
+                        lines.append(f"  情绪组件:")
+                        if components.get('vix_score'):
+                            lines.append(f"    VIX情绪: {components['vix_score']:.1f} ({components.get('vix_level', 'N/A')})")
+                        if components.get('momentum_score'):
+                            lines.append(f"    价格动量: {components['momentum_score']:.1f}")
+                        if components.get('volume_score'):
+                            lines.append(f"    成交量: {components['volume_score']:.1f}")
+
+                # 11. 专属恐慌指数(美股VIX/港股VHSI/A股CNVI/港股HKVI)
                 panic = data.get('panic_index', {})
                 if panic and 'error' not in panic:
                     panic_type = panic.get('type', '')
-                    lines.append(f"\n【恐慌指数】({panic_type})")
+                    lines.append(f"\n【{panic_type}恐慌指数】")
+
+                    if panic.get('note'):
+                        lines.append(f"  说明: {panic['note']}")
 
                     if panic_type == 'VIX':
                         state = panic.get('current_state', {})
@@ -1163,6 +1269,23 @@ class ComprehensiveAssetReporter:
 
                         if panic.get('risk_alert'):
                             lines.append(f"  风险提示: {panic['risk_alert']}")
+
+                    elif panic_type in ['CNVI', 'HKVI']:
+                        # A股CNVI或港股HKVI
+                        index_val = panic.get('index_value', 0)
+                        status = panic.get('status', '')
+                        emoji = panic.get('emoji', '😊')
+                        lines.append(f"  指数值: {index_val:.2f} ({status}) {emoji}")
+
+                        signal = panic.get('signal', {})
+                        if signal:
+                            lines.append(f"  信号: {signal.get('signal', 'N/A')}")
+                            if signal.get('action'):
+                                lines.append(f"  操作建议: {signal['action']}")
+
+                        percentile = panic.get('percentile', {})
+                        if percentile:
+                            lines.append(f"  历史分位: {percentile.get('description', 'N/A')}")
 
         lines.append("\n" + "=" * 80)
         lines.append("由 Claude Code 量化分析系统生成")
@@ -1349,11 +1472,25 @@ class ComprehensiveAssetReporter:
                         lines.append(f"- **市场强度**: {strength:.2f} {strength_emoji}")
                     lines.append("")
 
-                # 8. 恐慌指数
+                # 6. 综合市场情绪(所有资产)
+                sentiment = data.get('market_sentiment', {})
+                if sentiment and 'error' not in sentiment:
+                    lines.append("#### 综合市场情绪")
+                    lines.append(f"- **情绪评分**: {sentiment['sentiment_score']:.1f}/100 {sentiment.get('emoji', '😐')}")
+                    lines.append(f"- **情绪等级**: {sentiment.get('rating', '中性')}")
+                    if sentiment.get('suggestion'):
+                        lines.append(f"- **操作建议**: {sentiment['suggestion']}")
+                    lines.append("")
+
+                # 7. 专属恐慌指数(美股VIX/港股VHSI/A股CNVI/港股HKVI)
                 panic = data.get('panic_index', {})
                 if panic and 'error' not in panic:
                     panic_type = panic.get('type', '')
                     lines.append(f"#### 恐慌指数 ({panic_type})")
+
+                    if panic.get('note'):
+                        lines.append(f"*{panic['note']}*")
+                        lines.append("")
 
                     if panic_type == 'VIX':
                         state = panic.get('current_state', {})
@@ -1375,6 +1512,18 @@ class ComprehensiveAssetReporter:
 
                         if panic.get('signal'):
                             lines.append(f"- **信号**: {panic['signal']}")
+
+                    elif panic_type in ['CNVI', 'HKVI']:
+                        # A股CNVI或港股HKVI
+                        index_val = panic.get('index_value', 0)
+                        status = panic.get('status', '')
+                        emoji = panic.get('emoji', '😊')
+                        lines.append(f"- **指数值**: {index_val:.2f} ({status}) {emoji}")
+
+                        signal = panic.get('signal', {})
+                        if signal and signal.get('action'):
+                            lines.append(f"- **操作建议**: {signal['action']}")
+
                     lines.append("")
 
                 lines.append("---")

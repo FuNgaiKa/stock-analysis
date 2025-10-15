@@ -82,8 +82,9 @@
 
 11. **恐慌指数** ⭐⭐⭐ 🆕
     - 美股: VIX恐慌指数
-    - 港股: VHSI波动率指数
-    - 恐慌等级判断
+    - A股: CNVI自定义波动率指数(基于历史波动率、价格区间波动、成交量波动)
+    - 港股: VHSI波动率指数(失败时fallback到HKVI自定义指数)
+    - 恐慌等级判断(极度恐慌/恐慌上升/正常区间/过度乐观)
     - 历史分位数分析
     - 交易信号生成
 
@@ -168,7 +169,7 @@ python scripts/comprehensive_asset_analysis/run_asset_analysis.py
 python scripts/comprehensive_asset_analysis/run_asset_analysis.py --email
 ```
 
-**邮件将发送到**: `1264947688@qq.com`
+**邮件将发送到**: 配置文件中的收件人列表(支持多个收件人)
 
 **邮件效果**:
 - ✅ 精美HTML格式
@@ -177,6 +178,7 @@ python scripts/comprehensive_asset_analysis/run_asset_analysis.py --email
 - ✅ 风险评估高亮
 - ✅ 组合策略匹配提示
 - ✅ 移动端友好
+- ✅ 支持多个收件人同时发送
 
 ### 3. 保存到文件
 
@@ -229,7 +231,9 @@ sender:
   name: 综合资产分析系统
 
 recipients:
-  - 1264947688@qq.com             # 收件人(已固定)
+  - 1264947688@qq.com             # 收件人1
+  - 1194714620@qq.com             # 收件人2(可选)
+  - 2645826123@qq.com             # 收件人3(可选)
 ```
 
 ### 步骤4: 测试邮件发送
@@ -534,6 +538,39 @@ python scripts/comprehensive_asset_analysis/run_asset_analysis.py
 
 **注意**: 即使概率100%,也要结合技术面(如MACD背离)综合判断！
 
+### Q7: CNVI和HKVI是什么?
+
+**CNVI** (Chinese Market Volatility Index) - A股自定义波动率恐慌指数
+**HKVI** (Hong Kong Market Volatility Index) - 港股自定义波动率恐慌指数
+
+**为什么需要自定义指数?**
+- A股市场没有官方恐慌指数(不像美股有VIX)
+- 港股VHSI数据源不稳定(Yahoo Finance经常404)
+- 自定义指数基于实际历史数据计算,更贴合市场实际波动
+
+**计算方法**:
+- 40% 历史波动率(20日滚动标准差,年化)
+- 30% 价格区间波动(日内高低价波动)
+- 30% 成交量波动(成交量放大/缩小)
+
+**阈值标准**(与VIX对齐):
+- CNVI/HKVI > 30: 极度恐慌 😱 → 可能是抄底良机
+- CNVI/HKVI 25-30: 恐慌上升 ⚠️ → 控制仓位,等待企稳
+- CNVI/HKVI 15-25: 正常区间 😊 → 正常操作
+- CNVI/HKVI < 15: 过度乐观 😌 → 警惕调整风险
+
+### Q8: 为什么港股用HKVI而不是VHSI?
+
+系统会**优先尝试VHSI**(港股官方波动率指数),但如果:
+- Yahoo Finance数据获取失败(404错误)
+- VHSI停止更新
+- 网络问题
+
+系统会**自动fallback到HKVI**,确保分析不中断。日志会显示:
+```
+WARNING: VHSI数据获取失败,使用港股自定义波动率指数HKVI
+```
+
 ---
 
 ## 🆚 与四大科技指数系统的区别
@@ -551,7 +588,15 @@ python scripts/comprehensive_asset_analysis/run_asset_analysis.py
 
 ## 📝 更新日志
 
-### v1.1.0 (2025-10-15) 🆕
+### v1.2.0 (2025-10-15) 🆕
+- ✨ **新增**: A股自定义恐慌指数CNVI(基于历史波动率、价格区间波动、成交量波动)
+- ✨ **新增**: 港股自定义恐慌指数HKVI(VHSI数据不可用时自动fallback)
+- 🐛 **修复**: 邮件发送支持多个收件人(之前只能发送给1个收件人)
+- 📊 **优化**: 恐慌指数阈值对齐VIX标准(>30极度恐慌, 25-30恐慌上升, 15-25正常, <15过度乐观)
+- ✅ A股所有资产(创业板指、科创50、沪深300)现均有CNVI指数
+- ✅ 港股恒生科技智能切换VHSI/HKVI
+
+### v1.1.0 (2025-10-15)
 - ✨ **重大更新**: 从7维度扩展到11维度分析
 - 🆕 **新增维度8**: 成交量分析(OBV/量比/量价关系)
 - 🆕 **新增维度9**: 支撑压力位(轴心点/斐波那契/历史高低点)

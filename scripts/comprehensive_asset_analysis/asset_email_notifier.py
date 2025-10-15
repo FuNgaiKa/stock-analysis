@@ -89,9 +89,9 @@ class AssetEmailNotifier:
         message = MIMEMultipart('alternative')
         message['From'] = self.config['sender']['email']
 
-        # 固定收件人为 1264947688@qq.com
-        recipient = '1264947688@qq.com'
-        message['To'] = recipient
+        # 从配置文件获取收件人列表
+        recipients = self.config.get('recipients', ['1264947688@qq.com'])
+        message['To'] = ', '.join(recipients)  # 多个收件人用逗号分隔
         message['Subject'] = Header(subject, 'utf-8')
         message['X-Priority'] = '3'
 
@@ -113,12 +113,12 @@ class AssetEmailNotifier:
             )
             smtp.sendmail(
                 self.config['sender']['email'],
-                [recipient],
+                recipients,  # 发送到所有收件人
                 message.as_string()
             )
             smtp.quit()
 
-            self.logger.info(f"邮件发送成功: {subject}")
+            self.logger.info(f"邮件发送成功(发送到{len(recipients)}个收件人): {subject}")
             return True
 
         except Exception as e:
