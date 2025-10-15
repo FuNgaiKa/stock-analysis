@@ -248,6 +248,20 @@ stock-analysis/
 │   │   └── hkstock_source.py              # 港股数据源
 │   │
 │   ├── scripts/                           # 运行脚本
+│   │   ├── comprehensive_asset_analysis/  # 综合资产分析 🆕⭐
+│   │   │   ├── asset_reporter.py          # 7大资产分析器(11维度)
+│   │   │   ├── asset_email_notifier.py    # 邮件通知模块
+│   │   │   ├── run_asset_analysis.py      # 执行入口
+│   │   │   ├── README.md                  # 详细文档
+│   │   │   ├── INDICATOR_EXPANSION_PLAN.md # 指标扩展计划
+│   │   │   └── INTEGRATION_GUIDE.md       # 集成指南
+│   │   │
+│   │   ├── tech_indices_analysis/         # 四大科技指数分析 🆕⭐
+│   │   │   ├── tech_indices_reporter.py   # 科技指数分析器(7维度)
+│   │   │   ├── tech_email_notifier.py     # 邮件通知模块
+│   │   │   ├── run_tech_comprehensive_analysis.py # 执行入口
+│   │   │   └── README.md                  # 详细文档
+│   │   │
 │   │   ├── position_analysis/
 │   │   │   └── run_ma_deviation_monitor.py # 均线偏离度监控脚本
 │   │   ├── hk_stock_analysis/
@@ -354,7 +368,46 @@ python scripts/position_analysis/run_ma_deviation_monitor.py --email --quiet
 python scripts/position_analysis/run_ma_deviation_monitor.py --email --retry 5
 ```
 
-#### 方式5: 每日市场推送 🆕
+#### 方式5: 综合资产分析 🆕⭐
+```bash
+# 分析7大资产(四大科技指数+沪深300+黄金+比特币) - 11维度分析
+python scripts/comprehensive_asset_analysis/run_asset_analysis.py
+
+# 发送邮件报告
+python scripts/comprehensive_asset_analysis/run_asset_analysis.py --email
+
+# 保存为Markdown格式
+python scripts/comprehensive_asset_analysis/run_asset_analysis.py --format markdown --save reports/assets.md
+```
+
+**分析对象:**
+- 🇨🇳 创业板指/科创50/沪深300
+- 🇭🇰 恒生科技
+- 🇺🇸 纳斯达克
+- 💰 黄金
+- ₿ 比特币
+
+**分析维度(11维度):**
+- 历史点位、技术面、资金面、估值、市场情绪、风险评估、综合判断
+- 成交量分析、支撑压力位、市场宽度、恐慌指数(VIX/CNVI/HKVI)
+
+**详见**: [scripts/comprehensive_asset_analysis/README.md](scripts/comprehensive_asset_analysis/README.md)
+
+#### 方式6: 四大科技指数分析 🆕⭐
+```bash
+# 专注分析四大科技指数(创业板指/科创50/恒生科技/纳斯达克) - 7维度分析
+python scripts/tech_indices_analysis/run_tech_comprehensive_analysis.py
+
+# 发送邮件报告
+python scripts/tech_indices_analysis/run_tech_comprehensive_analysis.py --email
+```
+
+**分析维度(7维度):**
+- 历史点位、技术面、资金面、估值、市场情绪、风险评估、综合判断
+
+**详见**: [scripts/tech_indices_analysis/README.md](scripts/tech_indices_analysis/README.md)
+
+#### 方式7: 每日市场推送
 ```bash
 # 生成每日市场报告(控制台输出)
 python scripts/run_daily_report.py
@@ -380,7 +433,7 @@ python scripts/run_daily_report.py --email --verbose
 - 每个工作日 15:10 自动执行
 - 详见: [每日市场推送配置指南](docs/DAILY_REPORT_SETUP.md)
 
-#### 方式6: 完整主程序
+#### 方式8: 完整主程序
 ```bash
 # 运行主程序（包含所有功能菜单）
 python main.py
