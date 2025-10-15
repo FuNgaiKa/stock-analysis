@@ -57,15 +57,27 @@ class MarginTradingAnalyzer:
             DataFrame with columns: [信用交易日期, 融资余额, 融资买入额, 融券余量, ...]
         """
         try:
-            logger.info("获取上交所融资融券数据...")
-            df = ak.stock_margin_sse()
+            logger.info("获取上交所融资融券数据(宏观接口)...")
+            # 使用宏观数据接口获取最新数据
+            df = ak.macro_china_market_margin_sh()
 
             if df is None or df.empty:
                 logger.warning("上交所融资融券数据为空")
                 return pd.DataFrame()
 
+            # 统一列名格式
+            df = df.rename(columns={
+                '日期': '信用交易日期',
+                '融资买入额': '融资买入额',
+                '融资余额': '融资余额',
+                '融券卖出量': '融券卖出量',
+                '融券余量': '融券余量',
+                '融券余额': '融券余量金额',
+                '融资融券余额': '融资融券余额'
+            })
+
             # 转换日期格式
-            df['信用交易日期'] = pd.to_datetime(df['信用交易日期'], format='%Y%m%d')
+            df['信用交易日期'] = pd.to_datetime(df['信用交易日期'])
             df = df.sort_values('信用交易日期', ascending=True)
 
             # 筛选最近N天
@@ -74,7 +86,7 @@ class MarginTradingAnalyzer:
 
             df = df.tail(days)
 
-            logger.info(f"上交所融资融券数据获取成功: {len(df)} 条记录")
+            logger.info(f"上交所融资融券数据获取成功: {len(df)} 条记录, 最新日期: {df.iloc[-1]['信用交易日期'].strftime('%Y-%m-%d')}")
             return df
 
         except Exception as e:
@@ -92,15 +104,27 @@ class MarginTradingAnalyzer:
             DataFrame with columns: [信用交易日期, 融资余额, 融资买入额, 融券余量, ...]
         """
         try:
-            logger.info("获取深交所融资融券数据...")
-            df = ak.stock_margin_szse()
+            logger.info("获取深交所融资融券数据(宏观接口)...")
+            # 使用宏观数据接口获取最新数据
+            df = ak.macro_china_market_margin_sz()
 
             if df is None or df.empty:
                 logger.warning("深交所融资融券数据为空")
                 return pd.DataFrame()
 
+            # 统一列名格式
+            df = df.rename(columns={
+                '日期': '信用交易日期',
+                '融资买入额': '融资买入额',
+                '融资余额': '融资余额',
+                '融券卖出量': '融券卖出量',
+                '融券余量': '融券余量',
+                '融券余额': '融券余量金额',
+                '融资融券余额': '融资融券余额'
+            })
+
             # 转换日期格式
-            df['信用交易日期'] = pd.to_datetime(df['信用交易日期'], format='%Y%m%d')
+            df['信用交易日期'] = pd.to_datetime(df['信用交易日期'])
             df = df.sort_values('信用交易日期', ascending=True)
 
             # 筛选最近N天
@@ -109,7 +133,7 @@ class MarginTradingAnalyzer:
 
             df = df.tail(days)
 
-            logger.info(f"深交所融资融券数据获取成功: {len(df)} 条记录")
+            logger.info(f"深交所融资融券数据获取成功: {len(df)} 条记录, 最新日期: {df.iloc[-1]['信用交易日期'].strftime('%Y-%m-%d')}")
             return df
 
         except Exception as e:

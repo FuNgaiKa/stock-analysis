@@ -232,6 +232,10 @@ class ComprehensiveAssetReporter:
                 # A股使用自定义波动率指数
                 result['panic_index'] = self._analyze_panic_index('CNVI', config)
 
+            # 12. 宏观环境分析(美股、黄金、比特币)
+            if config['market'] in ['US', 'crypto', 'commodity']:
+                result['macro_environment'] = self._analyze_macro_environment(config['market'])
+
             logger.info(f"{config['name']} 分析完成")
 
         except Exception as e:
@@ -678,17 +682,47 @@ class ComprehensiveAssetReporter:
             return {'error': str(e)}
 
     def _analyze_capital_flow(self, market: str, code: str) -> Dict:
-        """资金面分析"""
+        """资金面分析(维度3)"""
         try:
             if market == 'CN':
-                # 北向资金
+                # A股: 北向资金 + 融资融券
                 north_flow = self.hk_connect.comprehensive_analysis(direction='north')
-                return {
+
+                # 融资融券分析
+                from position_analysis.analyzers.market_specific.margin_trading_analyzer import MarginTradingAnalyzer
+                margin_analyzer = MarginTradingAnalyzer(lookback_days=252)
+                margin_result = margin_analyzer.comprehensive_analysis(market='sse')  # 使用上交所数据
+
+                result = {
                     'type': 'northbound',
                     'recent_5d_flow': north_flow.get('flow_analysis', {}).get('recent_5d', 0),
                     'status': north_flow.get('sentiment_analysis', {}).get('sentiment', '未知'),
                     'sentiment_score': north_flow.get('sentiment_analysis', {}).get('sentiment_score', 50)
                 }
+
+                # 添加融资融券数据
+                if 'error' not in margin_result:
+                    metrics = margin_result.get('metrics', {})
+                    sentiment = margin_result.get('sentiment_analysis', {})
+
+                    result['margin_trading'] = {
+                        'available': True,
+                        'latest_date': metrics.get('latest_date', ''),
+                        'margin_balance': metrics.get('latest_margin_balance', 0),
+                        'margin_change_1d': metrics.get('margin_change_pct_1d', 0),
+                        'margin_change_5d': metrics.get('margin_change_pct_5d', 0),
+                        'margin_change_20d': metrics.get('margin_change_pct_20d', 0),
+                        'trend': metrics.get('trend', ''),
+                        'percentile': metrics.get('percentile_252d', 50),
+                        'sentiment': sentiment.get('sentiment', '未知'),
+                        'sentiment_score': sentiment.get('sentiment_score', 50),
+                        'signal': sentiment.get('signal', '观望')
+                    }
+                else:
+                    result['margin_trading'] = {'available': False, 'error': margin_result.get('error')}
+
+                return result
+
             elif market == 'HK':
                 # 南向资金
                 south_flow = self.hk_connect.comprehensive_analysis(direction='south')
@@ -706,11 +740,146 @@ class ComprehensiveAssetReporter:
             return {'error': str(e)}
 
     def _analyze_valuation(self, market: str, code: str) -> Dict:
-        """估值分析"""
-        return {
-            'available': False,
-            'note': 'PE/PB分位数分析需要专门数据源,待后续集成'
-        }
+        """
+        估值分析(维度4)
+
+        数据源说明:
+        - 使用akshare的stock_index_pe_lg接口
+        - 支持指数: 沪深300(000300)、创业板指(399006)、中证500(000905)、上证50(000016)
+        - 不支持: 科创50(000688)、恒生科技(HSTECH) - 免费数据源暂无历史PE/PB数据
+        """
+        try:
+            # 仅支持A股指数
+            if market != 'CN':
+                return {'available': False, 'reason': '仅支持A股指数估值分析'}
+
+            # 导入估值分析器
+            from position_analysis.analyzers.valuation.index_valuation_analyzer import IndexValuationAnalyzer
+
+            # 代码映射(asset_reporter中的code -> akshare code)
+            # 注意: 仅包含akshare的stock_index_pe_lg接口支持的指数
+            code_map = {
+                'HS300': '000300',      # 沪深300 ✅ 支持
+                'CYBZ': '399006',       # 创业板指 ✅ 支持
+                # 'KECHUANG50': '000688', # 科创50 ❌ 不支持(数据源无历史PE数据)
+            }
+
+            # 转换代码
+            index_code = code_map.get(code)
+            if not index_code:
+                return {'available': False, 'reason': f'指数 {code} 暂不支持PE估值(免费数据源限制)'}
+
+            # 创建分析器实例(10年历史数据)
+            valuation_analyzer = IndexValuationAnalyzer(lookback_days=2520)
+
+            # 1. 计算PE/PB分位数
+            valuation_result = valuation_analyzer.calculate_valuation_percentile(
+                index_code=index_code,
+                periods=[252, 756, 1260, 2520]  # 1年、3年、5年、10年
+            )
+
+            if 'error' in valuation_result:
+                return {'available': False, 'error': valuation_result['error']}
+
+            # 2. 计算股债收益比(ERP)
+            erp_result = valuation_analyzer.calculate_equity_risk_premium(index_code=index_code)
+
+            if 'error' in erp_result:
+                logger.warning(f"ERP计算失败: {erp_result['error']}")
+                erp_result = None
+
+            # 3. 汇总结果
+            return {
+                'available': True,
+                'index_name': valuation_result.get('index_name', ''),
+
+                # PE估值
+                'current_pe': valuation_result.get('current_pe', 0),
+                'pe_percentiles': valuation_result.get('pe_percentiles', {}),
+
+                # PB估值
+                'current_pb': valuation_result.get('current_pb', 0),
+                'pb_percentiles': valuation_result.get('pb_percentiles', {}),
+
+                # 估值水平判断
+                'valuation_level': valuation_result.get('valuation_level', {}),
+
+                # 股债收益比(ERP)
+                'erp': erp_result if erp_result else {'available': False},
+
+                # 数据日期
+                'data_date': valuation_result.get('data_date', '')
+            }
+
+        except Exception as e:
+            logger.error(f"估值分析失败: {str(e)}")
+            return {'available': False, 'error': str(e)}
+
+    def _analyze_macro_environment(self, market: str) -> Dict:
+        """
+        宏观环境分析(维度12: 美债收益率 + 美元指数)
+
+        Args:
+            market: 市场代码 ('US', 'CN', 'HK', 'crypto', 'commodity')
+
+        Returns:
+            宏观环境分析结果
+        """
+        try:
+            # 仅对美股、黄金、比特币提供宏观分析
+            if market not in ['US', 'crypto', 'commodity']:
+                return {'available': False, 'reason': '宏观分析仅适用于美股/黄金/比特币'}
+
+            result = {}
+
+            # 1. 美债收益率分析
+            try:
+                from position_analysis.analyzers.macro.treasury_yield_analyzer import TreasuryYieldAnalyzer
+                treasury_analyzer = TreasuryYieldAnalyzer(lookback_days=252)
+                treasury_result = treasury_analyzer.comprehensive_analysis()
+
+                if 'error' not in treasury_result:
+                    result['treasury_yield'] = {
+                        'available': True,
+                        'date': treasury_result['date'],
+                        'yields': treasury_result['yields'],
+                        'curve_shape': treasury_result['curve_shape'],
+                        'slope': treasury_result['slope'],
+                        'inversion_signal': treasury_result['inversion_signal'],
+                        'trend': treasury_result.get('trend')
+                    }
+                else:
+                    result['treasury_yield'] = {'available': False, 'error': treasury_result['error']}
+            except Exception as e:
+                logger.error(f"美债收益率分析失败: {str(e)}")
+                result['treasury_yield'] = {'available': False, 'error': str(e)}
+
+            # 2. 美元指数分析
+            try:
+                from position_analysis.analyzers.macro.dxy_analyzer import DXYAnalyzer
+                dxy_analyzer = DXYAnalyzer(lookback_days=252)
+                dxy_result = dxy_analyzer.comprehensive_analysis()
+
+                if 'error' not in dxy_result:
+                    result['dxy'] = {
+                        'available': True,
+                        'date': dxy_result['date'],
+                        'current_price': dxy_result['current_price'],
+                        'indicators': dxy_result['indicators'],
+                        'strength_analysis': dxy_result['strength_analysis']
+                    }
+                else:
+                    result['dxy'] = {'available': False, 'error': dxy_result['error']}
+            except Exception as e:
+                logger.error(f"美元指数分析失败: {str(e)}")
+                result['dxy'] = {'available': False, 'error': str(e)}
+
+            result['available'] = True
+            return result
+
+        except Exception as e:
+            logger.error(f"宏观环境分析失败: {str(e)}")
+            return {'available': False, 'error': str(e)}
 
     def _calculate_risk_score(self, result: Dict) -> Dict:
         """计算风险评分(0-1,越高越危险)"""
@@ -1107,6 +1276,90 @@ class ComprehensiveAssetReporter:
                     lines.append(f"    流向状态: {capital['status']}")
                     lines.append(f"    情绪评分: {capital['sentiment_score']}/100")
 
+                    # 融资融券数据(仅A股)
+                    margin = capital.get('margin_trading', {})
+                    if margin and margin.get('available'):
+                        lines.append(f"\n  融资融券(杠杆指标):")
+                        lines.append(f"    数据日期: {margin.get('latest_date', 'N/A')}")
+
+                        balance_billion = margin.get('margin_balance', 0) / 1e8
+                        lines.append(f"    融资余额: {balance_billion:.2f} 亿元")
+
+                        change_1d = margin.get('margin_change_1d', 0)
+                        change_5d = margin.get('margin_change_5d', 0)
+                        change_20d = margin.get('margin_change_20d', 0)
+                        lines.append(f"    单日变化: {change_1d:+.2f}%")
+                        lines.append(f"    5日变化: {change_5d:+.2f}%")
+                        lines.append(f"    20日变化: {change_20d:+.2f}%")
+
+                        trend = margin.get('trend', '未知')
+                        trend_emoji = '📈' if trend == '上升' else ('📉' if trend == '下降' else '➡️')
+                        lines.append(f"    趋势: {trend} {trend_emoji}")
+
+                        percentile = margin.get('percentile', 50)
+                        lines.append(f"    历史分位: {percentile:.1f}%")
+
+                        sentiment = margin.get('sentiment', '未知')
+                        sentiment_score = margin.get('sentiment_score', 50)
+                        signal = margin.get('signal', '观望')
+                        lines.append(f"    市场情绪: {sentiment} ({sentiment_score}/100)")
+                        lines.append(f"    交易信号: {signal}")
+
+                # 4.5 估值分析(维度4,仅A股指数)
+                valuation = data.get('valuation', {})
+                if valuation and valuation.get('available'):
+                    lines.append(f"\n【估值分析】(A股专属)")
+
+                    # PE估值
+                    current_pe = valuation.get('current_pe', 0) or 0
+                    pe_percentiles = valuation.get('pe_percentiles', {})
+                    if current_pe > 0 and pe_percentiles:
+                        lines.append(f"  PE估值:")
+                        lines.append(f"    当前PE: {current_pe:.2f}")
+                        lines.append(f"    历史分位:")
+                        for period_name, data in pe_percentiles.items():
+                            if isinstance(data, dict):
+                                pct = data.get('percentile', 0) / 100
+                                level = data.get('level', '')
+                                lines.append(f"      {period_name}: {pct:.1%} ({level})")
+                            else:
+                                lines.append(f"      {period_name}: {data:.1%}")
+
+                    # PB估值
+                    current_pb = valuation.get('current_pb', 0) or 0
+                    pb_percentiles = valuation.get('pb_percentiles', {})
+                    if current_pb > 0 and pb_percentiles:
+                        lines.append(f"  PB估值:")
+                        lines.append(f"    当前PB: {current_pb:.2f}")
+                        lines.append(f"    历史分位:")
+                        for period_name, data in pb_percentiles.items():
+                            if isinstance(data, dict):
+                                pct = data.get('percentile', 0) / 100
+                                level = data.get('level', '')
+                                lines.append(f"      {period_name}: {pct:.1%} ({level})")
+                            else:
+                                lines.append(f"      {period_name}: {data:.1%}")
+
+                    # 估值水平判断
+                    val_level = valuation.get('valuation_level', {})
+                    if val_level:
+                        pe_level = val_level.get('pe_level', {})
+                        pb_level = val_level.get('pb_level', {})
+                        if pe_level:
+                            level_desc = pe_level.get('level', '合理')
+                            emoji = pe_level.get('emoji', '➡️')
+                            lines.append(f"  估值水平: {level_desc} {emoji}")
+
+                    # 股债收益比(ERP)
+                    erp = valuation.get('erp', {})
+                    if erp and erp.get('available'):
+                        erp_value = erp.get('erp_value', 0)
+                        erp_pct = erp_value * 100
+                        signal = erp.get('signal', {})
+                        if signal:
+                            erp_desc = signal.get('description', '')
+                            lines.append(f"  股债收益比(ERP): {erp_pct:+.2f}% ({erp_desc})")
+
                 # 5. 风险评估
                 risk = data.get('risk_assessment', {})
                 if risk:
@@ -1408,6 +1661,106 @@ class ComprehensiveAssetReporter:
                         lines.append(f"- {indicator}")
                     lines.append("")
 
+                # 3.5 估值分析(维度4,仅A股指数)
+                valuation = data.get('valuation', {})
+                if valuation and valuation.get('available'):
+                    lines.append("#### 估值分析 (A股专属)")
+
+                    # PE/PB估值表格
+                    current_pe = valuation.get('current_pe', 0) or 0
+                    current_pb = valuation.get('current_pb', 0) or 0
+                    pe_percentiles = valuation.get('pe_percentiles', {})
+                    pb_percentiles = valuation.get('pb_percentiles', {})
+
+                    if current_pe > 0 and pe_percentiles:
+                        lines.append("")
+                        lines.append("**PE估值**:")
+                        lines.append(f"- **当前PE**: {current_pe:.2f}")
+                        lines.append("- **历史分位**:")
+                        for period_name, data in pe_percentiles.items():
+                            if isinstance(data, dict):
+                                pct = data.get('percentile', 0) / 100
+                                level = data.get('level', '')
+                                lines.append(f"  - {period_name}: {pct:.1%} ({level})")
+                            else:
+                                lines.append(f"  - {period_name}: {data:.1%}")
+
+                    if current_pb > 0 and pb_percentiles:
+                        lines.append("")
+                        lines.append("**PB估值**:")
+                        lines.append(f"- **当前PB**: {current_pb:.2f}")
+                        lines.append("- **历史分位**:")
+                        for period_name, data in pb_percentiles.items():
+                            if isinstance(data, dict):
+                                pct = data.get('percentile', 0) / 100
+                                level = data.get('level', '')
+                                lines.append(f"  - {period_name}: {pct:.1%} ({level})")
+                            else:
+                                lines.append(f"  - {period_name}: {data:.1%}")
+
+                    # 估值水平
+                    val_level = valuation.get('valuation_level', {})
+                    if val_level:
+                        pe_level = val_level.get('pe_level', {})
+                        if pe_level:
+                            level_desc = pe_level.get('level', '合理')
+                            emoji = pe_level.get('emoji', '➡️')
+                            lines.append(f"\n**估值水平**: {level_desc} {emoji}")
+
+                    # ERP
+                    erp = valuation.get('erp', {})
+                    if erp and erp.get('available'):
+                        erp_value = erp.get('erp_value', 0)
+                        erp_pct = erp_value * 100
+                        signal = erp.get('signal', {})
+                        if signal:
+                            erp_desc = signal.get('description', '')
+                            lines.append(f"**股债收益比(ERP)**: {erp_pct:+.2f}% ({erp_desc})")
+
+                    lines.append("")
+
+                # 3.7 资金面分析(仅A股/港股指数)
+                capital = data.get('capital_flow', {})
+                if capital and 'error' not in capital and capital.get('type'):
+                    lines.append("#### 资金面分析")
+                    flow_type = '北向资金(外资)' if capital['type'] == 'northbound' else '南向资金(内地)'
+                    lines.append(f"**{flow_type}**:")
+                    lines.append(f"- **近5日累计**: {capital['recent_5d_flow']:.2f} 亿元")
+                    lines.append(f"- **流向状态**: {capital['status']}")
+                    lines.append(f"- **情绪评分**: {capital['sentiment_score']}/100")
+
+                    # 融资融券数据(仅A股)
+                    margin = capital.get('margin_trading', {})
+                    if margin and margin.get('available'):
+                        lines.append("")
+                        lines.append("**融资融券(杠杆指标)**:")
+                        lines.append(f"- **数据日期**: {margin.get('latest_date', 'N/A')}")
+
+                        balance_billion = margin.get('margin_balance', 0) / 1e8
+                        lines.append(f"- **融资余额**: {balance_billion:.2f} 亿元")
+
+                        change_1d = margin.get('margin_change_1d', 0)
+                        change_5d = margin.get('margin_change_5d', 0)
+                        change_20d = margin.get('margin_change_20d', 0)
+                        lines.append(f"- **单日变化**: {change_1d:+.2f}%")
+                        lines.append(f"- **5日变化**: {change_5d:+.2f}%")
+                        lines.append(f"- **20日变化**: {change_20d:+.2f}%")
+
+                        trend = margin.get('trend', '未知')
+                        trend_emoji = '📈' if trend == '上升' else ('📉' if trend == '下降' else '➡️')
+                        lines.append(f"- **趋势**: {trend} {trend_emoji}")
+
+                        percentile = margin.get('percentile', 50)
+                        lines.append(f"- **历史分位**: {percentile:.1f}%")
+
+                        sentiment = margin.get('sentiment', '未知')
+                        sentiment_score = margin.get('sentiment_score', 50)
+                        signal = margin.get('signal', '观望')
+                        lines.append(f"- **市场情绪**: {sentiment} ({sentiment_score}/100)")
+                        lines.append(f"- **交易信号**: {signal}")
+
+                    lines.append("")
+
                 # 4. 综合判断
                 judgment = data.get('comprehensive_judgment', {})
                 if judgment:
@@ -1554,4 +1907,11 @@ if __name__ == '__main__':
     text_report = reporter.format_text_report(report)
     print(text_report)
 
-    print("\n✅ 测试完成")
+    # 生成并保存Markdown报告
+    markdown_report = reporter.format_markdown_report(report)
+    md_path = '/tmp/comprehensive_asset_report.md'
+    with open(md_path, 'w', encoding='utf-8') as f:
+        f.write(markdown_report)
+
+    print(f"\n✅ 测试完成")
+    print(f"📄 Markdown报告已保存至: {md_path}")
