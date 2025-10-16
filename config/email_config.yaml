@@ -1,0 +1,25 @@
+# 邮件配置文件
+# 注意: 请填写真实的邮箱信息后再使用邮件功能
+
+# SMTP 服务器配置
+smtp:
+  server: smtp.qq.com    # QQ邮箱SMTP服务器
+  port: 465              # SSL端口
+
+# 发件人信息
+sender:
+  email: 1264947688@qq.com     # TODO: 替换为您的QQ邮箱
+  password: ushckxkqfmfjiffh  # TODO: 替换为QQ邮箱授权码(不是登录密码!)
+  name: 科技指数分析系统
+
+# 收件人列表
+recipients:
+  - 1264947688@qq.com    # 固定收件人
+  - 1194714620@qq.com    # 新增收件人
+  - 2645826123@qq.com    # 新增收件人
+  - 1683562845@qq.com    # 新增收件人
+  - fungaika@foxmail.com # 新增收件人
+  - 1324579335@qq.com    # 新增收件人
+
+# 可选配置
+send_no_alert_email: false
