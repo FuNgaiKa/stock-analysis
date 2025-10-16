@@ -35,6 +35,7 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from scripts.sector_analysis.sector_config import get_sector_config, list_all_sectors
+from scripts.sector_analysis.data_source_manager import DataSourceManager
 from position_analysis.market_analyzers.cn_market_analyzer import CNMarketAnalyzer
 from position_analysis.analyzers.technical_analysis.divergence_analyzer import DivergenceAnalyzer
 from position_analysis.analyzers.market_specific.cn_stock_indicators import CNStockIndicators
@@ -54,14 +55,9 @@ class SectorReporter:
         """初始化分析器"""
         logger.info("初始化板块分析系统...")
 
-        # 导入Ashare数据源
-        try:
-            from data_sources.Ashare import get_price
-            self.get_price = get_price
-            logger.info("Ashare数据源初始化成功")
-        except Exception as e:
-            logger.error(f"Ashare数据源初始化失败: {str(e)}")
-            self.get_price = None
+        # 多数据源管理器 (替代原有的单一Ashare数据源)
+        self.data_source_manager = DataSourceManager()
+        logger.info(f"数据源管理器初始化完成: {self.data_source_manager.get_source_status()}")
 
         # 市场分析器
         self.cn_analyzer = CNMarketAnalyzer()
@@ -79,9 +75,6 @@ class SectorReporter:
 
         # 市场宽度分析器(仅A股)
         self.market_breadth_analyzer = MarketBreadthAnalyzer()
-
-        # 数据缓存
-        self.data_cache = {}
 
         logger.info("板块分析系统初始化完成")
 
@@ -110,16 +103,16 @@ class SectorReporter:
         try:
             # 获取板块数据(目前仅支持单个ETF，后续可扩展为多个股票组合)
             primary_symbol = config['symbols'][0]
-            data_source = config.get('data_source', 'ashare')  # 默认使用ashare
+            prefer_source = config.get('data_source', None)  # None表示自动选择，或指定'yfinance'等
 
             # 1. 历史点位分析
             result['historical_analysis'] = self._analyze_historical_position(
-                config['market'], primary_symbol, data_source
+                config['market'], primary_symbol, prefer_source
             )
 
             # 2. 技术面分析
             result['technical_analysis'] = self._analyze_technical(
-                config['market'], primary_symbol, data_source
+                config['market'], primary_symbol, prefer_source
             )
 
             # 3. 资金面分析(A股)
@@ -145,12 +138,12 @@ class SectorReporter:
 
             # 8. 成交量分析
             result['volume_analysis'] = self._analyze_volume(
-                config['market'], primary_symbol
+                config['market'], primary_symbol, prefer_source
             )
 
             # 9. 支撑压力位
             result['support_resistance'] = self._analyze_support_resistance(
-                config['market'], primary_symbol
+                config['market'], primary_symbol, prefer_source
             )
 
             # 10. 市场宽度(仅A股)
@@ -171,112 +164,33 @@ class SectorReporter:
 
         return result
 
-    def get_etf_data(self, symbol: str, period: str = "5y", market: str = "CN", data_source: str = "ashare") -> pd.DataFrame:
-        """获取ETF/个股历史数据
+    def get_etf_data(self, symbol: str, period: str = "5y", market: str = "CN", prefer_source: str = None) -> pd.DataFrame:
+        """获取ETF/个股历史数据 (使用多数据源管理器)
 
         Args:
             symbol: 股票代码
             period: 时间周期 (5y/10y/1y/5d)
             market: 市场类型 (CN/HK/US)
-            data_source: 数据源 (ashare/yfinance)
+            prefer_source: 优先使用的数据源 (ashare/yfinance/akshare)，None表示自动选择
+
+        Returns:
+            DataFrame with columns: open, high, low, close, volume, return
         """
-        cache_key = f"DATA_{symbol}_{period}_{market}_{data_source}"
-        if cache_key in self.data_cache:
-            logger.info(f"使用缓存的{symbol}数据")
-            return self.data_cache[cache_key]
+        # 使用数据源管理器获取数据，支持自动故障切换
+        df = self.data_source_manager.get_stock_data(
+            symbol=symbol,
+            period=period,
+            market=market,
+            prefer_source=prefer_source
+        )
 
-        # 如果使用yfinance数据源
-        if data_source == "yfinance":
-            return self._get_yfinance_data(symbol, period, cache_key)
+        return df
 
-        if not self.get_price:
-            logger.error("Ashare数据源未初始化")
-            return pd.DataFrame()
-
-        try:
-            # 计算需要获取的数据条数
-            if period == "5y":
-                count = 5 * 250
-            elif period == "10y":
-                count = 10 * 250
-            elif period == "1y":
-                count = 250
-            elif period == "5d":
-                count = 10
-            else:
-                count = 5 * 250
-
-            # 根据市场和代码格式确定前缀
-            if market == "HK":
-                # 港股: hk + 代码(去掉前导0)
-                # 例如: 09988 -> hk9988
-                symbol_clean = symbol.lstrip('0')
-                full_code = 'hk' + symbol_clean
-            else:
-                # A股/ETF代码格式: sh + 代码(上海) 或 sz + 代码(深圳)
-                # 513xxx/516xxx/51xxxx/56xxxx是上海
-                # 159xxx/15xxxx是深圳
-                # 002xxx/000xxx是深圳
-                # 6xxxxx是上海
-                if symbol.startswith('51') or symbol.startswith('56') or symbol.startswith('6'):
-                    full_code = 'sh' + symbol
-                elif symbol.startswith('15') or symbol.startswith('00') or symbol.startswith('30'):
-                    full_code = 'sz' + symbol
-                else:
-                    full_code = 'sh' + symbol
-
-            df = self.get_price(full_code, count=count, frequency='1d')
-
-            if df.empty:
-                logger.warning(f"{symbol}数据为空")
-                return pd.DataFrame()
-
-            # 添加return列
-            df['return'] = df['close'].pct_change()
-            self.data_cache[cache_key] = df
-
-            logger.info(f"{symbol}数据获取成功: {len(df)} 条记录")
-            return df
-
-        except Exception as e:
-            logger.error(f"获取{symbol}数据失败: {str(e)}")
-            return pd.DataFrame()
-
-    def _get_yfinance_data(self, symbol: str, period: str, cache_key: str) -> pd.DataFrame:
-        """使用yfinance获取美股/港股数据"""
-        try:
-            import yfinance as yf
-            logger.info(f"使用yfinance获取{symbol}数据...")
-
-            # 下载数据
-            ticker = yf.Ticker(symbol)
-            df = ticker.history(period=period)
-
-            if df.empty:
-                logger.warning(f"{symbol}数据为空")
-                return pd.DataFrame()
-
-            # 统一列名为小写
-            df.columns = df.columns.str.lower()
-
-            # 添加return列
-            df['return'] = df['close'].pct_change()
-
-            # 缓存数据
-            self.data_cache[cache_key] = df
-
-            logger.info(f"{symbol}数据获取成功(yfinance): {len(df)} 条记录")
-            return df
-
-        except Exception as e:
-            logger.error(f"yfinance获取{symbol}数据失败: {str(e)}")
-            return pd.DataFrame()
-
-    def _analyze_historical_position(self, market: str, symbol: str, data_source: str = "ashare") -> Dict:
+    def _analyze_historical_position(self, market: str, symbol: str, prefer_source: str = None) -> Dict:
         """历史点位分析"""
         try:
             # 获取ETF/个股数据
-            df = self.get_etf_data(symbol, period="5y", market=market, data_source=data_source)
+            df = self.get_etf_data(symbol, period="5y", market=market, prefer_source=prefer_source)
             if df.empty:
                 return {'error': '数据获取失败'}
 
@@ -359,11 +273,11 @@ class SectorReporter:
             logger.error(f"历史点位分析失败: {str(e)}", exc_info=True)
             return {'error': str(e)}
 
-    def _analyze_technical(self, market: str, symbol: str, data_source: str = "ashare") -> Dict:
+    def _analyze_technical(self, market: str, symbol: str, prefer_source: str = None) -> Dict:
         """技术面分析"""
         try:
             # 获取ETF/个股数据
-            df = self.get_etf_data(symbol, period="5y", market=market, data_source=data_source)
+            df = self.get_etf_data(symbol, period="5y", market=market, prefer_source=prefer_source)
 
             if df.empty:
                 return {'error': '数据获取失败'}
@@ -668,10 +582,10 @@ class SectorReporter:
                 'strategies': ['数据不足']
             }
 
-    def _analyze_volume(self, market: str, symbol: str) -> Dict:
+    def _analyze_volume(self, market: str, symbol: str, prefer_source: str = None) -> Dict:
         """成交量分析"""
         try:
-            df = self.get_etf_data(symbol, period="1y", market=market)
+            df = self.get_etf_data(symbol, period="1y", market=market, prefer_source=prefer_source)
             if df.empty:
                 return {'error': '数据获取失败'}
 
@@ -683,10 +597,10 @@ class SectorReporter:
             logger.error(f"成交量分析失败: {str(e)}")
             return {'error': str(e)}
 
-    def _analyze_support_resistance(self, market: str, symbol: str) -> Dict:
+    def _analyze_support_resistance(self, market: str, symbol: str, prefer_source: str = None) -> Dict:
         """支撑压力位分析"""
         try:
-            df = self.get_etf_data(symbol, period="1y", market=market)
+            df = self.get_etf_data(symbol, period="1y", market=market, prefer_source=prefer_source)
             if df.empty:
                 return {'error': '数据获取失败'}
 
