@@ -112,16 +112,50 @@ SECTOR_DEFINITIONS = {
         'description': '汽车零部件龙头，专注热管理系统，受益新能源汽车发展'
     },
 
-    # 阿里巴巴(个股) - 暂时使用A股数据源可能不支持港股
-    # 'BABA_HK': {
-    #     'name': '阿里巴巴(港股)',
-    #     'market': 'HK',
-    #     'type': 'stock',
-    #     'symbols': ['09988'],  # 阿里巴巴港股
-    #     'weights': None,
-    #     'category': 'tech',
-    #     'description': '中国电商及云计算巨头，覆盖电商、云计算、数字娱乐等业务'
-    # },
+    # 阿里巴巴港股 (优先使用港股，流动性更好)
+    'BABA_HK': {
+        'name': '阿里巴巴(港股)',
+        'market': 'HK',
+        'type': 'stock',
+        'symbols': ['9988.HK'],  # 阿里巴巴港股
+        'weights': None,
+        'category': 'tech',
+        'description': '中国电商及云计算巨头，覆盖电商、云计算、数字娱乐等业务',
+        'data_source': 'yfinance'  # 使用yfinance数据源
+    },
+
+    # A股半导体板块
+    'CN_SEMICONDUCTOR': {
+        'name': 'A股半导体',
+        'market': 'CN',
+        'type': 'etf',
+        'symbols': ['512480'],  # 国联安中证半导体ETF
+        'weights': None,
+        'category': 'tech',
+        'description': '跟踪中证半导体指数，覆盖芯片设计、制造、封测等半导体产业链'
+    },
+
+    # A股钢铁板块
+    'CN_STEEL': {
+        'name': 'A股钢铁',
+        'market': 'CN',
+        'type': 'etf',
+        'symbols': ['515210'],  # 国泰中证钢铁ETF
+        'weights': None,
+        'category': 'materials',
+        'description': '跟踪钢铁行业，覆盖宝钢股份、鞍钢股份等钢铁龙头企业'
+    },
+
+    # A股有色金属板块
+    'CN_METALS': {
+        'name': 'A股有色金属',
+        'market': 'CN',
+        'type': 'etf',
+        'symbols': ['159871'],  # 有色金属ETF
+        'weights': None,
+        'category': 'materials',
+        'description': '跟踪有色金属行业，覆盖紫金矿业、洛阳钼业、云南铜业等龙头'
+    },
 
     # 以下为示例配置，可根据需要启用
 
@@ -161,7 +195,8 @@ SECTOR_CATEGORIES = {
     'chemical': '化工',
     'coal': '煤炭',
     'media': '传媒娱乐',
-    'manufacturing': '先进制造'
+    'manufacturing': '先进制造',
+    'materials': '有色金属材料'
 }
 
 
