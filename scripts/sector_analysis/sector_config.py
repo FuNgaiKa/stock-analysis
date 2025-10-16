@@ -157,6 +157,28 @@ SECTOR_DEFINITIONS = {
         'description': '跟踪有色金属行业，覆盖紫金矿业、洛阳钼业、云南铜业等龙头'
     },
 
+    # A股银行板块
+    'CN_BANK': {
+        'name': 'A股银行',
+        'market': 'CN',
+        'type': 'etf',
+        'symbols': ['512800'],  # 华宝中证银行ETF
+        'weights': None,
+        'category': 'finance',
+        'description': '跟踪银行行业，覆盖工商银行、建设银行、招商银行等银行龙头'
+    },
+
+    # A股保险板块
+    'CN_INSURANCE': {
+        'name': 'A股保险',
+        'market': 'CN',
+        'type': 'etf',
+        'symbols': ['512910'],  # 广发中证保险ETF
+        'weights': None,
+        'category': 'finance',
+        'description': '跟踪保险行业，覆盖中国平安、中国人寿、中国太保等保险龙头'
+    },
+
     # 以下为示例配置，可根据需要启用
 
     # A股半导体板块(示例，未来可扩展)

@@ -24,7 +24,7 @@ from position_analysis.core.historical_position_analyzer import (
     PositionManager,
     SUPPORTED_INDICES
 )
-from position_analysis.reporting.report_generator import TextReportGenerator, HTMLReportGenerator
+from position_analysis.reporting.report_generator import TextReportGenerator, HTMLReportGenerator, MarkdownReportGenerator
 from position_analysis.reporting.chart_generator import ChartGenerator
 
 # 配置日志
@@ -54,6 +54,7 @@ class PositionAnalysisEngine:
         self.position_manager = PositionManager()
         self.text_reporter = TextReportGenerator()
         self.html_reporter = HTMLReportGenerator()
+        self.markdown_reporter = MarkdownReportGenerator()
         self.chart_gen = ChartGenerator()
 
         # 要分析的指数
@@ -68,7 +69,7 @@ class PositionAnalysisEngine:
         self,
         tolerance: float = 0.05,
         periods: List[int] = [5, 10, 20, 60],
-        output_html: bool = True,
+        output_format: str = "markdown",
         output_dir: str = "reports"
     ) -> Dict:
         """
@@ -77,7 +78,7 @@ class PositionAnalysisEngine:
         Args:
             tolerance: 相似度容差
             periods: 分析周期
-            output_html: 是否输出HTML报告
+            output_format: 报告输出格式 ("text", "html", "markdown")
             output_dir: 报告输出目录
 
         Returns:
@@ -135,18 +136,19 @@ class PositionAnalysisEngine:
         # 5. 输出报告
         logger.info("\n[步骤5] 生成分析报告...")
 
-        # 文本报告
-        text_report = self._generate_text_report(
-            positions,
-            single_index_results,
-            multi_index_result,
-            conclusion
-        )
+        # 根据格式生成报告
+        if output_format == "text":
+            # 文本报告
+            text_report = self._generate_text_report(
+                positions,
+                single_index_results,
+                multi_index_result,
+                conclusion
+            )
+            print("\n" + text_report)
 
-        print("\n" + text_report)
-
-        # HTML报告
-        if output_html:
+        elif output_format == "html":
+            # HTML报告
             html_report = self._generate_html_report(
                 positions,
                 single_index_results,
@@ -164,6 +166,35 @@ class PositionAnalysisEngine:
                 f.write(html_report)
 
             logger.info(f"HTML报告已保存: {html_path}")
+
+        elif output_format == "markdown":
+            # Markdown报告
+            markdown_report = self._generate_markdown_report(
+                positions,
+                single_index_results,
+                multi_index_result,
+                conclusion
+            )
+
+            # 保存Markdown
+            os.makedirs(output_dir, exist_ok=True)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            md_path = os.path.join(output_dir, f"position_analysis_{timestamp}.md")
+
+            with open(md_path, 'w', encoding='utf-8') as f:
+                f.write(markdown_report)
+
+            logger.info(f"Markdown报告已保存: {md_path}")
+
+        else:
+            logger.warning(f"不支持的输出格式: {output_format}，使用文本格式")
+            text_report = self._generate_text_report(
+                positions,
+                single_index_results,
+                multi_index_result,
+                conclusion
+            )
+            print("\n" + text_report)
 
         logger.info("\n" + "=" * 80)
         logger.info("分析完成!")
@@ -496,6 +527,62 @@ class PositionAnalysisEngine:
 
         return html
 
+    def _generate_markdown_report(
+        self,
+        positions: Dict,
+        single_results: Dict,
+        multi_result: Dict,
+        conclusion: Dict
+    ) -> str:
+        """生成Markdown报告"""
+
+        report = self.markdown_reporter.generate_header()
+
+        # 当前点位
+        report += self.markdown_reporter.generate_current_positions_section(positions)
+
+        # 单指数分析
+        report += "\n\n"
+        for index_code, result in single_results.items():
+            if 'warning' in result:
+                continue
+
+            report += self.markdown_reporter.generate_single_index_analysis(
+                SUPPORTED_INDICES[index_code].name,
+                positions[index_code]['price'],
+                result['similar_count'],
+                result.get('year_distribution', {}),
+                result.get('prob_stats', {})
+            )
+
+        # 多指数分析
+        report += self.markdown_reporter.generate_multi_index_analysis(
+            multi_result.get('match_count', 0),
+            multi_result.get('matched_periods', pd.DataFrame()),
+            multi_result.get('prob_stats', {})
+        )
+
+        # 仓位建议
+        if 'position_advice' in conclusion:
+            advice = conclusion['position_advice']
+            report += self.markdown_reporter.generate_position_advice(
+                advice['signal'],
+                advice['recommended_position'],
+                advice['description']
+            )
+
+        # 综合结论
+        report += self.markdown_reporter.generate_conclusion(
+            conclusion['direction'],
+            conclusion['confidence'],
+            conclusion['reasons'],
+            conclusion['suggestions']
+        )
+
+        report += self.markdown_reporter.generate_footer()
+
+        return report
+
     @staticmethod
     def _calculate_time_diversity(dates: pd.DatetimeIndex) -> float:
         """计算时间分散度"""
@@ -569,7 +656,7 @@ def run_a_stock_analysis():
         results = engine.run_full_analysis(
             tolerance=0.05,
             periods=[5, 10, 20, 60],
-            output_html=True,
+            output_format='markdown',
             output_dir='reports'
         )
 
