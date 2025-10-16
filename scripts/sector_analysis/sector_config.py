@@ -101,6 +101,28 @@ SECTOR_DEFINITIONS = {
         'description': '跟踪文化传媒行业，覆盖影视、广告、出版等传媒龙头企业'
     },
 
+    # 三花智控(个股)
+    'SANHUA_A': {
+        'name': '三花智控(A股)',
+        'market': 'CN',
+        'type': 'stock',
+        'symbols': ['002050'],  # 三花智控A股
+        'weights': None,
+        'category': 'manufacturing',
+        'description': '汽车零部件龙头，专注热管理系统，受益新能源汽车发展'
+    },
+
+    # 阿里巴巴(个股) - 暂时使用A股数据源可能不支持港股
+    # 'BABA_HK': {
+    #     'name': '阿里巴巴(港股)',
+    #     'market': 'HK',
+    #     'type': 'stock',
+    #     'symbols': ['09988'],  # 阿里巴巴港股
+    #     'weights': None,
+    #     'category': 'tech',
+    #     'description': '中国电商及云计算巨头，覆盖电商、云计算、数字娱乐等业务'
+    # },
+
     # 以下为示例配置，可根据需要启用
 
     # A股半导体板块(示例，未来可扩展)
@@ -138,7 +160,8 @@ SECTOR_CATEGORIES = {
     'realestate': '地产',
     'chemical': '化工',
     'coal': '煤炭',
-    'media': '传媒娱乐'
+    'media': '传媒娱乐',
+    'manufacturing': '先进制造'
 }
 
 

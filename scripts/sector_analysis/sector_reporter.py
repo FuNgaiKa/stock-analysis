@@ -170,9 +170,9 @@ class SectorReporter:
 
         return result
 
-    def get_etf_data(self, symbol: str, period: str = "5y") -> pd.DataFrame:
-        """获取ETF历史数据"""
-        cache_key = f"ETF_{symbol}_{period}"
+    def get_etf_data(self, symbol: str, period: str = "5y", market: str = "CN") -> pd.DataFrame:
+        """获取ETF/个股历史数据"""
+        cache_key = f"DATA_{symbol}_{period}_{market}"
         if cache_key in self.data_cache:
             logger.info(f"使用缓存的{symbol}数据")
             return self.data_cache[cache_key]
@@ -194,14 +194,24 @@ class SectorReporter:
             else:
                 count = 5 * 250
 
-            # ETF代码格式: sh + 代码(上海) 或 sz + 代码(深圳)
-            # 513xxx是上海, 159xxx是深圳, 516xxx是上海
-            if symbol.startswith('51') or symbol.startswith('56'):
-                full_code = 'sh' + symbol
-            elif symbol.startswith('15'):
-                full_code = 'sz' + symbol
+            # 根据市场和代码格式确定前缀
+            if market == "HK":
+                # 港股: hk + 代码(去掉前导0)
+                # 例如: 09988 -> hk9988
+                symbol_clean = symbol.lstrip('0')
+                full_code = 'hk' + symbol_clean
             else:
-                full_code = 'sh' + symbol
+                # A股/ETF代码格式: sh + 代码(上海) 或 sz + 代码(深圳)
+                # 513xxx/516xxx/51xxxx/56xxxx是上海
+                # 159xxx/15xxxx是深圳
+                # 002xxx/000xxx是深圳
+                # 6xxxxx是上海
+                if symbol.startswith('51') or symbol.startswith('56') or symbol.startswith('6'):
+                    full_code = 'sh' + symbol
+                elif symbol.startswith('15') or symbol.startswith('00') or symbol.startswith('30'):
+                    full_code = 'sz' + symbol
+                else:
+                    full_code = 'sh' + symbol
 
             df = self.get_price(full_code, count=count, frequency='1d')
 
@@ -223,8 +233,8 @@ class SectorReporter:
     def _analyze_historical_position(self, market: str, symbol: str) -> Dict:
         """历史点位分析"""
         try:
-            # 获取ETF数据
-            df = self.get_etf_data(symbol, period="5y")
+            # 获取ETF/个股数据
+            df = self.get_etf_data(symbol, period="5y", market=market)
             if df.empty:
                 return {'error': '数据获取失败'}
 
@@ -310,8 +320,8 @@ class SectorReporter:
     def _analyze_technical(self, market: str, symbol: str) -> Dict:
         """技术面分析"""
         try:
-            # 获取ETF数据
-            df = self.get_etf_data(symbol, period="5y")
+            # 获取ETF/个股数据
+            df = self.get_etf_data(symbol, period="5y", market=market)
 
             if df.empty:
                 return {'error': '数据获取失败'}
@@ -619,7 +629,7 @@ class SectorReporter:
     def _analyze_volume(self, market: str, symbol: str) -> Dict:
         """成交量分析"""
         try:
-            df = self.get_etf_data(symbol, period="1y")
+            df = self.get_etf_data(symbol, period="1y", market=market)
             if df.empty:
                 return {'error': '数据获取失败'}
 
@@ -634,7 +644,7 @@ class SectorReporter:
     def _analyze_support_resistance(self, market: str, symbol: str) -> Dict:
         """支撑压力位分析"""
         try:
-            df = self.get_etf_data(symbol, period="1y")
+            df = self.get_etf_data(symbol, period="1y", market=market)
             if df.empty:
                 return {'error': '数据获取失败'}
 
