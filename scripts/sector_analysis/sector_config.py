@@ -79,6 +79,28 @@ SECTOR_DEFINITIONS = {
         'description': '跟踪证券行业，覆盖中信证券、华泰证券等龙头券商'
     },
 
+    # A股游戏板块
+    'CN_GAME': {
+        'name': 'A股游戏',
+        'market': 'CN',
+        'type': 'etf',
+        'symbols': ['159869'],  # 华夏中证动漫游戏ETF
+        'weights': None,
+        'category': 'media',
+        'description': '跟踪动漫游戏产业，覆盖腾讯控股、网易、三七互娱等游戏龙头'
+    },
+
+    # A股传媒板块
+    'CN_MEDIA': {
+        'name': 'A股传媒',
+        'market': 'CN',
+        'type': 'etf',
+        'symbols': ['512980'],  # 广发中证传媒ETF
+        'weights': None,
+        'category': 'media',
+        'description': '跟踪文化传媒行业，覆盖影视、广告、出版等传媒龙头企业'
+    },
+
     # 以下为示例配置，可根据需要启用
 
     # A股半导体板块(示例，未来可扩展)
@@ -115,7 +137,8 @@ SECTOR_CATEGORIES = {
     'finance': '金融',
     'realestate': '地产',
     'chemical': '化工',
-    'coal': '煤炭'
+    'coal': '煤炭',
+    'media': '传媒娱乐'
 }
 
 
