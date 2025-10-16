@@ -256,88 +256,179 @@ class UnifiedAnalysisRunner:
         """格式化单个板块为 Markdown (参考 SectorReporter 的格式)"""
         lines = []
 
-        lines.append(f"## {config['category'].upper()}: {data.get('name', config['name'])}")
+        # 标题
+        lines.append(f"## {config['category'].upper()}: {data.get('sector_name', config['name'])}")
         lines.append("")
         lines.append(f"**描述**: {config.get('description', 'N/A')}")
         lines.append("")
 
-        # 当前价格
-        if 'current_price' in data:
-            lines.append("### 💰 当前价格")
-            lines.append("")
-            lines.append("| 指标 | 数值 |")
-            lines.append("|------|------|")
-            lines.append(f"| **当前价格** | {data['current_price']:.2f} |")
+        # 1. 当前点位
+        hist = data.get('historical_analysis', {})
+        if hist and 'current_price' in hist:
+            lines.append("### 当前点位")
+            lines.append(f"- **最新价格**: {hist['current_price']:.2f}")
 
-            if 'change_pct' in data:
-                change_emoji = "📈" if data['change_pct'] >= 0 else "📉"
-                lines.append(f"| **涨跌幅** | {change_emoji} {data['change_pct']:+.2f}% |")
-
-            if 'change' in data:
-                lines.append(f"| **涨跌额** | {data['change']:+.2f} |")
-
+            change_pct = hist.get('current_change_pct', 0)
+            change_emoji = "📈" if change_pct >= 0 else "📉"
+            lines.append(f"- **涨跌幅**: {change_pct:+.2f}% {change_emoji}")
+            lines.append(f"- **数据日期**: {hist.get('current_date', 'N/A')}")
             lines.append("")
 
-        # 技术指标
-        if 'technical_indicators' in data:
-            tech = data['technical_indicators']
-            lines.append("### 📊 技术指标")
-            lines.append("")
-            lines.append("| 指标 | 数值 |")
-            lines.append("|------|------|")
+        # 2. 综合判断
+        judgment = data.get('comprehensive_judgment', {})
+        if judgment:
+            lines.append("### 综合判断")
 
-            for key, value in tech.items():
-                if isinstance(value, (int, float)):
-                    lines.append(f"| **{key}** | {value:.2f} |")
-                else:
-                    lines.append(f"| **{key}** | {value} |")
-
-            lines.append("")
-
-        # 市场情绪
-        if 'market_sentiment' in data:
-            sentiment = data['market_sentiment']
-            lines.append("### 😊 市场情绪")
-            lines.append("")
-            lines.append(f"{sentiment.get('description', 'N/A')}")
-            lines.append("")
-
-        # 投资建议
-        if 'recommendation' in data:
-            rec = data['recommendation']
-            lines.append("### 💡 投资建议")
-            lines.append("")
-
-            rating = rec.get('rating', 'N/A')
-            emoji_map = {
-                '强烈买入': '🟢🟢🟢',
-                '买入': '🟢🟢',
-                '持有': '🟡',
-                '卖出': '🔴🔴',
-                '强烈卖出': '🔴🔴🔴'
+            direction = judgment.get('direction', 'N/A')
+            direction_emoji_map = {
+                '强烈看多': '✅✅',
+                '看多': '✅',
+                '中性偏多': '⚖️',
+                '中性': '⚖️',
+                '看空': '🔴'
             }
-            rating_emoji = emoji_map.get(rating, '')
-
-            lines.append(f"**评级**: {rating_emoji} {rating}")
+            direction_emoji = direction_emoji_map.get(direction, '⚖️')
+            lines.append(f"- **方向判断**: {direction}{direction_emoji}")
+            lines.append(f"- **建议仓位**: {judgment.get('recommended_position', 'N/A')}")
             lines.append("")
 
-            if 'reason' in rec:
-                lines.append(f"**理由**: {rec['reason']}")
+            strategies = judgment.get('strategies', [])
+            if strategies:
+                lines.append("**操作策略**:")
+                for strategy in strategies:
+                    lines.append(f"  - {strategy}")
                 lines.append("")
 
-            if 'target_price' in rec:
-                lines.append(f"**目标价**: {rec['target_price']:.2f}")
-                lines.append("")
+        # 3. 历史点位分析
+        if hist and '20d' in hist:
+            lines.append("### 历史点位分析")
+            lines.append(f"- **相似点位**: {hist.get('similar_periods_count', 0)} 个")
+            lines.append("")
+            lines.append("| 周期 | 上涨概率 | 平均收益 | 收益中位 | 置信度 |")
+            lines.append("|------|----------|----------|----------|--------|")
 
-        # 风险提示
-        if 'risk_warning' in data:
-            warnings = data['risk_warning']
-            if warnings:
-                lines.append("### ⚠️ 风险提示")
-                lines.append("")
-                for warning in warnings:
-                    lines.append(f"- {warning}")
-                lines.append("")
+            stats_20d = hist.get('20d', {})
+            if stats_20d:
+                lines.append(
+                    f"| 未来20日 | {stats_20d.get('up_prob', 0):.1%} | "
+                    f"{stats_20d.get('mean_return', 0):+.2%} | "
+                    f"{stats_20d.get('median_return', 0):+.2%} | "
+                    f"{stats_20d.get('confidence', 0):.1%} |"
+                )
+
+            stats_60d = hist.get('60d', {})
+            if stats_60d and stats_60d.get('confidence', 0) > 0:
+                lines.append(
+                    f"| 未来60日 | {stats_60d.get('up_prob', 0):.1%} | "
+                    f"{stats_60d.get('mean_return', 0):+.2%} | - | - |"
+                )
+
+            lines.append("")
+
+        # 4. 技术面分析
+        tech = data.get('technical_analysis', {})
+        if tech and 'error' not in tech:
+            lines.append("### 技术面分析")
+
+            # MACD
+            if 'macd' in tech:
+                macd_status = '✅ 金叉' if tech['macd']['status'] == 'golden_cross' else '🔴 死叉'
+                lines.append(f"- **MACD**: {macd_status}")
+
+            # RSI
+            if 'rsi' in tech:
+                rsi_val = tech['rsi']['value']
+                rsi_status_map = {
+                    'overbought': '⚠️ 超买',
+                    'oversold': '✅ 超卖',
+                    'normal': '😊 正常'
+                }
+                rsi_status = rsi_status_map.get(tech['rsi']['status'], '')
+                lines.append(f"- **RSI**: {rsi_val:.1f} ({rsi_status})")
+
+            # KDJ
+            if 'kdj' in tech:
+                kdj = tech['kdj']
+                kdj_signal = '✅' if kdj['signal'] == 'golden_cross' else '🔴'
+                lines.append(f"- **KDJ**: K={kdj['k']:.1f}, D={kdj['d']:.1f}, J={kdj['j']:.1f} {kdj_signal}")
+
+            # 布林带
+            if 'boll' in tech:
+                boll = tech['boll']
+                boll_pos_pct = boll['position'] * 100
+                boll_status_map = {
+                    'near_upper': '⚠️ 接近上轨',
+                    'near_lower': '✅ 接近下轨',
+                    'normal': '😊 中轨区域'
+                }
+                boll_status = boll_status_map.get(boll['status'], '')
+                lines.append(f"- **布林带**: {boll_pos_pct:.0f}% ({boll_status})")
+
+            # DMI/ADX
+            if 'dmi_adx' in tech:
+                dmi = tech['dmi_adx']
+                trend_map = {'strong': 'strong 🔥', 'medium': 'medium 📊', 'weak': 'weak ⚡'}
+                direction_emoji = '📈' if dmi['direction'] == 'bullish' else '📉'
+                lines.append(
+                    f"- **DMI/ADX**: {dmi['adx']:.1f} ({trend_map.get(dmi['trend'], '')}, {direction_emoji})"
+                )
+
+            lines.append("")
+
+        # 5. 资金面分析
+        capital = data.get('capital_flow', {})
+        if capital and 'error' not in capital and capital.get('type'):
+            lines.append("### 资金面分析")
+            flow_type = '**北向资金(外资)**' if capital['type'] == 'northbound' else '**南向资金(内地)**'
+            lines.append(f"{flow_type}:")
+            lines.append(f"- **近5日累计**: {capital.get('recent_5d_flow', 0):.2f} 亿元")
+            lines.append(f"- **流向状态**: {capital.get('status', 'N/A')}")
+            lines.append(f"- **情绪评分**: {capital.get('sentiment_score', 50)}/100")
+            lines.append("")
+
+        # 6. 风险评估
+        risk = data.get('risk_assessment', {})
+        if risk:
+            lines.append("### 风险评估")
+            risk_level = risk.get('risk_level', 'N/A')
+            risk_emoji_map = {
+                '极高风险': '🔴🔴🔴',
+                '高风险': '🔴🔴',
+                '中风险': '⚠️',
+                '低风险': '✅'
+            }
+            risk_emoji = risk_emoji_map.get(risk_level, '')
+            lines.append(f"- **综合风险**: {risk.get('risk_score', 0):.2f} ({risk_emoji} {risk_level})")
+
+            risk_factors = risk.get('risk_factors', [])
+            if risk_factors:
+                lines.append("- **风险因素**:")
+                for factor in risk_factors:
+                    lines.append(f"  - {factor}")
+
+            lines.append("")
+
+        # 7. 成交量分析
+        volume = data.get('volume_analysis', {})
+        if volume and 'error' not in volume:
+            lines.append("### 成交量分析")
+            obv = volume.get('obv_analysis', {})
+            if obv:
+                obv_trend = obv.get('trend', 'N/A')
+                obv_emoji = '➡️' if obv_trend in ['上升', '下降', '平稳'] else ''
+                lines.append(f"- **OBV趋势**: {obv_trend} {obv_emoji}")
+            lines.append("")
+
+        # 8. 支撑压力位
+        sr = data.get('support_resistance', {})
+        if sr and 'error' not in sr and sr.get('available', True):
+            lines.append("### 支撑压力位")
+            pivot = sr.get('pivot_points', {})
+            if pivot:
+                lines.append(f"- **轴心点**: {pivot.get('pivot', 0):.2f}")
+                lines.append(f"- **阻力位**: R1={pivot.get('r1', 0):.2f}, R2={pivot.get('r2', 0):.2f}")
+                lines.append(f"- **支撑位**: S1={pivot.get('s1', 0):.2f}, S2={pivot.get('s2', 0):.2f}")
+            lines.append("")
 
         lines.append("---")
         lines.append("")
