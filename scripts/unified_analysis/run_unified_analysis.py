@@ -132,6 +132,8 @@ class UnifiedAnalysisRunner:
         """
         格式化报告
 
+        直接调用原有报告生成器的方法,确保数据完整展示
+
         Args:
             results: 分析结果
             format_type: 报告格式 ('text' 或 'markdown')
@@ -139,210 +141,206 @@ class UnifiedAnalysisRunner:
         Returns:
             格式化后的报告文本
         """
-        if format_type == 'markdown':
-            return self._format_markdown_report(results)
-        else:
-            return self._format_text_report(results)
-
-    def _format_markdown_report(self, results: dict) -> str:
-        """生成 Markdown 格式报告"""
         lines = []
 
         # 报告头部
-        lines.append("# 📊 统一资产分析报告")
-        lines.append("")
-        lines.append(f"**生成时间**: {results['date']}")
-        lines.append("")
-        lines.append("---")
-        lines.append("")
+        if format_type == 'markdown':
+            lines.append("# 📊 统一资产分析报告")
+            lines.append("")
+            lines.append(f"**生成时间**: {results['date']}")
+            lines.append("")
+            lines.append("---")
+            lines.append("")
+        else:
+            lines.append("=" * 80)
+            lines.append("统一资产分析报告".center(80))
+            lines.append(f"生成时间: {results['date']}".center(80))
+            lines.append("=" * 80)
+            lines.append("")
 
         # 统计信息
         total_count = len(results['assets'])
         success_count = sum(1 for data in results['assets'].values() if 'error' not in data)
         fail_count = total_count - success_count
 
-        lines.append("## 📋 分析概览")
-        lines.append("")
-        lines.append(f"- **总资产数**: {total_count}")
-        lines.append(f"- **成功分析**: {success_count}")
-        lines.append(f"- **失败数**: {fail_count}")
-        lines.append("")
-        lines.append("---")
-        lines.append("")
+        if format_type == 'markdown':
+            lines.append("## 📋 分析概览")
+            lines.append("")
+            lines.append(f"- **总资产数**: {total_count}")
+            lines.append(f"- **成功分析**: {success_count}")
+            lines.append(f"- **失败数**: {fail_count}")
+            lines.append("")
+            lines.append("---")
+            lines.append("")
+        else:
+            lines.append(f"总资产数: {total_count}")
+            lines.append(f"成功分析: {success_count}")
+            lines.append(f"失败数: {fail_count}")
+            lines.append("")
+            lines.append("=" * 80)
+            lines.append("")
 
-        # 按类别分组
-        categories = {}
+        # 分组整理报告数据
+        comprehensive_report = {'assets': {}}
+        sector_reports = []
+
         for asset_key, data in results['assets'].items():
             if 'error' in data:
                 continue
 
             config = UNIFIED_ASSETS[asset_key]
-            category = config.get('category', 'other')
+            if config['analyzer_type'] == 'comprehensive':
+                comprehensive_report['assets'][asset_key] = data
+            elif config['analyzer_type'] == 'sector':
+                sector_reports.append((asset_key, data, config))
 
-            if category not in categories:
-                categories[category] = []
+        # 生成指数类资产报告 (使用 ComprehensiveAssetReporter)
+        if comprehensive_report['assets'] and self.comprehensive_reporter:
+            comprehensive_report['timestamp'] = results['timestamp']
+            comprehensive_report['date'] = results['date']
 
-            categories[category].append((asset_key, data, config))
+            if format_type == 'markdown':
+                lines.append(self.comprehensive_reporter.format_markdown_report(comprehensive_report))
+            else:
+                lines.append(self.comprehensive_reporter.format_text_report(comprehensive_report))
 
-        # 输出各类别
-        category_names = {
-            'tech_index': '## 📈 科技指数',
-            'broad_index': '## 📊 宽基指数',
-            'commodity': '## 🏆 大宗商品',
-            'crypto': '## 💰 加密货币',
-            'healthcare': '## 💊 医疗健康',
-            'energy': '## 🔋 新能源',
-            'tech': '## 💻 科技',
-            'consumer': '## 🍷 消费',
-            'finance': '## 💼 金融',
-            'chemical': '## 🧪 化工',
-            'coal': '## ⛏️ 煤炭',
-            'media': '## 🎮 传媒娱乐',
-            'manufacturing': '## 🏭 先进制造',
-            'materials': '## 🏗️ 有色金属材料'
-        }
+        # 生成板块类资产报告 (使用 SectorReporter)
+        if sector_reports and self.sector_reporter:
+            for asset_key, data, config in sector_reports:
+                # 构造单个板块的报告数据
+                single_sector_report = {
+                    'timestamp': results['timestamp'],
+                    'date': results['date'],
+                    'sectors': {asset_key: data}
+                }
 
-        for category, assets_list in sorted(categories.items()):
-            lines.append(category_names.get(category, f"## {category}"))
-            lines.append("")
-
-            for asset_key, data, config in assets_list:
-                # 基本信息
-                lines.append(f"### {data.get('asset_name', config['name'])}")
-                lines.append("")
-                lines.append(f"**描述**: {config.get('description', 'N/A')}")
-                lines.append("")
-
-                # 价格信息
-                if 'current_price' in data:
-                    lines.append("#### 💰 价格信息")
-                    lines.append("")
-                    lines.append("| 指标 | 数值 |")
-                    lines.append("|------|------|")
-                    lines.append(f"| **当前价格** | {data['current_price']:.2f} |")
-
-                    if 'change_pct' in data:
-                        change_emoji = "📈" if data['change_pct'] >= 0 else "📉"
-                        lines.append(f"| **涨跌幅** | {change_emoji} {data['change_pct']:+.2f}% |")
-
-                    lines.append("")
-
-                # 技术指标
-                if 'technical' in data:
-                    tech = data['technical']
-                    lines.append("#### 📊 技术指标")
-                    lines.append("")
-                    lines.append("| 指标 | 数值 |")
-                    lines.append("|------|------|")
-
-                    for key, value in tech.items():
-                        if isinstance(value, (int, float)):
-                            lines.append(f"| **{key}** | {value:.2f} |")
-                        else:
-                            lines.append(f"| **{key}** | {value} |")
-
-                    lines.append("")
-
-                # 投资建议
-                if 'recommendation' in data:
-                    rec = data['recommendation']
-                    lines.append("#### 💡 投资建议")
-                    lines.append("")
-                    lines.append(f"**评级**: {rec.get('rating', 'N/A')}")
-                    lines.append("")
-                    if 'reason' in rec:
-                        lines.append(f"**理由**: {rec['reason']}")
-                        lines.append("")
-
-                lines.append("---")
-                lines.append("")
+                if format_type == 'markdown':
+                    # SectorReporter 只有 format_text_report,我们需要手动生成 markdown
+                    lines.append(self._format_sector_markdown(asset_key, data, config))
+                else:
+                    lines.append(self.sector_reporter.format_text_report(single_sector_report))
 
         # 失败的资产
         if fail_count > 0:
-            lines.append("## ⚠️ 分析失败")
-            lines.append("")
-            for asset_key, data in results['assets'].items():
-                if 'error' in data:
-                    lines.append(f"- **{data.get('asset_name', asset_key)}**: {data['error']}")
-            lines.append("")
+            if format_type == 'markdown':
+                lines.append("## ⚠️ 分析失败")
+                lines.append("")
+                for asset_key, data in results['assets'].items():
+                    if 'error' in data:
+                        lines.append(f"- **{data.get('asset_name', asset_key)}**: {data['error']}")
+                lines.append("")
+            else:
+                lines.append("-" * 80)
+                lines.append("分析失败")
+                lines.append("-" * 80)
+                for asset_key, data in results['assets'].items():
+                    if 'error' in data:
+                        lines.append(f"{data.get('asset_name', asset_key)}: {data['error']}")
+                lines.append("")
 
         # 报告尾部
-        lines.append("---")
-        lines.append("")
-        lines.append("**免责声明**: 本报告仅供参考,不构成投资建议。投资有风险,入市需谨慎。")
-        lines.append("")
-        lines.append(f"*报告生成时间: {results['date']}*")
+        if format_type == 'markdown':
+            lines.append("---")
+            lines.append("")
+            lines.append("**免责声明**: 本报告仅供参考,不构成投资建议。投资有风险,入市需谨慎。")
+            lines.append("")
+            lines.append(f"*报告生成时间: {results['date']}*")
+        else:
+            lines.append("=" * 80)
+            lines.append("免责声明: 本报告仅供参考,不构成投资建议。投资有风险,入市需谨慎。")
+            lines.append("=" * 80)
 
         return '\n'.join(lines)
 
-    def _format_text_report(self, results: dict) -> str:
-        """生成纯文本格式报告"""
+    def _format_sector_markdown(self, asset_key: str, data: dict, config: dict) -> str:
+        """格式化单个板块为 Markdown (参考 SectorReporter 的格式)"""
         lines = []
 
-        # 报告头部
-        lines.append("=" * 80)
-        lines.append("统一资产分析报告".center(80))
-        lines.append(f"生成时间: {results['date']}".center(80))
-        lines.append("=" * 80)
+        lines.append(f"## {config['category'].upper()}: {data.get('name', config['name'])}")
+        lines.append("")
+        lines.append(f"**描述**: {config.get('description', 'N/A')}")
         lines.append("")
 
-        # 统计信息
-        total_count = len(results['assets'])
-        success_count = sum(1 for data in results['assets'].values() if 'error' not in data)
-        fail_count = total_count - success_count
+        # 当前价格
+        if 'current_price' in data:
+            lines.append("### 💰 当前价格")
+            lines.append("")
+            lines.append("| 指标 | 数值 |")
+            lines.append("|------|------|")
+            lines.append(f"| **当前价格** | {data['current_price']:.2f} |")
 
-        lines.append(f"总资产数: {total_count}")
-        lines.append(f"成功分析: {success_count}")
-        lines.append(f"失败数: {fail_count}")
-        lines.append("")
-        lines.append("=" * 80)
-        lines.append("")
+            if 'change_pct' in data:
+                change_emoji = "📈" if data['change_pct'] >= 0 else "📉"
+                lines.append(f"| **涨跌幅** | {change_emoji} {data['change_pct']:+.2f}% |")
 
-        # 输出各资产
-        for asset_key, data in results['assets'].items():
-            config = UNIFIED_ASSETS[asset_key]
+            if 'change' in data:
+                lines.append(f"| **涨跌额** | {data['change']:+.2f} |")
 
-            lines.append("-" * 80)
-            lines.append(f"【{data.get('asset_name', config['name'])}】")
-            lines.append("-" * 80)
-
-            if 'error' in data:
-                lines.append(f"分析失败: {data['error']}")
-                lines.append("")
-                continue
-
-            # 描述
-            lines.append(f"描述: {config.get('description', 'N/A')}")
             lines.append("")
 
-            # 价格信息
-            if 'current_price' in data:
-                lines.append(f"当前价格: {data['current_price']:.2f}")
-                if 'change_pct' in data:
-                    lines.append(f"涨跌幅: {data['change_pct']:+.2f}%")
+        # 技术指标
+        if 'technical_indicators' in data:
+            tech = data['technical_indicators']
+            lines.append("### 📊 技术指标")
+            lines.append("")
+            lines.append("| 指标 | 数值 |")
+            lines.append("|------|------|")
+
+            for key, value in tech.items():
+                if isinstance(value, (int, float)):
+                    lines.append(f"| **{key}** | {value:.2f} |")
+                else:
+                    lines.append(f"| **{key}** | {value} |")
+
+            lines.append("")
+
+        # 市场情绪
+        if 'market_sentiment' in data:
+            sentiment = data['market_sentiment']
+            lines.append("### 😊 市场情绪")
+            lines.append("")
+            lines.append(f"{sentiment.get('description', 'N/A')}")
+            lines.append("")
+
+        # 投资建议
+        if 'recommendation' in data:
+            rec = data['recommendation']
+            lines.append("### 💡 投资建议")
+            lines.append("")
+
+            rating = rec.get('rating', 'N/A')
+            emoji_map = {
+                '强烈买入': '🟢🟢🟢',
+                '买入': '🟢🟢',
+                '持有': '🟡',
+                '卖出': '🔴🔴',
+                '强烈卖出': '🔴🔴🔴'
+            }
+            rating_emoji = emoji_map.get(rating, '')
+
+            lines.append(f"**评级**: {rating_emoji} {rating}")
+            lines.append("")
+
+            if 'reason' in rec:
+                lines.append(f"**理由**: {rec['reason']}")
                 lines.append("")
 
-            # 技术指标
-            if 'technical' in data:
-                lines.append("技术指标:")
-                for key, value in data['technical'].items():
-                    if isinstance(value, (int, float)):
-                        lines.append(f"  {key}: {value:.2f}")
-                    else:
-                        lines.append(f"  {key}: {value}")
+            if 'target_price' in rec:
+                lines.append(f"**目标价**: {rec['target_price']:.2f}")
                 lines.append("")
 
-            # 投资建议
-            if 'recommendation' in data:
-                rec = data['recommendation']
-                lines.append(f"投资建议: {rec.get('rating', 'N/A')}")
-                if 'reason' in rec:
-                    lines.append(f"理由: {rec['reason']}")
+        # 风险提示
+        if 'risk_warning' in data:
+            warnings = data['risk_warning']
+            if warnings:
+                lines.append("### ⚠️ 风险提示")
+                lines.append("")
+                for warning in warnings:
+                    lines.append(f"- {warning}")
                 lines.append("")
 
-        lines.append("=" * 80)
-        lines.append("免责声明: 本报告仅供参考,不构成投资建议。投资有风险,入市需谨慎。")
-        lines.append("=" * 80)
+        lines.append("---")
+        lines.append("")
 
         return '\n'.join(lines)
 
