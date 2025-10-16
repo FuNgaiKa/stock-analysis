@@ -20,7 +20,7 @@
 - 🏆 **大宗商品**: 黄金
 - 💰 **加密货币**: 比特币
 
-### 板块ETF类 (13个)
+### 板块ETF类 (16个)
 - 💊 **医疗健康**: 港股创新药
 - 🔋 **新能源**: 港股电池
 - 🧪 **化工**: A股化工
@@ -28,14 +28,14 @@
 - 🍷 **消费**: A股白酒
 - 💼 **金融**: A股证券、A股银行、A股保险
 - 🎮 **传媒娱乐**: A股游戏、A股传媒
-- 💻 **科技**: A股半导体
-- 🏗️ **材料**: A股钢铁、A股有色金属
+- 💻 **科技**: A股半导体、A股软件
+- 🏗️ **材料**: A股钢铁、A股有色金属、A股稀土
 
-### 个股类 (2个)
+### 个股类 (3个)
 - 🏭 **先进制造**: 三花智控
-- 💻 **科技**: 阿里巴巴(港股)
+- 💻 **科技**: 阿里巴巴(港股)、指南针
 
-**总计**: 22 个资产
+**总计**: 25 个资产
 
 ## 🚀 快速开始
 
@@ -71,11 +71,78 @@ python scripts/unified_analysis/run_unified_analysis.py --save reports/unified_r
 python scripts/unified_analysis/run_unified_analysis.py --format text --save reports/unified_report.txt
 ```
 
-### 5. 显示详细日志
+### 5. 发送邮件报告
+
+```bash
+# 分析并发送邮件到配置的所有收件人
+python scripts/unified_analysis/run_unified_analysis.py --email
+
+# 分析、保存并发送邮件
+python scripts/unified_analysis/run_unified_analysis.py --save reports/report.md --email
+```
+
+### 6. 显示详细日志
 
 ```bash
 python scripts/unified_analysis/run_unified_analysis.py --verbose
 ```
+
+## 📧 邮件配置
+
+### 配置文件位置
+
+`config/email_config.yaml`
+
+### 配置示例
+
+```yaml
+# SMTP 服务器配置
+smtp:
+  server: smtp.qq.com
+  port: 465
+
+# 发件人信息
+sender:
+  email: your_email@qq.com
+  password: your_auth_code  # QQ邮箱授权码
+  name: 科技指数分析系统
+
+# 收件人列表
+recipients:
+  - user1@qq.com
+  - user2@foxmail.com
+  - user3@qq.com
+```
+
+### 临时修改收件人
+
+**方式1: 注释不需要的收件人 (推荐)**
+
+如果只想发送给部分收件人,可以临时注释掉其他收件人:
+
+```yaml
+recipients:
+  # - user1@qq.com      # 临时不发送
+  # - user2@foxmail.com # 临时不发送
+  - user3@qq.com        # 只发送给这个
+```
+
+**方式2: 创建临时配置文件**
+
+复制一份配置文件,只保留需要的收件人:
+
+```bash
+cp config/email_config.yaml config/email_config_temp.yaml
+# 编辑 email_config_temp.yaml,只保留需要的收件人
+# 然后在代码中指定使用临时配置
+```
+
+**注意事项:**
+
+1. 邮件会发送给配置文件中**所有未注释的收件人**
+2. 每个收件人会单独收到一封邮件(独立SMTP连接)
+3. 部分发送失败不影响其他收件人
+4. 发送完成后建议恢复配置文件的原始状态
 
 ## 📝 配置文件
 
@@ -219,7 +286,13 @@ Claude Code
 
 ## 📅 更新日志
 
-### 2025-10-16
+### 2025-10-16 (v2)
+- ✨ 新增3个标的: 软件ETF、稀土ETF、指南针
+- 📧 完善邮件配置说明
+- 📝 新增临时修改收件人的操作指南
+- 📦 资产总数增至25个
+
+### 2025-10-16 (v1)
 - ✨ 初始版本
 - 📦 整合 22 个资产配置
 - 🚀 实现统一运行脚本
