@@ -36,6 +36,7 @@ from scripts.unified_analysis.unified_config import (
 )
 from scripts.comprehensive_asset_analysis.asset_reporter import ComprehensiveAssetReporter
 from scripts.sector_analysis.sector_reporter import SectorReporter
+from scripts.unified_analysis.unified_email_notifier import UnifiedEmailNotifier
 
 # 配置日志
 logging.basicConfig(
@@ -545,6 +546,11 @@ def main():
         action='store_true',
         help='显示详细日志'
     )
+    parser.add_argument(
+        '--email',
+        action='store_true',
+        help='发送邮件到配置的收件人列表'
+    )
 
     args = parser.parse_args()
 
@@ -606,6 +612,24 @@ def main():
             with open(save_path, 'w', encoding='utf-8') as f:
                 f.write(report)
             logger.info(f"报告已保存到: {save_path}")
+
+        # 发送邮件(始终使用文本格式)
+        if args.email:
+            logger.info("准备发送邮件到配置的收件人列表...")
+            try:
+                # 邮件发送使用文本格式报告
+                text_report = runner.format_report(results, 'text')
+                notifier = UnifiedEmailNotifier()
+                success = notifier.send_unified_report(results, text_report)
+                if success:
+                    logger.info("✅ 邮件发送成功")
+                else:
+                    logger.error("❌ 邮件发送失败")
+                    sys.exit(1)
+            except Exception as e:
+                logger.error(f"邮件发送异常: {str(e)}")
+                logger.info("💡 提示: 请确保已配置 config/email_config.yaml")
+                sys.exit(1)
 
         logger.info("✅ 分析任务完成")
 
