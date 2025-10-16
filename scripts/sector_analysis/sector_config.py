@@ -179,6 +179,39 @@ SECTOR_DEFINITIONS = {
         'description': '跟踪保险行业，覆盖中国平安、中国人寿、中国太保等保险龙头'
     },
 
+    # A股软件板块
+    'CN_SOFTWARE': {
+        'name': 'A股软件',
+        'market': 'CN',
+        'type': 'etf',
+        'symbols': ['515230'],  # 国泰中证全指软件ETF
+        'weights': None,
+        'category': 'tech',
+        'description': '跟踪中证全指软件指数，覆盖金山办公、用友网络、恒生电子等软件龙头'
+    },
+
+    # A股稀土板块
+    'CN_RARE_EARTH': {
+        'name': 'A股稀土',
+        'market': 'CN',
+        'type': 'etf',
+        'symbols': ['516780'],  # 华泰柏瑞中证稀土产业ETF
+        'weights': None,
+        'category': 'materials',
+        'description': '跟踪中证稀土产业指数，覆盖北方稀土、盛和资源、五矿稀土等稀土龙头'
+    },
+
+    # 指南针(个股)
+    'ZHINANZHEN': {
+        'name': '指南针',
+        'market': 'CN',
+        'type': 'stock',
+        'symbols': ['300803'],  # 指南针股票代码
+        'weights': None,
+        'category': 'tech',
+        'description': '证券投资软件龙头，主营炒股软件及金融信息服务'
+    },
+
     # 以下为示例配置，可根据需要启用
 
     # A股半导体板块(示例，未来可扩展)

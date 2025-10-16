@@ -243,6 +243,30 @@ UNIFIED_ASSETS = {
         'description': '跟踪保险行业，覆盖中国平安、中国人寿、中国太保等保险龙头'
     },
 
+    # A股软件板块
+    'CN_SOFTWARE': {
+        'type': 'etf',
+        'analyzer_type': 'sector',
+        'market': 'CN',
+        'name': 'A股软件',
+        'symbols': ['515230'],
+        'weights': None,
+        'category': 'tech',
+        'description': '跟踪中证全指软件指数，覆盖金山办公、用友网络、恒生电子等软件龙头'
+    },
+
+    # A股稀土板块
+    'CN_RARE_EARTH': {
+        'type': 'etf',
+        'analyzer_type': 'sector',
+        'market': 'CN',
+        'name': 'A股稀土',
+        'symbols': ['516780'],
+        'weights': None,
+        'category': 'materials',
+        'description': '跟踪中证稀土产业指数，覆盖北方稀土、盛和资源、五矿稀土等稀土龙头'
+    },
+
     # ==================== 个股类 ====================
     # 三花智控
     'SANHUA_A': {
@@ -267,6 +291,18 @@ UNIFIED_ASSETS = {
         'category': 'tech',
         'description': '中国电商及云计算巨头，覆盖电商、云计算、数字娱乐等业务',
         'data_source': 'yfinance'
+    },
+
+    # 指南针
+    'ZHINANZHEN': {
+        'type': 'stock',
+        'analyzer_type': 'sector',
+        'market': 'CN',
+        'name': '指南针',
+        'symbols': ['300803'],
+        'weights': None,
+        'category': 'tech',
+        'description': '证券投资软件龙头，主营炒股软件及金融信息服务'
     },
 }
 
