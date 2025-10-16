@@ -170,14 +170,23 @@ class UnifiedAnalysisRunner:
             lines.append(f"- **成功分析**: {success_count}")
             lines.append(f"- **失败数**: {fail_count}")
             lines.append("")
-            lines.append("---")
-            lines.append("")
         else:
             lines.append(f"总资产数: {total_count}")
             lines.append(f"成功分析: {success_count}")
             lines.append(f"失败数: {fail_count}")
             lines.append("")
             lines.append("=" * 80)
+            lines.append("")
+
+        # 生成汇总表格
+        if format_type == 'markdown':
+            summary_table = self._generate_summary_table(results)
+            if summary_table:
+                lines.append("## 📊 标的汇总")
+                lines.append("")
+                lines.append(summary_table)
+                lines.append("")
+            lines.append("---")
             lines.append("")
 
         # 分组整理报告数据
@@ -249,6 +258,74 @@ class UnifiedAnalysisRunner:
             lines.append("=" * 80)
             lines.append("免责声明: 本报告仅供参考,不构成投资建议。投资有风险,入市需谨慎。")
             lines.append("=" * 80)
+
+        return '\n'.join(lines)
+
+    def _generate_summary_table(self, results: dict) -> str:
+        """生成所有标的汇总表格"""
+        lines = []
+
+        # 表头 (去掉类别列)
+        lines.append("| 标的名称 | 当前价格 | 涨跌幅 | 方向判断 | 建议仓位 | 20日上涨概率 | 风险等级 |")
+        lines.append("|----------|----------|--------|----------|----------|--------------|----------|")
+
+        # 遍历所有资产
+        for asset_key, data in results['assets'].items():
+            if 'error' in data:
+                continue
+
+            config = UNIFIED_ASSETS[asset_key]
+
+            # 标的名称
+            if config['analyzer_type'] == 'comprehensive':
+                asset_name = data.get('asset_name', config['name'])
+            else:
+                asset_name = data.get('sector_name', config['name'])
+
+            # 当前价格和涨跌幅 - 修复字段名称
+            # comprehensive 类型使用 'historical_analysis', sector 类型也使用 'historical_analysis'
+            hist = data.get('historical_analysis', {})
+
+            current_price = hist.get('current_price', 0)
+            change_pct = hist.get('current_change_pct', 0)
+            change_emoji = "📈" if change_pct >= 0 else "📉"
+
+            # 综合判断
+            judgment = data.get('comprehensive_judgment', {})
+            direction = judgment.get('direction', 'N/A')
+            position = judgment.get('recommended_position', 'N/A')
+
+            # 方向判断emoji
+            direction_map = {
+                '强烈看多': '✅✅',
+                '看多': '✅',
+                '中性偏多': '⚖️',
+                '中性': '⚖️',
+                '看空': '🔴'
+            }
+            direction_with_emoji = f"{direction}{direction_map.get(direction, '')}"
+
+            # 20日上涨概率 (comprehensive 和 sector 使用相同字段)
+            stats_20d = hist.get('20d', {})
+            up_prob_20d = stats_20d.get('up_prob', 0)
+
+            # 风险等级
+            risk = data.get('risk_assessment', {})
+            risk_level = risk.get('risk_level', 'N/A')
+            risk_emoji_map = {
+                '极高风险': '🔴🔴🔴',
+                '高风险': '🔴🔴',
+                '中风险': '⚠️',
+                '低风险': '✅'
+            }
+            risk_with_emoji = f"{risk_emoji_map.get(risk_level, '')} {risk_level}"
+
+            # 生成表格行 (去掉 category 列)
+            lines.append(
+                f"| {asset_name} | {current_price:.2f} | "
+                f"{change_pct:+.2f}% {change_emoji} | {direction_with_emoji} | {position} | "
+                f"{up_prob_20d:.1%} | {risk_with_emoji} |"
+            )
 
         return '\n'.join(lines)
 
