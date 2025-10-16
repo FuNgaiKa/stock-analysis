@@ -689,6 +689,47 @@ class SectorReporter:
         logger.info("板块综合报告生成完成")
         return report
 
+    def _generate_investment_summary(self, report: Dict) -> List:
+        """生成投资建议总结"""
+        strong_buy = []  # 强烈推荐
+        neutral = []     # 中性持有
+        reduce = []      # 减仓观望
+
+        for sector_key, data in report['sectors'].items():
+            if 'error' in data:
+                continue
+
+            sector_name = data.get('sector_name', sector_key)
+            judgment = data.get('comprehensive_judgment', {})
+            hist = data.get('historical_analysis', {})
+            risk = data.get('risk_assessment', {})
+
+            up_prob_20d = hist.get('20d', {}).get('up_prob', 0)
+            risk_score = risk.get('risk_score', 0.5)
+            direction = judgment.get('direction', '未知')
+
+            # 构建指标描述
+            metrics = f"20日上涨概率 {up_prob_20d:.1%}, 风险评分 {risk_score:.2f}"
+
+            # 分类
+            if direction in ['强烈看多', '看多'] and up_prob_20d >= 0.6:
+                strong_buy.append((sector_name, metrics))
+            elif direction in ['看空'] or up_prob_20d < 0.4:
+                reduce.append((sector_name, metrics))
+            else:
+                neutral.append((sector_name, metrics))
+
+        # 构建输出
+        summary_sections = []
+        if strong_buy:
+            summary_sections.append(("✅ 强烈推荐 (高胜率+低风险):", strong_buy))
+        if neutral:
+            summary_sections.append(("⚖️ 中性持有 (观望为主):", neutral))
+        if reduce:
+            summary_sections.append(("⚠️ 减仓观望 (风险较高):", reduce))
+
+        return summary_sections
+
     def format_text_report(self, report: Dict) -> str:
         """格式化为文本报告"""
         lines = []
@@ -696,6 +737,23 @@ class SectorReporter:
         lines.append("板块综合分析报告")
         lines.append(f"分析时间: {report['timestamp'].strftime('%Y-%m-%d %H:%M:%S')}")
         lines.append("=" * 80)
+
+        # 添加投资建议总结
+        summary_sections = self._generate_investment_summary(report)
+        if summary_sections:
+            lines.append("\n" + "=" * 80)
+            lines.append("【投资建议总结】")
+            lines.append("=" * 80)
+
+            for section_title, sectors_info in summary_sections:
+                lines.append(f"\n{section_title}")
+                for sector_name, metrics in sectors_info:
+                    lines.append(f"  • {sector_name}")
+                    lines.append(f"    - {metrics}")
+
+            lines.append("\n" + "=" * 80)
+            lines.append("【详细分析】")
+            lines.append("=" * 80)
 
         for sector_key, data in report['sectors'].items():
             if 'error' in data:
