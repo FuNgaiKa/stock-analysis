@@ -50,9 +50,14 @@ def main():
         reporter = TechIndicesReporter()
         report = reporter.generate_comprehensive_report()
 
-        # 打印到控制台
+        # 打印到控制台 (Windows GBK编码处理)
         text_report = reporter.format_text_report(report)
-        print("\n" + text_report)
+        try:
+            print("\n" + text_report)
+        except UnicodeEncodeError:
+            # Windows控制台GBK编码不支持emoji和特殊字符,转换后输出
+            text_safe = text_report.encode('gbk', errors='ignore').decode('gbk')
+            print("\n" + text_safe)
 
         # 保存到文件
         if args.save:
