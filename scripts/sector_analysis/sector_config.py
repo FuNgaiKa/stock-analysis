@@ -35,6 +35,50 @@ SECTOR_DEFINITIONS = {
         'description': '跟踪新能源车电池产业链，覆盖宁德时代、比亚迪、赣锋锂业等'
     },
 
+    # A股化工板块
+    'CN_CHEMICAL': {
+        'name': 'A股化工',
+        'market': 'CN',
+        'type': 'etf',
+        'symbols': ['516020'],  # 华宝化工ETF
+        'weights': None,
+        'category': 'chemical',
+        'description': '跟踪化工产业链，覆盖万华化学、恒力石化等龙头'
+    },
+
+    # A股煤炭板块
+    'CN_COAL': {
+        'name': 'A股煤炭',
+        'market': 'CN',
+        'type': 'etf',
+        'symbols': ['515220'],  # 国泰中证煤炭ETF
+        'weights': None,
+        'category': 'coal',
+        'description': '跟踪煤炭产业链，覆盖中国神华、陕西煤业等龙头'
+    },
+
+    # A股白酒板块
+    'CN_LIQUOR': {
+        'name': 'A股白酒',
+        'market': 'CN',
+        'type': 'etf',
+        'symbols': ['512690'],  # 鹏华中证酒ETF
+        'weights': None,
+        'category': 'consumer',
+        'description': '跟踪白酒产业，覆盖茅台、五粮液、泸州老窖等龙头'
+    },
+
+    # A股证券板块
+    'CN_SECURITIES': {
+        'name': 'A股证券',
+        'market': 'CN',
+        'type': 'etf',
+        'symbols': ['512880'],  # 证券ETF
+        'weights': None,
+        'category': 'finance',
+        'description': '跟踪证券行业，覆盖中信证券、华泰证券等龙头券商'
+    },
+
     # 以下为示例配置，可根据需要启用
 
     # A股半导体板块(示例，未来可扩展)
@@ -69,7 +113,9 @@ SECTOR_CATEGORIES = {
     'defense': '国防军工',
     'consumer': '消费',
     'finance': '金融',
-    'realestate': '地产'
+    'realestate': '地产',
+    'chemical': '化工',
+    'coal': '煤炭'
 }
 
 
