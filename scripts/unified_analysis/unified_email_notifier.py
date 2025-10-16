@@ -90,44 +90,67 @@ class UnifiedEmailNotifier:
         # 构建HTML邮件内容
         html_content = self._format_html_content(report)
 
-        # 创建邮件
-        message = MIMEMultipart('alternative')
-        message['From'] = self.config['sender']['email']
-
         # 从配置文件获取收件人列表
         recipients = self.config.get('recipients', ['1264947688@qq.com'])
-        message['To'] = ', '.join(recipients)  # 多个收件人用逗号分隔
-        message['Subject'] = Header(subject, 'utf-8')
-        message['X-Priority'] = '3'
 
-        # 添加纯文本和HTML版本
-        text_part = MIMEText(text_content, 'plain', 'utf-8')
-        html_part = MIMEText(html_content, 'html', 'utf-8')
-        message.attach(text_part)
-        message.attach(html_part)
+        # 发送邮件 - 给每个收件人单独发送一封,每次都建立新连接
+        success_count = 0
+        failed_recipients = []
 
-        # 发送邮件
-        try:
-            smtp = smtplib.SMTP_SSL(
-                self.config['smtp']['server'],
-                self.config['smtp']['port']
-            )
-            smtp.login(
-                self.config['sender']['email'],
-                self.config['sender']['password']
-            )
-            smtp.sendmail(
-                self.config['sender']['email'],
-                recipients,  # 发送到所有收件人
-                message.as_string()
-            )
-            smtp.quit()
+        # 为每个收件人单独创建连接和发送邮件
+        for recipient in recipients:
+            try:
+                # 每个收件人建立独立的SMTP连接
+                smtp = smtplib.SMTP_SSL(
+                    self.config['smtp']['server'],
+                    self.config['smtp']['port']
+                )
+                smtp.login(
+                    self.config['sender']['email'],
+                    self.config['sender']['password']
+                )
 
-            self.logger.info(f"邮件发送成功(发送到{len(recipients)}个收件人): {subject}")
+                # 创建邮件
+                message = MIMEMultipart('alternative')
+                message['From'] = self.config['sender']['email']
+                message['To'] = recipient  # 单个收件人
+                message['Subject'] = Header(subject, 'utf-8')
+                message['X-Priority'] = '3'
+
+                # 添加纯文本和HTML版本
+                text_part = MIMEText(text_content, 'plain', 'utf-8')
+                html_part = MIMEText(html_content, 'html', 'utf-8')
+                message.attach(text_part)
+                message.attach(html_part)
+
+                # 发送给当前收件人
+                smtp.sendmail(
+                    self.config['sender']['email'],
+                    [recipient],
+                    message.as_string()
+                )
+
+                smtp.quit()
+                success_count += 1
+                self.logger.info(f"✅ 邮件发送成功: {recipient}")
+
+            except Exception as e:
+                failed_recipients.append(recipient)
+                self.logger.error(f"❌ 发送到 {recipient} 失败: {str(e)}")
+                try:
+                    smtp.quit()
+                except:
+                    pass
+
+        # 汇总结果
+        if success_count == len(recipients):
+            self.logger.info(f"🎉 所有邮件发送成功(共{success_count}个收件人): {subject}")
             return True
-
-        except Exception as e:
-            self.logger.error(f"邮件发送失败: {str(e)}")
+        elif success_count > 0:
+            self.logger.warning(f"⚠️ 部分邮件发送成功({success_count}/{len(recipients)}),失败的收件人: {', '.join(failed_recipients)}")
+            return True
+        else:
+            self.logger.error(f"❌ 所有邮件发送失败")
             return False
 
     def _format_html_content(self, report: Dict) -> str:
