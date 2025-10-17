@@ -97,6 +97,9 @@ class CNBullMarketAnalyzer:
         gain_from_min = ((close - running_min) / running_min) * 100
         max_gain = gain_from_min.max()
 
+        # 统计回撤>10%的次数
+        drawdown_over_10_count = self._count_drawdowns_over_threshold(close, threshold=10.0)
+
         # 波动率(年化)
         daily_returns = close.pct_change().dropna()
         volatility = daily_returns.std() * np.sqrt(252) * 100
@@ -117,11 +120,36 @@ class CNBullMarketAnalyzer:
             "年化收益率(%)": round(annualized_return, 2),
             "最大回撤(%)": round(max_drawdown, 2),
             "最大涨幅(%)": round(max_gain, 2),
+            "回撤>10%次数": drawdown_over_10_count,
             "年化波动率(%)": round(volatility, 2),
             "夏普比率": round(sharpe_ratio, 2),
             "胜率(%)": round(win_rate, 2),
             "交易天数": len(close),
         }
+
+    def _count_drawdowns_over_threshold(self, close: pd.Series, threshold: float = 10.0) -> int:
+        """统计回撤超过阈值的次数
+
+        逻辑：从每个新高点开始，如果回撤超过threshold%，计数+1
+        """
+        count = 0
+        cummax = close.iloc[0]  # 当前最高点
+        in_drawdown = False  # 是否处于回撤状态
+
+        for price in close:
+            if price > cummax:
+                # 创新高，重置状态
+                cummax = price
+                in_drawdown = False
+            else:
+                # 计算当前回撤
+                current_drawdown = ((price - cummax) / cummax) * 100
+                if current_drawdown <= -threshold and not in_drawdown:
+                    # 首次触及回撤阈值
+                    count += 1
+                    in_drawdown = True
+
+        return count
 
     def analyze_all_bull_markets(self):
         """分析所有牛市"""
@@ -180,15 +208,15 @@ class CNBullMarketAnalyzer:
             print(f"时间: {result['start_date']} ~ {result['end_date']}")
             print("-"*120)
             print(f"{'指数':<12} {'总收益率(%)':<12} {'年化收益率(%)':<14} {'最大回撤(%)':<12} "
-                  f"{'最大涨幅(%)':<12} {'夏普比率':<10} {'交易天数':<10}")
+                  f"{'最大涨幅(%)':<12} {'回撤>10%次数':<14} {'夏普比率':<10} {'交易天数':<10}")
             print("-"*120)
 
             for index_name, metrics in result['indices'].items():
                 if metrics:
                     print(f"{index_name:<12} {metrics.get('总收益率(%)', 'N/A'):<12} "
                           f"{metrics.get('年化收益率(%)', 'N/A'):<14} {metrics.get('最大回撤(%)', 'N/A'):<12} "
-                          f"{metrics.get('最大涨幅(%)', 'N/A'):<12} {metrics.get('夏普比率', 'N/A'):<10} "
-                          f"{metrics.get('交易天数', 'N/A'):<10}")
+                          f"{metrics.get('最大涨幅(%)', 'N/A'):<12} {metrics.get('回撤>10%次数', 'N/A'):<14} "
+                          f"{metrics.get('夏普比率', 'N/A'):<10} {metrics.get('交易天数', 'N/A'):<10}")
 
             print()
 
@@ -218,8 +246,8 @@ class CNBullMarketAnalyzer:
 
                 # Markdown 表格
                 if result['indices']:
-                    f.write("| 指数 | 总收益率(%) | 年化收益率(%) | 最大回撤(%) | 最大涨幅(%) | 年化波动率(%) | 夏普比率 | 胜率(%) | 交易天数 |\n")
-                    f.write("|------|------------|--------------|-----------|-----------|-------------|---------|--------|--------|\n")
+                    f.write("| 指数 | 总收益率(%) | 年化收益率(%) | 最大回撤(%) | 最大涨幅(%) | 回撤>10%次数 | 年化波动率(%) | 夏普比率 | 胜率(%) | 交易天数 |\n")
+                    f.write("|------|------------|--------------|-----------|-----------|------------|-------------|---------|--------|--------|\n")
 
                     for index_name, metrics in result['indices'].items():
                         if metrics:
@@ -228,12 +256,13 @@ class CNBullMarketAnalyzer:
                                   f"{metrics.get('年化收益率(%)', 'N/A')} | "
                                   f"{metrics.get('最大回撤(%)', 'N/A')} | "
                                   f"{metrics.get('最大涨幅(%)', 'N/A')} | "
+                                  f"{metrics.get('回撤>10%次数', 'N/A')} | "
                                   f"{metrics.get('年化波动率(%)', 'N/A')} | "
                                   f"{metrics.get('夏普比率', 'N/A')} | "
                                   f"{metrics.get('胜率(%)', 'N/A')} | "
                                   f"{metrics.get('交易天数', 'N/A')} |\n")
                         else:
-                            f.write(f"| {index_name} | 无数据 | - | - | - | - | - | - | - |\n")
+                            f.write(f"| {index_name} | 无数据 | - | - | - | - | - | - | - | - |\n")
 
                 f.write("\n")
 
