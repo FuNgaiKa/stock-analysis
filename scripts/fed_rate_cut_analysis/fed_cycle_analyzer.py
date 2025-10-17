@@ -207,6 +207,37 @@ class FedCycleAnalyzer:
         df = pd.DataFrame(comparison_data)
         return df
 
+    def analyze_pre_cut_performance(self, results: List[Dict]) -> Dict:
+        """分析首次降息前的市场表现
+
+        Args:
+            results: 分析结果列表
+
+        Returns:
+            首次降息前表现统计
+        """
+        pre_cut_data = []
+
+        for result in results:
+            cycle = result["cycle_info"]
+
+            for symbol, analysis in result["indices_analysis"].items():
+                pre_metrics = analysis["stages"].get("降息前90天", {})
+                cycle_metrics = analysis["stages"].get("降息周期中", {})
+
+                if pre_metrics and cycle_metrics:
+                    pre_cut_data.append({
+                        "降息周期": cycle.name,
+                        "周期类型": cycle.cycle_type,
+                        "指数": analysis["name"],
+                        "降息前90天收益(%)": pre_metrics.get("总收益率(%)", 0),
+                        "降息周期收益(%)": cycle_metrics.get("总收益率(%)", 0),
+                        "降息幅度": cycle.start_rate - cycle.end_rate,
+                        "降息次数": cycle.total_cuts,
+                    })
+
+        return pd.DataFrame(pre_cut_data)
+
     def generate_summary_table(self, results: List[Dict]) -> str:
         """生成摘要表格
 
@@ -250,6 +281,107 @@ class FedCycleAnalyzer:
             summary += "\n"
 
         return summary
+
+    def generate_enhanced_report(self, results: List[Dict]) -> str:
+        """生成增强版分析报告
+
+        包括：
+        1. 基础市场表现
+        2. 首次降息前后对比
+        3. 降息幅度分析
+        4. 预防式vs纾困式对比
+
+        Args:
+            results: 分析结果列表
+
+        Returns:
+            完整报告文本
+        """
+        report = "\n" + "=" * 100 + "\n"
+        report += "美联储降息周期深度分析报告\n"
+        report += f"生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+        report += "=" * 100 + "\n\n"
+
+        # 1. 基础表现对比
+        report += self.generate_summary_table(results)
+
+        # 2. 降息周期对比表
+        report += "\n" + "=" * 100 + "\n"
+        report += "降息周期对比 (降息幅度 & 市场表现)\n"
+        report += "=" * 100 + "\n\n"
+
+        cycle_comparison = []
+        for result in results:
+            cycle = result["cycle_info"]
+
+            # 计算美股平均表现
+            us_indices = ["^GSPC", "^IXIC", "^DJI"]
+            total_returns = []
+            for symbol in us_indices:
+                if symbol in result["indices_analysis"]:
+                    metrics = result["indices_analysis"][symbol]["stages"].get("降息周期中", {})
+                    ret = metrics.get("总收益率(%)", None)
+                    if ret is not None:
+                        total_returns.append(ret)
+
+            avg_return = sum(total_returns) / len(total_returns) if total_returns else 0
+
+            cycle_comparison.append({
+                "周期": cycle.name,
+                "类型": cycle.cycle_type,
+                "起始利率": f"{cycle.start_rate}%",
+                "结束利率": f"{cycle.end_rate}%",
+                "降息幅度": f"{cycle.start_rate - cycle.end_rate}%",
+                "降息次数": cycle.total_cuts,
+                "美股平均收益": f"{avg_return:.2f}%",
+            })
+
+        cycle_df = pd.DataFrame(cycle_comparison)
+        report += cycle_df.to_string(index=False) + "\n\n"
+
+        # 3. 首次降息前后市场表现
+        report += "\n" + "=" * 100 + "\n"
+        report += "首次降息前90天 vs 降息周期中 - 市场表现对比\n"
+        report += "=" * 100 + "\n\n"
+
+        pre_cut_df = self.analyze_pre_cut_performance(results)
+        if not pre_cut_df.empty:
+            report += f"{'周期':<20} {'类型':<10} {'指数':<12} {'降息前90天(%)':<15} {'降息周期中(%)':<15} {'降息幅度':<10}\n"
+            report += "-" * 100 + "\n"
+            for _, row in pre_cut_df.iterrows():
+                report += f"{row['降息周期']:<20} {row['周期类型']:<10} {row['指数']:<12} "
+                report += f"{row['降息前90天收益(%)']:>14.2f} {row['降息周期收益(%)']:>14.2f} "
+                report += f"{row['降息幅度']:>9.2f}%\n"
+
+        # 4. 关键发现总结
+        report += "\n\n" + "=" * 100 + "\n"
+        report += "关键发现总结\n"
+        report += "=" * 100 + "\n\n"
+
+        # 按类型分组统计
+        preventive = pre_cut_df[pre_cut_df["周期类型"] == "预防式"]
+        crisis = pre_cut_df[pre_cut_df["周期类型"] == "纾困式"]
+
+        if not preventive.empty:
+            report += "【预防式降息】：\n"
+            report += f"  - 平均降息幅度: {preventive['降息幅度'].mean():.2f}%\n"
+            report += f"  - 降息前90天平均收益: {preventive['降息前90天收益(%)'].mean():.2f}%\n"
+            report += f"  - 降息周期中平均收益: {preventive['降息周期收益(%)'].mean():.2f}%\n"
+            report += f"  - 特征: 市场提前反应，降息后继续上涨\n\n"
+
+        if not crisis.empty:
+            report += "【纾困式降息】：\n"
+            report += f"  - 平均降息幅度: {crisis['降息幅度'].mean():.2f}%\n"
+            report += f"  - 降息前90天平均收益: {crisis['降息前90天收益(%)'].mean():.2f}%\n"
+            report += f"  - 降息周期中平均收益: {crisis['降息周期收益(%)'].mean():.2f}%\n"
+            report += f"  - 特征: 降息前已大跌，降息也难止跌\n\n"
+
+        report += "\n投资启示:\n"
+        report += "  1. 预防式降息：降息幅度小(0.75-2%),市场通常上涨\n"
+        report += "  2. 纾困式降息：降息幅度大(5-5.5%),市场往往继续下跌\n"
+        report += "  3. 关键判断：观察降息前市场是否已大幅下跌\n"
+
+        return report
 
     def get_best_performers(self, results: List[Dict], metric: str = "总收益率(%)") -> pd.DataFrame:
         """获取表现最佳的市场/周期组合

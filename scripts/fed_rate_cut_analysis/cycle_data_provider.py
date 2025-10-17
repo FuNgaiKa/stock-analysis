@@ -32,6 +32,16 @@ class FedRateCutDataProvider:
         """定义历史降息周期"""
         return [
             RateCutCycle(
+                name="1995年软着陆",
+                start_date="1995-07-06",
+                end_date="1996-01-31",
+                start_rate=6.0,
+                end_rate=5.25,
+                total_cuts=3,
+                background="经济温和放缓,主动预防衰退,实现软着陆",
+                cycle_type="预防式"
+            ),
+            RateCutCycle(
                 name="2001年互联网泡沫",
                 start_date="2001-01-03",
                 end_date="2003-06-25",

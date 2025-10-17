@@ -105,8 +105,9 @@ def analyze_comparison(analyzer: FedCycleAnalyzer, market: str):
 
 def save_report(results, analyzer: FedCycleAnalyzer, market: str):
     """保存分析报告到文件"""
-    # 创建报告目录
-    report_dir = Path(__file__).parent / "reports"
+    # 使用项目根目录的reports文件夹
+    project_root = Path(__file__).parent.parent.parent
+    report_dir = project_root / "reports"
     report_dir.mkdir(exist_ok=True)
 
     # 生成文件名
@@ -114,24 +115,21 @@ def save_report(results, analyzer: FedCycleAnalyzer, market: str):
     filename = f"fed_cycle_analysis_{market}_{timestamp}.txt"
     filepath = report_dir / filename
 
-    # 写入报告
+    # 写入增强版报告
     with open(filepath, "w", encoding="utf-8") as f:
-        f.write("美联储降息周期市场分析报告\n")
-        f.write(f"生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-        f.write("=" * 80 + "\n\n")
+        # 使用增强版报告生成器
+        enhanced_report = analyzer.generate_enhanced_report(results)
+        f.write(enhanced_report)
 
-        # 写入摘要
-        summary = analyzer.generate_summary_table(results)
-        f.write(summary)
-
-        # 写入最佳表现
-        f.write("\n\n最佳表现排名 (按总收益率)\n")
-        f.write("=" * 80 + "\n")
+        # 追加最佳表现排名
+        f.write("\n\n" + "=" * 100 + "\n")
+        f.write("最佳表现排名 (按总收益率)\n")
+        f.write("=" * 100 + "\n\n")
         best_performers = analyzer.get_best_performers(results, metric="总收益率(%)")
         if not best_performers.empty:
             f.write(best_performers.to_string(index=False))
 
-    print(f"\n✅ 详细报告已保存至: {filepath}")
+    print(f"\n✅ 增强版分析报告已保存至: {filepath}")
 
 
 def main():
