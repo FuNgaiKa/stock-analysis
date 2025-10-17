@@ -84,7 +84,6 @@ data/
 output/
 results/
 
-# Reports and logs
-reports/
+# Logs
 logs/
 *.html
