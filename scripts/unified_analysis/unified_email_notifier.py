@@ -426,6 +426,15 @@ class UnifiedEmailNotifier:
                 risk_class = 'risk-high'
                 risk_emoji = '🔴'
 
+            # 持有建议 - 从 strategies 中提取包含"持有"的建议
+            strategies = judgment.get('strategies', [])
+            hold_suggestion = '-'
+            for strategy in strategies:
+                # 匹配包含"持有"关键词的建议
+                if '持有' in strategy:
+                    hold_suggestion = strategy
+                    break
+
             rows.append(f"""
             <tr>
                 <td><strong>{asset_name}</strong></td>
@@ -435,6 +444,7 @@ class UnifiedEmailNotifier:
                 <td>{position}</td>
                 <td class="{prob_class}">{up_prob_20d:.1%}</td>
                 <td class="{risk_class}">{risk_emoji} {risk_level}</td>
+                <td>{hold_suggestion}</td>
             </tr>
             """)
 
@@ -449,6 +459,7 @@ class UnifiedEmailNotifier:
                     <th>建议仓位</th>
                     <th>20日上涨概率</th>
                     <th>风险等级</th>
+                    <th>持有建议</th>
                 </tr>
             </thead>
             <tbody>
