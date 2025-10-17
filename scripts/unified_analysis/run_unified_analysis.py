@@ -266,9 +266,9 @@ class UnifiedAnalysisRunner:
         """生成所有标的汇总表格"""
         lines = []
 
-        # 表头 (去掉类别列)
-        lines.append("| 标的名称 | 当前价格 | 涨跌幅 | 方向判断 | 建议仓位 | 20日上涨概率 | 风险等级 |")
-        lines.append("|----------|----------|--------|----------|----------|--------------|----------|")
+        # 表头 (添加持有建议列)
+        lines.append("| 标的名称 | 当前价格 | 涨跌幅 | 方向判断 | 建议仓位 | 20日上涨概率 | 风险等级 | 持有建议 |")
+        lines.append("|----------|----------|--------|----------|----------|--------------|----------|----------|")
 
         # 遍历所有资产
         for asset_key, data in results['assets'].items():
@@ -321,11 +321,20 @@ class UnifiedAnalysisRunner:
             }
             risk_with_emoji = f"{risk_emoji_map.get(risk_level, '')} {risk_level}"
 
-            # 生成表格行 (去掉 category 列)
+            # 持有建议 - 从 strategies 中提取包含"持有"的建议
+            strategies = judgment.get('strategies', [])
+            hold_suggestion = '-'
+            for strategy in strategies:
+                # 匹配包含"持有"关键词的建议
+                if '持有' in strategy:
+                    hold_suggestion = strategy
+                    break
+
+            # 生成表格行 (添加持有建议列)
             lines.append(
                 f"| {asset_name} | {current_price:.2f} | "
                 f"{change_pct:+.2f}% {change_emoji} | {direction_with_emoji} | {position} | "
-                f"{up_prob_20d:.1%} | {risk_with_emoji} |"
+                f"{up_prob_20d:.1%} | {risk_with_emoji} | {hold_suggestion} |"
             )
 
         return '\n'.join(lines)
