@@ -568,6 +568,14 @@ class SectorReporter:
             elif risk_score < 0.3:
                 strategies.append('低风险，可以持有')
 
+            # 持有建议逻辑增强：即使看空，低风险资产也可以继续持有
+            if direction == '看空' and risk_score < 0.3:
+                # 看空但低风险，给出持有建议
+                if up_prob_20d >= 0.35:
+                    # 看空但概率不是特别差（35%-40%），低风险可以继续持有
+                    if '低风险，可以持有' not in strategies:
+                        strategies.append('低风险，可以持有')
+
             return {
                 'direction': direction,
                 'recommended_position': position,
