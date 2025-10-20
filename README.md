@@ -179,120 +179,115 @@ stock-analysis/
 │   │       ├── A股API - /api/cn/indices, /api/cn/current-positions
 │   │       └── 回测API - /api/backtest/run
 │   │
-│   └── frontend/                          # Vue 3前端
-│       ├── src/
-│       │   ├── views/                     # 页面组件
-│       │   │   ├── MarketOverview.vue     # 市场概览页
-│       │   │   ├── IndexAnalysis.vue      # 指数分析页
-│       │   │   ├── VixAnalysis.vue        # VIX恐慌指数页
-│       │   │   ├── SectorRotation.vue     # 行业轮动页
-│       │   │   ├── Backtest.vue           # 历史回测页
-│       │   │   ├── PositionAnalysis.vue   # 历史点位对比页 🆕
-│       │   │   ├── HKStockAnalysis.vue    # 港股市场分析页 🆕
-│       │   │   ├── CompoundCalculator.vue # 复合收益计算器页 🆕
-│       │   │   └── Docs.vue               # 使用文档页
-│       │   │
-│       │   ├── components/                # 组件
-│       │   │   ├── charts/                # 图表组件
-│       │   │   │   ├── LineChart.vue      # 折线图
-│       │   │   │   ├── RadarChart.vue     # 雷达图
-│       │   │   │   └── BarChart.vue       # 柱状图
-│       │   │   └── cards/
-│       │   │       └── MetricCard.vue     # 指标卡片
-│       │   │
-│       │   ├── assets/styles/             # 样式
-│       │   │   └── index.css              # 全局样式(现代化设计)
-│       │   │
-│       │   └── router/                    # 路由配置
-│       │       └── index.ts
-│       │
+│   └── frontend/                          # Vue 3前端(保持独立)
+│       ├── src/views/                     # 页面组件
+│       ├── src/components/                # UI组件
 │       └── package.json                   # 前端依赖
 │
-├── 🐍 Python量化工具集
-│   ├── stock/                             # A股市场火热程度分析
-│   │   ├── stock.py                       # 🎯 主分析器
-│   │   ├── enhanced_data_sources.py       # 多数据源管理器
-│   │   ├── akshare_optimized.py           # akshare优化数据源
-│   │   ├── tencent_source.py              # 腾讯财经数据源
-│   │   └── ...                            # 其他数据源
+├── 🐍 Python量化核心库
+│   ├── src/                               # 核心代码库(新架构) 📦
+│   │   ├── analyzers/                     # 分析器模块
+│   │   │   ├── comprehensive/             # 综合分析
+│   │   │   ├── position/                  # 持仓分析
+│   │   │   ├── sector/                    # 板块分析
+│   │   │   └── macro/                     # 宏观分析
+│   │   ├── strategies/                    # 策略模块
+│   │   └── utils/                         # 工具函数
 │   │
 │   ├── position_analysis/                 # 历史点位对比分析系统
-│   │   ├── us_market_analyzer.py          # 美股市场分析器 ⭐
-│   │   ├── hk_market_analyzer.py          # 港股市场分析器 ⭐
-│   │   ├── cn_market_analyzer.py          # A股市场分析器 ⭐
-│   │   ├── historical_position_analyzer.py # 核心分析器
-│   │   ├── market_state_detector.py       # 市场状态检测器 (Phase 3.1)
-│   │   ├── enhanced_data_provider.py      # 九维度数据提供器 (Phase 2)
-│   │   ├── valuation_analyzer.py          # 估值分析器
-│   │   ├── analyzers/                     # 专业分析器 (20个)
-│   │   │   ├── divergence_analyzer.py     # 背离分析器 ⭐ (NEW)
-│   │   │   ├── vix_analyzer.py            # VIX恐慌指数分析 ⭐
-│   │   │   ├── sector_rotation_analyzer.py # 行业轮动分析 ⭐
-│   │   │   └── volume_analyzer.py         # 成交量分析
-│   │   ├── ma_deviation_monitor.py        # 均线偏离度监控器
-│   │   ├── email_notifier.py              # 邮件通知模块
-│   │   ├── report_generator.py            # 报告生成器
-│   │   ├── chart_generator.py             # 图表生成器
+│   │   ├── market_analyzers/              # 市场分析器
+│   │   │   ├── us_market_analyzer.py      # 美股 ⭐
+│   │   │   ├── hk_market_analyzer.py      # 港股 ⭐
+│   │   │   └── cn_market_analyzer.py      # A股 ⭐
+│   │   ├── analyzers/                     # 专业分析器(20+个)
+│   │   │   ├── technical_analysis/        # 技术分析
+│   │   │   │   └── divergence_analyzer.py # 背离分析 🆕
+│   │   │   ├── market_indicators/         # 市场指标
+│   │   │   │   ├── vix_analyzer.py        # VIX恐慌指数
+│   │   │   │   └── cn_volatility_index.py # A股波动率
+│   │   │   ├── market_specific/           # 市场特性
+│   │   │   │   ├── ah_premium_analyzer.py # AH溢价
+│   │   │   │   └── hk_connect_analyzer.py # 港股通
+│   │   │   └── valuation/                 # 估值分析
+│   │   ├── core/                          # 核心引擎
 │   │   └── README.md                      # 详细文档
 │   │
-│   ├── trading_strategies/                # 交易策略模块
-│   │   ├── backtesting/                   # 回测引擎 ⭐
-│   │   │   ├── backtest_engine.py         # 回测引擎
-│   │   │   └── performance_metrics.py     # 性能指标计算
-│   │   └── signal_generators/             # 信号生成器
-│   │       ├── resonance_signals.py       # 四指标共振策略 ⭐
-│   │       └── technical_indicators.py    # 技术指标计算
-│   │
 │   ├── data_sources/                      # 数据源模块
-│   │   ├── us_stock_source.py             # 美股数据源(yfinance)
-│   │   └── hkstock_source.py              # 港股数据源
+│   │   ├── us_stock_source.py             # 美股(yfinance)
+│   │   ├── hkstock_source.py              # 港股
+│   │   └── akshare_optimized.py           # A股(akshare)
 │   │
-│   ├── scripts/                           # 运行脚本
-│   │   ├── comprehensive_asset_analysis/  # 综合资产分析 🆕⭐
-│   │   │   ├── asset_reporter.py          # 7大资产分析器(11维度)
-│   │   │   ├── asset_email_notifier.py    # 邮件通知模块
-│   │   │   ├── run_asset_analysis.py      # 执行入口
-│   │   │   ├── README.md                  # 详细文档
-│   │   │   ├── INDICATOR_EXPANSION_PLAN.md # 指标扩展计划
-│   │   │   └── INTEGRATION_GUIDE.md       # 集成指南
-│   │   │
-│   │   ├── tech_indices_analysis/         # 四大科技指数分析 🆕⭐
-│   │   │   ├── tech_indices_reporter.py   # 科技指数分析器(7维度)
-│   │   │   ├── tech_email_notifier.py     # 邮件通知模块
-│   │   │   ├── run_tech_comprehensive_analysis.py # 执行入口
-│   │   │   └── README.md                  # 详细文档
-│   │   │
-│   │   ├── position_analysis/
-│   │   │   └── run_ma_deviation_monitor.py # 均线偏离度监控脚本
-│   │   ├── hk_stock_analysis/
-│   │   │   └── run_hk_analysis.py         # 港股分析脚本
-│   │   └── trading_strategies/
-│   │       └── run_backtest.py            # 回测脚本
-│   │
-│   ├── .github/workflows/                 # GitHub Actions 配置
-│   │   └── ma_deviation_monitor.yml       # 自动监控工作流
-│   │
-│   └── docs/                              # 文档目录
-│       ├── 均线偏离度监控系统.md           # 监控系统说明
-│       ├── GitHub_Actions配置指南.md      # Actions 配置指南
-│       ├── 定时任务配置指南.md            # 本地定时任务配置
-│       ├── HK_STOCK_README.md             # 港股模块文档
-│       ├── VALUATION_ANALYSIS_GUIDE.md    # 估值分析指南
-│       ├── PLATFORM_MODULES.md            # Web平台功能规划 ⭐
-│       └── ...                            # 其他设计文档
+│   └── trading_strategies/                # 交易策略
+│       ├── backtesting/                   # 回测引擎
+│       └── signal_generators/             # 信号生成器
 │
-├── run_position_analysis.py               # Phase 1: 基础历史点位分析
-├── run_enhanced_analysis.py               # Phase 1.5: 增强因子分析
-├── run_phase2_analysis.py                 # Phase 2: 九维度分析
-├── run_phase3_state_detection.py          # Phase 3.1: 市场状态诊断
+├── 📜 运行脚本
+│   └── scripts/                           # 可执行脚本
+│       ├── unified_analysis/              # 🆕⭐ 统一分析工具
+│       │   ├── run_unified_analysis.py    # 25个资产统一分析
+│       │   ├── unified_email_notifier.py  # 邮件通知
+│       │   ├── unified_config.py          # 资产配置
+│       │   └── README.md                  # 每日更新工作流程
+│       │
+│       ├── comprehensive_asset_analysis/  # 综合资产分析
+│       ├── sector_analysis/               # 板块分析
+│       ├── tech_indices_analysis/         # 科技指数分析
+│       ├── fed_rate_cut_analysis/         # 美联储降息周期
+│       ├── position_analysis/             # 持仓分析脚本
+│       ├── hk_stock_analysis/             # 港股分析
+│       ├── us_stock_analysis/             # 美股分析
+│       └── run_daily_report.py            # 每日报告生成
 │
-├── compound_interest/                     # 复合收益计算
-├── requirements.txt                       # Python项目依赖
-├── email_config.yaml.template             # 邮件配置模板
-└── README.md                              # 项目文档
+├── 📊 报告和文档
+│   ├── reports/                           # 分析报告 📂
+│   │   ├── README.md                      # 报告目录说明 🆕
+│   │   ├── daily/                         # 每日报告 🆕
+│   │   │   └── 2025-10/                   # 按月分类
+│   │   │       ├── unified_analysis_*.md  # 统一分析报告
+│   │   │       └── 持仓调整建议_*.md       # 持仓建议
+│   │   ├── analysis/                      # 专项分析 🆕
+│   │   │   ├── bull_markets/              # 牛市分析
+│   │   │   └── 其他专项分析
+│   │   └── archive/                       # 历史归档 🆕
+│   │
+│   └── docs/                              # 项目文档
+│       ├── 均线偏离度监控系统.md
+│       ├── GitHub_Actions配置指南.md
+│       ├── HK_STOCK_README.md
+│       └── ...
+│
+├── 🧪 测试和示例
+│   ├── tests/                             # 测试文件 📦
+│   │   ├── test_*.py                      # 单元测试
+│   │   └── scripts/                       # 脚本测试 🆕
+│   │       ├── test_data_sources.py
+│   │       └── test_phase2_comparison.py
+│   │
+│   └── examples/                          # 示例代码 🆕
+│       └── demo_us_stock_phase2.py
+│
+├── 🗂️ 配置和其他
+│   ├── config/                            # 配置文件
+│   │   └── email_config.yaml              # 邮件配置
+│   ├── _deprecated/                       # 废弃代码(保留)
+│   ├── .github/workflows/                 # CI/CD
+│   ├── main.py                            # 主程序入口
+│   ├── requirements.txt                   # Python依赖
+│   └── README.md                          # 本文档
 ```
 
-> **⭐ 标记** = Web平台新增/更新的模块
+**🆕 最新更新(2025-10-20)**:
+- ✅ **reports目录重构** - daily/analysis/archive三级分类
+- ✅ **测试文件整理** - 统一到tests目录
+- ✅ **示例代码分离** - examples目录独立管理
+- ✅ **unified_analysis** - 25个资产一键分析+每日自动更新
+
+**📂 目录说明**:
+- `src/` - 新架构核心库,逐步整合
+- `position_analysis/` - 成熟的分析系统
+- `scripts/` - 可执行脚本,按功能分类
+- `reports/` - 分析报告,按时间和类型归档
+- `tests/` - 所有测试文件集中管理
 
 ## 🚀 快速开始
 
