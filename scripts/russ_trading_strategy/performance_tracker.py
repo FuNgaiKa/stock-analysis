@@ -288,41 +288,57 @@ class PerformanceTracker:
             lines.append(f"\n⚠️ **落后沪深300约{abs(excess):.2f}%**")
         lines.append("")
 
+        # 目标说明
+        lines.append("### 🎯 收益目标体系")
+        lines.append("")
+        lines.append("**长期目标**: 年化15%,穿越牛熊")
+        lines.append("")
+        lines.append("**短期目标**(到2026年底,按优先级排序):")
+        lines.append("1. 🥇 资金达到100万 (最优先)")
+        lines.append("2. 🥈 跑赢沪深300 (次优先)")
+        lines.append("3. 🥉 资金翻倍(100%涨幅) (第三优先)")
+        lines.append("")
+        lines.append("---")
+        lines.append("")
+
         # 三大目标达成情况
-        lines.append("### 🎯 三大目标达成情况")
+        lines.append("### 📊 短期目标达成情况")
         lines.append("")
 
         achievements = result['achievements']
 
-        # 目标1: 100万
+        # 目标1: 100万 (最优先)
         target_100w = achievements['target_100w']
         status_emoji = "✅" if target_100w['achieved'] else "🔄"
-        lines.append(f"#### {status_emoji} 目标1: 资金达到100万")
+        lines.append(f"#### {status_emoji} 🥇 优先级1: 资金达到100万")
         lines.append(f"- 当前进度: {target_100w['progress_pct']}")
         if not target_100w['achieved']:
             remaining = 1000000 - result['current_capital']
             lines.append(f"- 还需: ¥{remaining:,.0f} ({remaining/10000:.1f}万)")
+            lines.append(f"- **优先级**: 最高 - 这是首要目标")
         lines.append("")
 
-        # 目标2: 跑赢沪深300
+        # 目标2: 跑赢沪深300 (次优先)
         beat_hs300 = achievements['beat_hs300']
         status_emoji = "✅" if beat_hs300['achieved'] else "❌"
-        lines.append(f"#### {status_emoji} 目标2: 跑赢沪深300")
+        lines.append(f"#### {status_emoji} 🥈 优先级2: 跑赢沪深300")
         if beat_hs300['achieved']:
             lines.append(f"- 超额收益: {beat_hs300['excess_return_pct']}")
         else:
             lines.append(f"- 落后幅度: {beat_hs300['excess_return_pct']}")
+        lines.append(f"- **优先级**: 次高 - 在达成100万基础上追求超额收益")
         lines.append("")
 
-        # 目标3: 翻倍
+        # 目标3: 翻倍 (第三优先)
         double = achievements['double_capital']
         status_emoji = "✅" if double['achieved'] else "🔄"
-        lines.append(f"#### {status_emoji} 目标3: 资金翻倍(100%涨幅)")
+        lines.append(f"#### {status_emoji} 🥉 优先级3: 资金翻倍(100%涨幅)")
         lines.append(f"- 当前进度: {double['progress_pct']}")
         lines.append(f"- 翻倍目标: ¥{result['double_target']:,.0f}")
         if not double['achieved']:
             remaining = result['double_target'] - result['current_capital']
             lines.append(f"- 还需: ¥{remaining:,.0f} ({remaining/10000:.1f}万)")
+        lines.append(f"- **优先级**: 第三 - 在前两个目标基础上的进阶目标")
         lines.append("")
 
         # 阶段性目标
