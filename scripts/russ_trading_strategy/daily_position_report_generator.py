@@ -249,7 +249,13 @@ class DailyPositionReportGenerator:
 
     def identify_market_state(self, market_data: Dict) -> Dict:
         """
-        识别市场状态(牛市/熊市/震荡)
+        识别市场状态(牛市/熊市/震荡的细分阶段)
+
+        采用多维度判断:
+        1. 短期趋势: 当日平均涨跌幅
+        2. 中期趋势: 距离关键点位的位置
+        3. 长期趋势: 年初至今累计涨幅
+        4. 市场宽度: 主要指数共振情况
 
         Args:
             market_data: 市场数据
@@ -257,38 +263,135 @@ class DailyPositionReportGenerator:
         Returns:
             市场状态分析结果
         """
-        # 简化版:基于涨跌幅判断
         indices = market_data.get('indices', {})
         if not indices:
-            return {'state': '未知', 'confidence': 0, 'suggestion': '数据不足'}
+            return {'state': '未知', 'confidence': 0, 'suggestion': '数据不足',
+                    'recommended_position': (0.60, 0.75)}
 
-        # 计算平均涨跌幅
+        # ========== 1. 短期趋势判断(当日涨跌) ==========
         avg_change = sum(idx.get('change_pct', 0) for idx in indices.values()) / len(indices)
 
-        # 简单判断(实际应该用更复杂的指标如ADX, 波动率等)
+        short_term_score = 0
         if avg_change > 1.5:
-            state = '上涨趋势'
-            emoji = '📈'
-            suggestion = '可适当增仓,但控制节奏'
-            recommended_position = (0.75, 0.85)
-        elif avg_change < -1.5:
-            state = '下跌趋势'
-            emoji = '📉'
-            suggestion = '降低仓位,保留现金'
-            recommended_position = (0.50, 0.65)
+            short_term_score = 2  # 强势上涨
+        elif avg_change > 0.5:
+            short_term_score = 1  # 温和上涨
+        elif avg_change > -0.5:
+            short_term_score = 0  # 震荡
+        elif avg_change > -1.5:
+            short_term_score = -1  # 温和下跌
         else:
+            short_term_score = -2  # 强势下跌
+
+        # ========== 2. 长期趋势判断(年初至今涨幅) ==========
+        # 基准点位(2025-01-01)
+        benchmark_points = {
+            'HS300': 3145.0,
+            'CYBZ': 2060.0,
+            'KC50': 955.0
+        }
+
+        ytd_gains = []
+        for key, idx in indices.items():
+            current = idx.get('current', 0)
+            if key in benchmark_points and current > 0:
+                base = benchmark_points[key]
+                ytd_gain = (current - base) / base
+                ytd_gains.append(ytd_gain)
+
+        avg_ytd_gain = sum(ytd_gains) / len(ytd_gains) if ytd_gains else 0
+
+        long_term_score = 0
+        if avg_ytd_gain > 0.30:  # 年内涨超30%
+            long_term_score = 2  # 强势牛市
+        elif avg_ytd_gain > 0.15:  # 年内涨15%-30%
+            long_term_score = 1  # 温和牛市
+        elif avg_ytd_gain > -0.10:  # 年内±10%以内
+            long_term_score = 0  # 震荡
+        elif avg_ytd_gain > -0.20:  # 年内跌10%-20%
+            long_term_score = -1  # 温和熊市
+        else:  # 年内跌超20%
+            long_term_score = -2  # 深度熊市
+
+        # ========== 3. 市场宽度(指数共振) ==========
+        positive_count = sum(1 for idx in indices.values() if idx.get('change_pct', 0) > 0)
+        total_count = len(indices)
+        positive_ratio = positive_count / total_count if total_count > 0 else 0.5
+
+        breadth_score = 0
+        if positive_ratio >= 0.8:  # 80%以上上涨
+            breadth_score = 2
+        elif positive_ratio >= 0.6:  # 60%-80%上涨
+            breadth_score = 1
+        elif positive_ratio >= 0.4:  # 40%-60%
+            breadth_score = 0
+        elif positive_ratio >= 0.2:  # 20%-40%上涨
+            breadth_score = -1
+        else:  # 20%以下上涨
+            breadth_score = -2
+
+        # ========== 4. 综合评分与状态判断 ==========
+        # 短期权重30%, 长期权重50%, 市场宽度20%
+        total_score = short_term_score * 0.3 + long_term_score * 0.5 + breadth_score * 0.2
+
+        # 根据综合评分判断市场状态
+        if total_score >= 1.2:
+            # 强势牛市上升期
+            state = '牛市上升期'
+            emoji = '🚀'
+            suggestion = '积极配置,把握上涨机会'
+            recommended_position = (0.70, 0.90)
+            confidence = 80
+            phase = 'bull_rally'
+        elif total_score >= 0.5:
+            # 牛市调整/震荡期
+            state = '牛市震荡期'
+            emoji = '📈'
+            suggestion = '维持较高仓位,逢低加仓'
+            recommended_position = (0.60, 0.80)
+            confidence = 70
+            phase = 'bull_consolidation'
+        elif total_score >= -0.3:
+            # 震荡市
             state = '震荡市'
             emoji = '🟡'
             suggestion = '控制仓位,高抛低吸'
-            recommended_position = (0.60, 0.75)
+            recommended_position = (0.50, 0.70)
+            confidence = 65
+            phase = 'sideways'
+        elif total_score >= -0.8:
+            # 熊市反弹
+            state = '熊市反弹期'
+            emoji = '⚠️'
+            suggestion = '谨慎参与反弹,保留现金'
+            recommended_position = (0.40, 0.60)
+            confidence = 60
+            phase = 'bear_rally'
+        else:
+            # 熊市下跌期
+            state = '熊市下跌期'
+            emoji = '📉'
+            suggestion = '严控仓位,保留现金为主'
+            recommended_position = (0.30, 0.50)
+            confidence = 75
+            phase = 'bear_decline'
 
         return {
             'state': state,
+            'phase': phase,
             'emoji': emoji,
             'avg_change': avg_change,
-            'confidence': 60,  # 简化版置信度
+            'avg_ytd_gain': avg_ytd_gain,
+            'positive_ratio': positive_ratio,
+            'total_score': total_score,
+            'confidence': confidence,
             'suggestion': suggestion,
-            'recommended_position': recommended_position
+            'recommended_position': recommended_position,
+            'detail_scores': {
+                'short_term': short_term_score,
+                'long_term': long_term_score,
+                'breadth': breadth_score
+            }
         }
 
     def calculate_var_cvar(self, positions: List[Dict], total_value: float) -> Dict:
@@ -509,15 +612,71 @@ class DailyPositionReportGenerator:
         if market_data and market_data.get('indices'):
             market_state = self.identify_market_state(market_data)
             if market_state.get('state') != '未知':
-                lines.append("### 🌍 市场环境判断")
+                lines.append("### 🌍 市场环境判断(增强版)")
                 lines.append("")
                 lines.append(f"**当前市场状态**: {market_state['emoji']} {market_state['state']}")
                 lines.append("")
-                lines.append(f"- **综合判断**: 基于主要指数表现,市场处于{market_state['state']}")
-                lines.append(f"- **平均涨跌**: {market_state['avg_change']:+.2f}%")
-                lines.append(f"- **操作策略**: {market_state['suggestion']}")
+
+                # 综合判断
+                lines.append(f"- **综合判断**: 基于多维度分析,市场处于**{market_state['state']}**")
+                lines.append(f"  - 综合评分: {market_state['total_score']:.2f} (范围:-2到+2)")
+                lines.append(f"  - 置信度: {market_state['confidence']}%")
+                lines.append("")
+
+                # 详细分析维度
+                lines.append("**分析维度**:")
+                lines.append("")
+                lines.append("| 维度 | 评分 | 数据 | 说明 |")
+                lines.append("|------|------|------|------|")
+
+                # 短期趋势
+                short_term = market_state['detail_scores']['short_term']
+                short_emoji = "📈" if short_term > 0 else ("📉" if short_term < 0 else "➡️")
+                lines.append(
+                    f"| 短期趋势 | {short_term:+.1f} | 当日均涨{market_state['avg_change']:+.2f}% | "
+                    f"{short_emoji} {'强势' if abs(short_term) == 2 else ('温和' if abs(short_term) == 1 else '震荡')} |"
+                )
+
+                # 长期趋势
+                long_term = market_state['detail_scores']['long_term']
+                long_emoji = "🚀" if long_term > 0 else ("⚠️" if long_term < 0 else "🟡")
+                ytd_gain_pct = market_state['avg_ytd_gain'] * 100
+                lines.append(
+                    f"| 长期趋势 | {long_term:+.1f} | 年内累计{ytd_gain_pct:+.1f}% | "
+                    f"{long_emoji} {'牛市' if long_term > 0 else ('熊市' if long_term < 0 else '震荡')} |"
+                )
+
+                # 市场宽度
+                breadth = market_state['detail_scores']['breadth']
+                breadth_emoji = "✅" if breadth > 0 else ("❌" if breadth < 0 else "⚖️")
+                positive_pct = market_state['positive_ratio'] * 100
+                lines.append(
+                    f"| 市场宽度 | {breadth:+.1f} | {positive_pct:.0f}%指数上涨 | "
+                    f"{breadth_emoji} {'普涨' if breadth > 0 else ('普跌' if breadth < 0 else '分化')} |"
+                )
+
+                lines.append("")
+
+                # 操作建议
+                lines.append("**操作建议**:")
+                lines.append("")
                 min_pos, max_pos = market_state['recommended_position']
                 lines.append(f"- **建议仓位**: {min_pos*100:.0f}%-{max_pos*100:.0f}%")
+                lines.append(f"- **操作策略**: {market_state['suggestion']}")
+
+                # 根据不同阶段给出具体建议
+                phase = market_state.get('phase', 'sideways')
+                if phase == 'bull_rally':
+                    lines.append(f"- **具体建议**: 牛市上升期可保持7-9成仓位,积极参与成长股机会")
+                elif phase == 'bull_consolidation':
+                    lines.append(f"- **具体建议**: 牛市调整期保持6-8成仓位,逢低加仓优质标的")
+                elif phase == 'sideways':
+                    lines.append(f"- **具体建议**: 震荡期保持5-7成仓位,高抛低吸,控制节奏")
+                elif phase == 'bear_rally':
+                    lines.append(f"- **具体建议**: 熊市反弹谨慎参与,保持4-6成仓位,随时止盈")
+                elif phase == 'bear_decline':
+                    lines.append(f"- **具体建议**: 熊市下跌严控仓位3-5成,保留现金应对机会")
+
                 lines.append("")
 
         lines.append("---")
