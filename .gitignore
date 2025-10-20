@@ -83,7 +83,6 @@ secrets.py
 data/
 output/
 results/
-reports/
 
 # Logs
 logs/
