@@ -101,6 +101,94 @@
 
 ---
 
+### 5. 风险管理器 (`risk_manager.py`) **[新增]**
+**功能**:全面的风险评估和监控
+
+**风险指标**:
+- 最大回撤(Maximum Drawdown)
+- 波动率(Volatility)
+- 夏普比率(Sharpe Ratio)
+- Sortino比率
+- Calmar比率
+- VaR (Value at Risk)
+- Beta系数
+- 信息比率(Information Ratio)
+- 相关性矩阵
+- 止损检查
+
+**输出**:
+- 完整风险报告
+- 风险评级和警告
+- 风险控制建议
+
+---
+
+### 6. 动态仓位管理器 (`dynamic_position_manager.py`) **[新增]**
+**功能**:智能仓位调整建议
+
+**核心算法**:
+- Kelly公式(最优仓位计算)
+- 波动率目标法
+- 市场环境识别(牛市/熊市/震荡)
+- 风险平价模型
+
+**输出**:
+- 综合仓位建议
+- 多策略对比
+- 动态调仓方案
+
+---
+
+### 7. 增强版回测引擎 (`backtest_engine_enhanced.py`) **[新增]**
+**功能**:历史回测和压力测试
+
+**核心功能**:
+- 简单回测
+- 压力测试(市场崩盘、熊市等场景)
+- 蒙特卡洛模拟
+- 敏感性分析
+- 多场景回测
+
+**输出**:
+- 回测结果报告
+- 压力测试结果
+- 模拟统计分析
+
+---
+
+### 8. 数据管理器 (`data_manager.py`) **[新增]**
+**功能**:统一数据接口和交易日志
+
+**核心功能**:
+- 交易记录管理
+- 持仓快照跟踪
+- 权益曲线记录
+- CSV导出功能
+
+**输出**:
+- 汇总报告
+- 交易统计
+- 历史数据查询
+
+---
+
+### 9. 可视化模块 (`visualizer.py`) **[新增]**
+**功能**:生成各类图表
+
+**图表类型**:
+- 权益曲线图
+- 回撤分析图
+- 收益率分布图
+- 相关性热力图
+- 月度收益热力图
+- 综合仪表盘
+
+**输出**:
+- 高清PNG图表
+- 多维度可视化分析
+
+---
+
 ## 🚀 快速开始
 
 ### 基础用法
@@ -382,15 +470,20 @@ config = {
 
 ```
 russ_trading_strategy/
-├── README_RUSS.md                  # 本文档
-├── russ_strategy_runner.py         # 主程序入口 ⭐
-├── position_health_checker.py      # 持仓健康度检查
-├── performance_tracker.py          # 收益追踪对比
-├── potential_analyzer.py           # 潜在空间评估
-├── monthly_plan_generator.py       # 月度计划生成器
-├── unified_config.py               # 统一资产配置
-├── run_unified_analysis.py         # 统一资产分析(原有)
-└── unified_email_notifier.py       # 邮件通知器(原有)
+├── README_RUSS.md                       # 本文档
+├── russ_strategy_runner.py              # 主程序入口 ⭐
+├── position_health_checker.py           # 持仓健康度检查
+├── performance_tracker.py               # 收益追踪对比 (增强版✨)
+├── potential_analyzer.py                # 潜在空间评估
+├── monthly_plan_generator.py            # 月度计划生成器
+├── risk_manager.py                      # 风险管理器 [新增✨]
+├── dynamic_position_manager.py          # 动态仓位管理器 [新增✨]
+├── backtest_engine_enhanced.py          # 增强版回测引擎 [新增✨]
+├── data_manager.py                      # 数据管理器 [新增✨]
+├── visualizer.py                        # 可视化模块 [新增✨]
+├── unified_config.py                    # 统一资产配置
+├── run_unified_analysis.py              # 统一资产分析(原有)
+└── unified_email_notifier.py            # 邮件通知器(原有)
 ```
 
 ---

@@ -43,6 +43,18 @@ from russ_trading_strategy.performance_tracker import PerformanceTracker
 from russ_trading_strategy.potential_analyzer import PotentialAnalyzer
 from russ_trading_strategy.monthly_plan_generator import MonthlyPlanGenerator
 
+# 新增模块导入
+try:
+    from russ_trading_strategy.risk_manager import RiskManager
+    from russ_trading_strategy.dynamic_position_manager import DynamicPositionManager
+    from russ_trading_strategy.backtest_engine_enhanced import BacktestEngineEnhanced
+    from russ_trading_strategy.data_manager import DataManager
+    from russ_trading_strategy.visualizer import Visualizer
+    HAS_ENHANCED_MODULES = True
+except ImportError as e:
+    print(f"警告: 部分增强模块导入失败: {e}")
+    HAS_ENHANCED_MODULES = False
+
 
 class RussStrategyRunner:
     """Russ个人交易策略运行器"""
@@ -64,6 +76,20 @@ class RussStrategyRunner:
         self.performance_tracker = PerformanceTracker(config.get('targets', {}))
         self.potential_analyzer = PotentialAnalyzer()
         self.monthly_plan_generator = MonthlyPlanGenerator(config.get('strategy', {}))
+
+        # 初始化增强模块(如果可用)
+        if HAS_ENHANCED_MODULES:
+            self.risk_manager = RiskManager(risk_free_rate=config.get('risk_free_rate', 0.03))
+            self.position_manager = DynamicPositionManager(config.get('strategy', {}))
+            self.backtest_engine = BacktestEngineEnhanced()
+            self.data_manager = DataManager(data_dir=config.get('data_dir', 'data/russ_trading'))
+            self.visualizer = Visualizer(output_dir=config.get('charts_dir', 'charts'))
+        else:
+            self.risk_manager = None
+            self.position_manager = None
+            self.backtest_engine = None
+            self.data_manager = None
+            self.visualizer = None
 
     def _load_default_config(self) -> Dict:
         """加载默认配置"""

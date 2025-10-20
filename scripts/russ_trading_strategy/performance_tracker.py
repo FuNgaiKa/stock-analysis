@@ -1,16 +1,32 @@
 """
-收益追踪对比模块
+收益追踪对比模块(增强版)
 
 追踪投资收益并与基准对比:
 1. 阶段性目标进度(50万→60万→70万→100万)
 2. 与沪深300涨幅对比
 3. 翻倍目标进度(100%涨幅)
 4. 年化收益率计算
+
+增强功能:
+5. 风险指标集成(夏普比率、最大回撤、波动率)
+6. 滚动收益率分析(月度、季度、年度)
+7. 收益归因分析(Brinson模型)
+8. 风险调整后收益
 """
 
-from typing import Dict, Optional
-from datetime import datetime
+from typing import Dict, Optional, List, Tuple
+from datetime import datetime, timedelta
 import math
+import sys
+import os
+
+# 添加父目录到路径以便导入RiskManager
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+try:
+    from russ_trading_strategy.risk_manager import RiskManager
+except ImportError:
+    RiskManager = None
 
 
 class PerformanceTracker:
@@ -26,6 +42,7 @@ class PerformanceTracker:
                 - base_date: 基准日期 (默认'2025-01-01')
                 - initial_capital: 初始资金
                 - target_annual_return: 目标年化收益率 (默认15%)
+                - risk_free_rate: 无风险利率 (默认3%)
         """
         if targets_config is None:
             targets_config = {}
@@ -34,6 +51,14 @@ class PerformanceTracker:
         self.base_date = targets_config.get('base_date', '2025-01-01')
         self.initial_capital = targets_config.get('initial_capital', 500000)
         self.target_annual_return = targets_config.get('target_annual_return', 0.15)
+
+        # 增强功能配置
+        risk_free_rate = targets_config.get('risk_free_rate', 0.03)
+        self.risk_manager = RiskManager(risk_free_rate=risk_free_rate) if RiskManager else None
+
+        # 历史数据存储(用于滚动收益率等高级分析)
+        self.equity_history = []  # [(date, value), ...]
+        self.returns_history = []  # [(date, return), ...]
 
     def track_performance(
         self,
@@ -233,6 +258,340 @@ class PerformanceTracker:
             results['suggestions'].append(
                 f"距离下一个阶段目标{next_stage['target_text']}还需{next_stage['remaining_text']}"
             )
+
+    # ========== 增强功能方法 ==========
+
+    def update_equity_history(self, date: str, equity_value: float):
+        """
+        更新权益历史记录
+
+        Args:
+            date: 日期字符串
+            equity_value: 权益价值
+        """
+        self.equity_history.append((date, equity_value))
+
+        # 计算收益率
+        if len(self.equity_history) > 1:
+            prev_value = self.equity_history[-2][1]
+            daily_return = (equity_value - prev_value) / prev_value
+            self.returns_history.append((date, daily_return))
+
+    def calculate_risk_metrics(
+        self,
+        equity_curve: Optional[List[float]] = None,
+        returns: Optional[List[float]] = None
+    ) -> Dict:
+        """
+        计算风险指标
+
+        Args:
+            equity_curve: 权益曲线 (如果为None,使用历史数据)
+            returns: 收益率序列 (如果为None,使用历史数据)
+
+        Returns:
+            风险指标字典
+        """
+        if not self.risk_manager:
+            return {'error': 'RiskManager未初始化'}
+
+        # 使用提供的数据或历史数据
+        if equity_curve is None:
+            equity_curve = [v for _, v in self.equity_history]
+
+        if returns is None:
+            returns = [r for _, r in self.returns_history]
+
+        if not equity_curve or not returns:
+            return {'error': '缺少历史数据'}
+
+        # 计算各项风险指标
+        risk_metrics = {}
+
+        # 最大回撤
+        dd_result = self.risk_manager.calculate_max_drawdown(equity_curve)
+        risk_metrics['max_drawdown'] = dd_result
+
+        # 波动率
+        vol_result = self.risk_manager.calculate_volatility(returns, annualize=True)
+        risk_metrics['volatility'] = vol_result
+
+        # 夏普比率
+        sharpe_result = self.risk_manager.calculate_sharpe_ratio(returns)
+        risk_metrics['sharpe_ratio'] = sharpe_result
+
+        # Sortino比率
+        sortino_result = self.risk_manager.calculate_sortino_ratio(returns)
+        risk_metrics['sortino_ratio'] = sortino_result
+
+        # Calmar比率
+        if dd_result['max_drawdown'] > 0 and len(returns) > 0:
+            annual_return = self._calculate_annualized_return(
+                sum(returns), len(returns) / 252.0
+            )
+            calmar_result = self.risk_manager.calculate_calmar_ratio(
+                annual_return, dd_result['max_drawdown']
+            )
+            risk_metrics['calmar_ratio'] = calmar_result
+
+        # VaR
+        var_result = self.risk_manager.calculate_var(returns, confidence=0.95)
+        risk_metrics['var'] = var_result
+
+        return risk_metrics
+
+    def calculate_rolling_returns(
+        self,
+        period_days: int = 30,
+        min_periods: int = 20
+    ) -> Dict:
+        """
+        计算滚动收益率
+
+        Args:
+            period_days: 滚动窗口天数
+            min_periods: 最小周期数
+
+        Returns:
+            滚动收益率分析结果
+        """
+        if len(self.equity_history) < min_periods:
+            return {'error': f'数据不足,需要至少{min_periods}个数据点'}
+
+        rolling_returns = []
+
+        for i in range(period_days, len(self.equity_history)):
+            start_date, start_value = self.equity_history[i - period_days]
+            end_date, end_value = self.equity_history[i]
+
+            period_return = (end_value - start_value) / start_value
+            rolling_returns.append({
+                'start_date': start_date,
+                'end_date': end_date,
+                'return': period_return,
+                'return_pct': f"{period_return * 100:.2f}%"
+            })
+
+        if not rolling_returns:
+            return {'error': '无法计算滚动收益率'}
+
+        # 统计分析
+        returns_values = [r['return'] for r in rolling_returns]
+
+        import numpy as np
+        return {
+            'period_days': period_days,
+            'n_periods': len(rolling_returns),
+            'rolling_returns': rolling_returns,
+            'statistics': {
+                'mean': np.mean(returns_values),
+                'median': np.median(returns_values),
+                'std': np.std(returns_values),
+                'min': min(returns_values),
+                'max': max(returns_values),
+                'positive_periods': sum(1 for r in returns_values if r > 0),
+                'negative_periods': sum(1 for r in returns_values if r < 0),
+                'win_rate': sum(1 for r in returns_values if r > 0) / len(returns_values)
+            }
+        }
+
+    def calculate_monthly_returns(self) -> Dict:
+        """
+        计算月度收益率
+
+        Returns:
+            月度收益率字典
+        """
+        return self._calculate_periodic_returns('month')
+
+    def calculate_quarterly_returns(self) -> Dict:
+        """
+        计算季度收益率
+
+        Returns:
+            季度收益率字典
+        """
+        return self._calculate_periodic_returns('quarter')
+
+    def calculate_yearly_returns(self) -> Dict:
+        """
+        计算年度收益率
+
+        Returns:
+            年度收益率字典
+        """
+        return self._calculate_periodic_returns('year')
+
+    def _calculate_periodic_returns(self, period_type: str) -> Dict:
+        """
+        计算周期性收益率
+
+        Args:
+            period_type: 'month', 'quarter', 或 'year'
+
+        Returns:
+            周期性收益率字典
+        """
+        if not self.equity_history:
+            return {'error': '没有历史数据'}
+
+        from collections import defaultdict
+
+        period_data = defaultdict(list)
+
+        for date_str, value in self.equity_history:
+            date = datetime.strptime(date_str, '%Y-%m-%d')
+
+            if period_type == 'month':
+                key = f"{date.year}-{date.month:02d}"
+            elif period_type == 'quarter':
+                quarter = (date.month - 1) // 3 + 1
+                key = f"{date.year}-Q{quarter}"
+            elif period_type == 'year':
+                key = str(date.year)
+            else:
+                return {'error': f'无效的周期类型: {period_type}'}
+
+            period_data[key].append((date_str, value))
+
+        # 计算每个周期的收益率
+        period_returns = []
+
+        for period_key, values in sorted(period_data.items()):
+            if len(values) < 2:
+                continue
+
+            start_date, start_value = values[0]
+            end_date, end_value = values[-1]
+
+            period_return = (end_value - start_value) / start_value
+
+            period_returns.append({
+                'period': period_key,
+                'start_date': start_date,
+                'end_date': end_date,
+                'start_value': start_value,
+                'end_value': end_value,
+                'return': period_return,
+                'return_pct': f"{period_return * 100:.2f}%"
+            })
+
+        return {
+            'period_type': period_type,
+            'n_periods': len(period_returns),
+            'periods': period_returns
+        }
+
+    def calculate_attribution_analysis(
+        self,
+        portfolio_returns: Dict[str, float],
+        benchmark_returns: Dict[str, float],
+        portfolio_weights: Dict[str, float],
+        benchmark_weights: Dict[str, float]
+    ) -> Dict:
+        """
+        收益归因分析(简化版Brinson模型)
+
+        Args:
+            portfolio_returns: 投资组合各资产收益率 {'asset': return}
+            benchmark_returns: 基准各资产收益率 {'asset': return}
+            portfolio_weights: 投资组合各资产权重 {'asset': weight}
+            benchmark_weights: 基准各资产权重 {'asset': weight}
+
+        Returns:
+            归因分析结果
+        """
+        # 确保资产名称一致
+        assets = set(portfolio_returns.keys()) | set(benchmark_returns.keys())
+
+        attribution = {
+            'allocation_effect': 0,  # 配置效应
+            'selection_effect': 0,   # 选择效应
+            'interaction_effect': 0,  # 交互效应
+            'total_active_return': 0,  # 总主动收益
+            'details': {}
+        }
+
+        for asset in assets:
+            p_weight = portfolio_weights.get(asset, 0)
+            b_weight = benchmark_weights.get(asset, 0)
+            p_return = portfolio_returns.get(asset, 0)
+            b_return = benchmark_returns.get(asset, 0)
+
+            # Brinson归因模型
+            # 配置效应 = (组合权重 - 基准权重) * 基准收益率
+            allocation = (p_weight - b_weight) * b_return
+
+            # 选择效应 = 基准权重 * (组合收益率 - 基准收益率)
+            selection = b_weight * (p_return - b_return)
+
+            # 交互效应 = (组合权重 - 基准权重) * (组合收益率 - 基准收益率)
+            interaction = (p_weight - b_weight) * (p_return - b_return)
+
+            attribution['allocation_effect'] += allocation
+            attribution['selection_effect'] += selection
+            attribution['interaction_effect'] += interaction
+
+            attribution['details'][asset] = {
+                'allocation_effect': allocation,
+                'selection_effect': selection,
+                'interaction_effect': interaction,
+                'total_contribution': allocation + selection + interaction
+            }
+
+        # 总主动收益
+        attribution['total_active_return'] = (
+            attribution['allocation_effect'] +
+            attribution['selection_effect'] +
+            attribution['interaction_effect']
+        )
+
+        return attribution
+
+    def calculate_risk_adjusted_performance(self) -> Dict:
+        """
+        计算风险调整后的收益指标
+
+        Returns:
+            风险调整收益字典
+        """
+        if not self.equity_history or not self.returns_history:
+            return {'error': '缺少历史数据'}
+
+        equity_values = [v for _, v in self.equity_history]
+        returns_values = [r for _, r in self.returns_history]
+
+        # 总收益率
+        total_return = (equity_values[-1] - equity_values[0]) / equity_values[0]
+
+        # 风险指标
+        risk_metrics = self.calculate_risk_metrics(equity_values, returns_values)
+
+        if 'error' in risk_metrics:
+            return risk_metrics
+
+        # 风险调整后的收益
+        sharpe = risk_metrics['sharpe_ratio'].get('sharpe_ratio', 0)
+        sortino = risk_metrics['sortino_ratio'].get('sortino_ratio', 0)
+        max_dd = risk_metrics['max_drawdown'].get('max_drawdown', 0)
+
+        # Calmar比率 (年化收益 / 最大回撤)
+        days = len(returns_values)
+        years = days / 252.0
+        annual_return = self._calculate_annualized_return(total_return, years) if years > 0 else 0
+        calmar = annual_return / max_dd if max_dd > 0 else 0
+
+        return {
+            'total_return': total_return,
+            'annual_return': annual_return,
+            'max_drawdown': max_dd,
+            'volatility': risk_metrics['volatility'].get('annual_volatility', 0),
+            'sharpe_ratio': sharpe,
+            'sortino_ratio': sortino,
+            'calmar_ratio': calmar,
+            'risk_adjusted_return': total_return / max_dd if max_dd > 0 else 0,
+            'return_to_risk_ratio': total_return / risk_metrics['volatility'].get('annual_volatility', 0.01)
+        }
 
     def format_performance_report(self, result: Dict, format_type: str = 'markdown') -> str:
         """
