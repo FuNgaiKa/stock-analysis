@@ -624,9 +624,10 @@ class DailyPositionReportGenerator:
             lines.append(f"| **集中度风险** | {max_position*100:.1f}%单标的 | "
                        f"{'🚨 高风险' if max_position > self.thresholds['max_single_position'] else '✅ 可控'} | "
                        f"{'过度集中,需分散' if max_position > self.thresholds['max_single_position'] else '分散度良好'} |")
+            min_cash_pct = self.thresholds['min_cash_reserve'] * 100
             lines.append(f"| **流动性风险** | {cash_ratio*100:.1f}%现金 | "
                        f"{'🚨 不足' if cash_ratio < self.thresholds['min_cash_reserve'] else '✅ 充足'} | "
-                       f"{'低于{self.thresholds[\"min_cash_reserve\"]*100:.0f}%安全线' if cash_ratio < self.thresholds['min_cash_reserve'] else '安全垫充足'} |")
+                       f"{'低于' + f'{min_cash_pct:.0f}' + '%安全线' if cash_ratio < self.thresholds['min_cash_reserve'] else '安全垫充足'} |")
 
             # 估算回撤和波动率
             if total_value > 0 and 'estimated_volatility' in var_result:
