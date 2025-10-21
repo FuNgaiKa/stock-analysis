@@ -370,6 +370,69 @@ class EnhancedReportGenerator(BaseGenerator):
             lines.append("- 股息率: 年化股息收益率")
             lines.append("")
 
+            # 资金面分析
+            if 'market_volume' in market_data and market_data['market_volume']:
+                lines.append("### 💰 资金面分析")
+                lines.append("")
+
+                mv = market_data['market_volume']
+                total_vol_trillion = mv.get('total_volume_trillion', 0)
+
+                if total_vol_trillion > 0:
+                    # 两市成交额评级
+                    if total_vol_trillion >= 1.5:
+                        vol_rating = "🟢🟢 极度活跃"
+                        vol_desc = "牛市特征明显"
+                    elif total_vol_trillion >= 1.0:
+                        vol_rating = "🟢 活跃"
+                        vol_desc = "资金充裕,利于上涨"
+                    elif total_vol_trillion >= 0.7:
+                        vol_rating = "🟡 正常"
+                        vol_desc = "震荡行情"
+                    elif total_vol_trillion >= 0.5:
+                        vol_rating = "🟡 偏冷"
+                        vol_desc = "观望情绪浓厚"
+                    else:
+                        vol_rating = "🔴 冰点"
+                        vol_desc = "熊市特征"
+
+                    lines.append(f"**两市成交额**: {total_vol_trillion:.2f}万亿 {vol_rating}")
+                    lines.append(f"- {vol_desc}")
+                    lines.append("")
+
+            # 主力资金流向
+            if 'fund_flow' in market_data and market_data['fund_flow']:
+                ff = market_data['fund_flow']
+                main_inflow = ff.get('main_net_inflow', 0) / 100000000  # 转亿元
+
+                if main_inflow != 0:
+                    if not ('market_volume' in market_data and market_data['market_volume']):
+                        lines.append("### 💰 资金面分析")
+                        lines.append("")
+
+                    if main_inflow >= 100:
+                        flow_rating = "🟢🟢 强势流入"
+                        flow_desc = "大资金积极买入"
+                    elif main_inflow >= 50:
+                        flow_rating = "🟢 流入"
+                        flow_desc = "资金看多情绪"
+                    elif main_inflow > 0:
+                        flow_rating = "🟡 小幅流入"
+                        flow_desc = "中性偏多"
+                    elif main_inflow > -50:
+                        flow_rating = "🟡 小幅流出"
+                        flow_desc = "中性偏空"
+                    elif main_inflow > -100:
+                        flow_rating = "🔴 流出"
+                        flow_desc = "资金撤离"
+                    else:
+                        flow_rating = "🔴🔴 大幅流出"
+                        flow_desc = "恐慌性抛售"
+
+                    lines.append(f"**主力资金**: {main_inflow:+.2f}亿 {flow_rating}")
+                    lines.append(f"- {flow_desc}")
+                    lines.append("")
+
             # 市场状态识别
             market_state = self.identify_market_state(market_data)
             if market_state.get('state') != '未知':

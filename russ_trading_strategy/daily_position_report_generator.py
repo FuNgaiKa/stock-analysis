@@ -288,6 +288,56 @@ class DailyPositionReportGenerator:
             except Exception as e:
                 logger.warning(f"获取估值数据失败: {e}")
 
+            # 获取资金面数据 (主力资金、两市成交额)
+            try:
+                import akshare as ak
+
+                # 1. 主力资金流向
+                try:
+                    df_fund_flow = ak.stock_market_fund_flow()
+                    if df_fund_flow is not None and not df_fund_flow.empty:
+                        latest_flow = df_fund_flow.iloc[-1]
+                        market_data['fund_flow'] = {
+                            'date': str(latest_flow['日期']),
+                            'main_net_inflow': float(latest_flow['主力净流入-净额']),  # 单位:元
+                            'super_large_inflow': float(latest_flow['超大单净流入-净额']),
+                            'large_inflow': float(latest_flow['大单净流入-净额']),
+                            'main_net_inflow_pct': float(latest_flow['主力净流入-净占比'])
+                        }
+                        logger.info(f"✅ 主力资金净流入: {latest_flow['主力净流入-净额']/100000000:.2f}亿")
+                except Exception as e:
+                    logger.warning(f"获取主力资金流向失败: {e}")
+                    market_data['fund_flow'] = {}
+
+                # 2. 两市成交额 (上证+深证)
+                try:
+                    df_sh = ak.stock_zh_index_daily(symbol='sh000001')
+                    df_sz = ak.stock_zh_index_daily(symbol='sz399001')
+                    if df_sh is not None and not df_sh.empty and df_sz is not None and not df_sz.empty:
+                        vol_sh = float(df_sh.iloc[-1]['volume'])
+                        vol_sz = float(df_sz.iloc[-1]['volume'])
+                        total_volume = vol_sh + vol_sz
+
+                        market_data['market_volume'] = {
+                            'sh_volume': vol_sh,
+                            'sz_volume': vol_sz,
+                            'total_volume': total_volume,
+                            'total_volume_trillion': total_volume / 1000000000000  # 转万亿
+                        }
+                        logger.info(f"✅ 两市成交额: {total_volume/1000000000000:.2f}万亿")
+                except Exception as e:
+                    logger.warning(f"获取两市成交额失败: {e}")
+                    market_data['market_volume'] = {}
+
+            except ImportError:
+                logger.warning("akshare未安装,无法获取资金面数据")
+                market_data['fund_flow'] = {}
+                market_data['market_volume'] = {}
+            except Exception as e:
+                logger.warning(f"获取资金面数据失败: {e}")
+                market_data['fund_flow'] = {}
+                market_data['market_volume'] = {}
+
             if market_data['indices']:
                 return market_data
 
