@@ -25,10 +25,10 @@ from pathlib import Path
 from datetime import datetime
 
 # 添加项目根目录到路径
-project_root = Path(__file__).parent.parent.parent
+project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from scripts.russ_trading_strategy.unified_config import (
+from russ_trading_strategy.unified_config import (
     UNIFIED_ASSETS,
     list_all_assets,
     list_assets_by_analyzer,
@@ -36,7 +36,7 @@ from scripts.russ_trading_strategy.unified_config import (
 )
 from scripts.comprehensive_asset_analysis.asset_reporter import ComprehensiveAssetReporter
 from scripts.sector_analysis.sector_reporter import SectorReporter
-from scripts.russ_trading_strategy.unified_email_notifier import UnifiedEmailNotifier
+from russ_trading_strategy.unified_email_notifier import UnifiedEmailNotifier
 
 # 配置日志
 logging.basicConfig(

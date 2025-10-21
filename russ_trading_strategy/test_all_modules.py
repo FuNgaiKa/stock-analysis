@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 # 添加项目根目录
-project_root = Path(__file__).parent.parent.parent
+project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 print("=" * 80)
@@ -21,7 +21,7 @@ print("=" * 80)
 # 测试1: 配置加载
 print("\n✅ 测试1: 配置加载器")
 try:
-    from scripts.russ_trading_strategy.utils.config_loader import get_risk_profile, get_benchmarks
+    from russ_trading_strategy.utils.config_loader import get_risk_profile, get_benchmarks
     config = get_risk_profile('aggressive')
     benchmarks = get_benchmarks()
     print(f"   - 风险配置加载成功: {config['name']}")
@@ -33,7 +33,7 @@ except Exception as e:
 # 测试2: 日志系统
 print("\n✅ 测试2: 日志系统")
 try:
-    from scripts.russ_trading_strategy.utils.logger import setup_logger
+    from russ_trading_strategy.utils.logger import setup_logger
     logger = setup_logger('test', log_to_file=False)
     logger.info("测试日志")
     print("   ✅ PASS")
@@ -43,7 +43,7 @@ except Exception as e:
 # 测试3: 缓存系统
 print("\n✅ 测试3: 缓存系统")
 try:
-    from scripts.russ_trading_strategy.utils.cache_manager import SimpleCache
+    from russ_trading_strategy.utils.cache_manager import SimpleCache
     cache = SimpleCache()
     cache.set('test_key', 'test_value', ttl=60)
     value = cache.get('test_key')
@@ -55,7 +55,7 @@ except Exception as e:
 # 测试4: 量化分析
 print("\n✅ 测试4: 量化分析器")
 try:
-    from scripts.russ_trading_strategy.core.quant_analyzer import QuantAnalyzer
+    from russ_trading_strategy.core.quant_analyzer import QuantAnalyzer
     import pandas as pd
     import numpy as np
 
@@ -77,7 +77,7 @@ except Exception as e:
 # 测试5: 压力测试
 print("\n✅ 测试5: 压力测试器")
 try:
-    from scripts.russ_trading_strategy.core.stress_tester import StressTester
+    from russ_trading_strategy.core.stress_tester import StressTester
 
     tester = StressTester()
     positions = [
@@ -92,7 +92,7 @@ except Exception as e:
 # 测试6: 情景分析
 print("\n✅ 测试6: 情景分析器")
 try:
-    from scripts.russ_trading_strategy.core.scenario_analyzer import ScenarioAnalyzer
+    from russ_trading_strategy.core.scenario_analyzer import ScenarioAnalyzer
 
     analyzer = ScenarioAnalyzer()
     positions = [
@@ -107,7 +107,7 @@ except Exception as e:
 # 测试7: 归因分析
 print("\n✅ 测试7: 归因分析器")
 try:
-    from scripts.russ_trading_strategy.core.attribution_analyzer import AttributionAnalyzer
+    from russ_trading_strategy.core.attribution_analyzer import AttributionAnalyzer
 
     analyzer = AttributionAnalyzer()
     health_result = {
@@ -125,7 +125,7 @@ except Exception as e:
 # 测试8: 执行摘要
 print("\n✅ 测试8: 执行摘要生成器")
 try:
-    from scripts.russ_trading_strategy.core.executive_summary import ExecutiveSummaryGenerator
+    from russ_trading_strategy.core.executive_summary import ExecutiveSummaryGenerator
 
     generator = ExecutiveSummaryGenerator()
     health_result = {'health_score': 45.0, 'health_level': 'danger'}
@@ -139,7 +139,7 @@ except Exception as e:
 # 测试9: 图表生成
 print("\n✅ 测试9: 图表生成器")
 try:
-    from scripts.russ_trading_strategy.core.chart_generator import ChartGenerator
+    from russ_trading_strategy.core.chart_generator import ChartGenerator
 
     generator = ChartGenerator()
     positions = [
