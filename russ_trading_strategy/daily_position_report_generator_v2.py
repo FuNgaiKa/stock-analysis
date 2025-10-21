@@ -647,6 +647,14 @@ class EnhancedReportGenerator(BaseGenerator):
                 lines.append(item)
             lines.append("")
 
+        # 第二优先级 - 战略调整建议 (NEW!)
+        if action_items.get('priority_2'):
+            lines.append("### 🎯 第二优先级(未来1-2个月战略调整) ⭐核心")
+            lines.append("")
+            for item in action_items['priority_2']:
+                lines.append(item)
+            lines.append("")
+
         # 第三优先级
         if action_items['priority_3']:
             lines.append("### 📅 第三优先级(未来1-2周观察)")
@@ -670,42 +678,43 @@ class EnhancedReportGenerator(BaseGenerator):
             lines.append("")
 
         # ========== 方案C+战略配置详解 (NEW!) ==========
-        lines.append("### 🚀 方案C+战略配置详解 (Ultra Aggressive)")
+        lines.append("### 🚀 方案C+战略配置详解 (2026翻倍必达版)")
         lines.append("")
         lines.append("#### 🎯 核心思想")
         lines.append("")
-        lines.append("方案C+是**成长+周期双引擎翻倍策略**，核心是抓住中国经济转型两大主线:")
+        lines.append("方案C+是**2026翻倍极致进攻策略**，核心是科技成长80%全力进攻:")
         lines.append("")
-        lines.append("1. **科技成长75%** - 新经济主引擎")
-        lines.append("   - 🌟 **科创50**: 中国版纳斯达克,硬科技核心")
-        lines.append("   - 🌟 **恒生科技**: 互联网+AI龙头,腾讯阿里美团")
-        lines.append("   - 🌟 **创业板**: 新能源+医药+半导体成长股")
-        lines.append("   - **配置逻辑**: 牛市弹性最大,历史涨幅2-4倍")
+        lines.append("1. **科技成长75%** - 翻倍核心引擎 ⭐⭐⭐")
+        lines.append("   - 🌟 **恒生科技35%**: 互联网+AI龙头,腾讯阿里美团")
+        lines.append("   - 🌟 **创业板25%**: 新能源+医药+半导体成长股")
+        lines.append("   - 🌟 **科创50 15%**: 中国版纳斯达克,硬科技核心")
+        lines.append("   - **配置逻辑**: 牛市弹性最大,2年翻倍刚好达标")
         lines.append("")
         lines.append("2. **周期品15%** - 波段增强收益")
-        lines.append("   - ⚡ **化工**: 油价上行周期,PTA/MDI景气")
-        lines.append("   - ⚡ **煤炭**: 能源安全底仓,分红高+政策支持")
-        lines.append("   - **配置逻辑**: 震荡市防守,底部反弹爆发力强")
+        lines.append("   - ⚡ **化工10%**: 油价上行周期,PTA/MDI景气")
+        lines.append("   - ⚡ **煤炭5%**: 能源安全底仓,分红高+政策支持")
+        lines.append("   - **配置逻辑**: 降低回撤,但不影响进攻性")
         lines.append("")
-        lines.append("3. **现金10%** - 安全垫+机会仓")
-        lines.append("   - ✅ 应对突发风险(黑天鹅事件)")
-        lines.append("   - ✅ 优质标的跌20%时加仓")
+        lines.append("3. **现金10%** - 极限底线")
+        lines.append("   - ✅ 应对突发黑天鹅(最低5%)")
+        lines.append("   - ✅ 科技暴跌时加仓")
         lines.append("   - ✅ 资金调度灵活性")
         lines.append("")
         lines.append("#### 📊 策略优势")
         lines.append("")
         lines.append("| 优势 | 说明 |")
         lines.append("|------|------|")
-        lines.append("| **进攻性强** | 科技成长75%,牛市跑赢沪深300 40%+ |")
+        lines.append("| **进攻性强** | 科技75%,牛市跑赢沪深300 40%+ |")
         lines.append("| **有效分散** | 科技+周期低相关,降低回撤 |")
-        lines.append("| **波段增强** | 周期品高抛低吸,提升年化5-10% |")
+        lines.append("| **2026翻倍** | 理论收益: 2025年+60%, 2026年+30% = 108% |")
         lines.append("| **风险可控** | 10%现金+止损-30%,最大回撤可控 |")
         lines.append("")
         lines.append("#### ⚠️ 风险承受")
         lines.append("")
         lines.append("- 📉 **预期最大回撤**: -25%至-30% (2015股灾级别)")
-        lines.append("- 🎯 **止损纪律**: 单次回撤触及-30%立即减仓")
-        lines.append("- 💪 **心理准备**: 需忍受季度级别波动")
+        lines.append("- 🎯 **止损纪律**: 单次回撤触及-30%立即减仓至65%")
+        lines.append("- 💪 **心理准备**: 需忍受季度级别-15%波动")
+        lines.append("- 🔥 **翻倍目标**: 2年翻倍刚好达标,平衡收益与风险")
         lines.append("")
         lines.append("---")
         lines.append("")
@@ -729,7 +738,7 @@ class EnhancedReportGenerator(BaseGenerator):
         lines.append("**关键假设**:")
         lines.append("")
         lines.append("- 🚀 市场环境: 2025牛市延续 + 2026震荡消化")
-        lines.append("- 📊 持仓结构: 科技成长75% + 周期股15% + 现金10%")
+        lines.append("- 📊 持仓结构: **科技成长75% + 周期股15% + 现金10%**")
         lines.append("- ⚡ 操作频率: 底仓持有 + 波段择时")
         lines.append("- ⚠️ 风险承受: 单次最大回撤-30%以内")
         lines.append("")
@@ -776,6 +785,314 @@ class EnhancedReportGenerator(BaseGenerator):
         logger.info("增强版报告生成完成!")
 
         return '\n'.join(lines)
+
+    def _generate_enhanced_action_items(
+        self,
+        positions: List[Dict],
+        market_data: Dict,
+        total_value: float
+    ) -> Dict:
+        """
+        重写父类方法,增加第二优先级战略调整建议
+
+        增强点: 方案C+ (科技80% + 周期10% + 现金10%) 战略调整路径
+        """
+        # 先调用父类方法获取基础建议
+        result = super()._generate_enhanced_action_items(positions, market_data, total_value)
+
+        # 清空priority_2,重新生成战略调整建议
+        result['priority_2'] = []
+
+        if not positions or total_value == 0:
+            return result
+
+        # 计算当前配置
+        tech_ratio = 0  # 科技成长
+        cycle_ratio = 0  # 周期品
+        defensive_ratio = 0  # 防守品种
+        cash_ratio = 1.0 - sum(p.get('position_ratio', 0) for p in positions)
+
+        for p in positions:
+            asset_name = p.get('asset_name', '').lower()
+            ratio = p.get('position_ratio', 0)
+
+            # 科技成长: 恒生科技、创业板、科创50
+            if any(x in asset_name for x in ['恒生科技', '创业板', '科创50', '科技']):
+                tech_ratio += ratio
+            # 周期品: 化工、煤炭
+            elif any(x in asset_name for x in ['化工', '煤炭']):
+                cycle_ratio += ratio
+            # 防守品种: 证券、白酒、银行、保险
+            elif any(x in asset_name for x in ['证券', '白酒', '银行', '保险']):
+                defensive_ratio += ratio
+
+        # 目标配置 (方案C+)
+        target_tech = 0.75
+        target_cycle = 0.15
+        target_cash = 0.10
+
+        # 计算缺口
+        tech_gap = target_tech - tech_ratio
+        cycle_gap = target_cycle - cycle_ratio
+        cash_gap = target_cash - cash_ratio
+
+        # ========== 生成战略调整建议 ==========
+        result['priority_2'].append("**基于方案C+ (2026翻倍目标) 的战略调整路径**:")
+        result['priority_2'].append("")
+        result['priority_2'].append(f"**当前配置 vs 目标配置**:")
+        result['priority_2'].append("")
+        result['priority_2'].append("| 类别 | 当前 | 目标 | 缺口 | 说明 |")
+        result['priority_2'].append("|------|------|------|------|------|")
+        result['priority_2'].append(
+            f"| 科技成长 | {tech_ratio*100:.0f}% | **75%** | "
+            f"{'+'if tech_gap>0 else ''}{tech_gap*100:.0f}% | "
+            f"{'⚠️ 严重不足' if tech_gap > 0.20 else '✅ 接近目标' if abs(tech_gap) < 0.05 else '需调整'} |"
+        )
+        result['priority_2'].append(
+            f"| 周期品 | {cycle_ratio*100:.0f}% | **15%** | "
+            f"{'+'if cycle_gap>0 else ''}{cycle_gap*100:.0f}% | "
+            f"{'需减仓' if cycle_gap < 0 else '需加仓' if cycle_gap > 0 else '✅ 符合'} |"
+        )
+        result['priority_2'].append(
+            f"| 防守品种 | {defensive_ratio*100:.0f}% | **0%** | -{defensive_ratio*100:.0f}% | "
+            f"{'⚠️ 需清仓' if defensive_ratio > 0.10 else '基本清理'} |"
+        )
+        result['priority_2'].append(
+            f"| 现金 | {cash_ratio*100:.0f}% | **10%** | "
+            f"{'+'if cash_gap>0 else''}{cash_gap*100:.0f}% | "
+            f"{'需减仓补充' if cash_gap > 0 else '可以加仓' if cash_gap < -0.03 else '✅ 合理'} |"
+        )
+        result['priority_2'].append("")
+
+        # A. 科技成长加仓路线图
+        if tech_gap > 0.05:
+            result['priority_2'].append("**A. 科技成长加仓路线图** (重中之重)")
+            result['priority_2'].append("")
+            result['priority_2'].append(f"**目标**: 科技从{tech_ratio*100:.0f}%提升至75% (+{tech_gap*100:.0f}%)")
+            result['priority_2'].append("")
+            result['priority_2'].append("**分步执行计划**:")
+            result['priority_2'].append("")
+
+            # 根据缺口大小制定计划
+            gap_pct = tech_gap * 100
+            if gap_pct > 40:  # 缺口很大
+                result['priority_2'].append(f"- **阶段1** (本周): 证券/白酒减仓15% → 恒生科技+创业板")
+                result['priority_2'].append(f"  - 预期: 科技成长 {tech_ratio*100:.0f}% → {(tech_ratio+0.15)*100:.0f}%")
+                result['priority_2'].append("")
+                result['priority_2'].append(f"- **阶段2** (未来2周): 防守品种再减15% → 科创50+创业板")
+                result['priority_2'].append(f"  - 预期: 科技成长 {(tech_ratio+0.15)*100:.0f}% → {(tech_ratio+0.30)*100:.0f}%")
+                result['priority_2'].append("")
+                result['priority_2'].append(f"- **阶段3** (未来1个月): 防守品种再减15% → 科技组合")
+                result['priority_2'].append(f"  - 预期: 科技成长 {(tech_ratio+0.30)*100:.0f}% → {(tech_ratio+0.45)*100:.0f}%")
+                result['priority_2'].append("")
+                result['priority_2'].append(f"- **阶段4** (未来2个月): 最后调整至75%")
+                result['priority_2'].append(f"  - 预期: 科技成长 {(tech_ratio+0.45)*100:.0f}% → 75%+ ✅")
+            elif gap_pct > 20:  # 缺口中等
+                result['priority_2'].append(f"- **阶段1** (本周): 减仓防守品种10% → 科技组合")
+                result['priority_2'].append(f"  - 预期: 科技成长 {tech_ratio*100:.0f}% → {(tech_ratio+0.10)*100:.0f}%")
+                result['priority_2'].append("")
+                result['priority_2'].append(f"- **阶段2** (未来2周): 再减仓10% → 科技组合")
+                result['priority_2'].append(f"  - 预期: 科技成长 {(tech_ratio+0.10)*100:.0f}% → {(tech_ratio+0.20)*100:.0f}%")
+                result['priority_2'].append("")
+                result['priority_2'].append(f"- **阶段3** (未来1个月): 最后调整至75%")
+                result['priority_2'].append(f"  - 预期: 科技成长 {(tech_ratio+0.20)*100:.0f}% → 75%+ ✅")
+            else:  # 缺口较小
+                result['priority_2'].append(f"- **阶段1** (未来2周): 调整{gap_pct:.0f}%至目标")
+                result['priority_2'].append(f"  - 预期: 科技成长 {tech_ratio*100:.0f}% → 75% ✅")
+
+            result['priority_2'].append("")
+            result['priority_2'].append("**关键触发条件** (择时加仓):")
+            result['priority_2'].append("")
+            result['priority_2'].append("- 恒生科技单日跌幅>5%时加仓")
+            result['priority_2'].append("- 创业板指单日跌幅>3%时加仓")
+            result['priority_2'].append("- 科创50ETF跌破1.45时加仓")
+            result['priority_2'].append("- VIX恐慌指数>30时大举加仓")
+            result['priority_2'].append("")
+
+        # B. 防守品种退出策略
+        if defensive_ratio > 0.05:
+            result['priority_2'].append("**B. 防守品种退出策略** (核心调整)")
+            result['priority_2'].append("")
+
+            # 找出防守品种
+            defensive_positions = [
+                p for p in positions
+                if any(x in p.get('asset_name', '').lower() for x in ['证券', '白酒', '银行', '保险'])
+            ]
+
+            for p in defensive_positions:
+                asset_name = p.get('asset_name', '')
+                ratio = p.get('position_ratio', 0)
+                result['priority_2'].append(f"**{asset_name}** (当前{ratio*100:.0f}%):")
+                result['priority_2'].append(f"- 目标: 逐步清仓 (不符合方案C+)")
+                result['priority_2'].append(f"- 理由: {'证券/银行/保险'if any(x in asset_name.lower() for x in ['证券','银行','保险']) else '白酒'}属于{'周期性金融' if any(x in asset_name.lower() for x in ['证券','银行','保险']) else '消费防守'},不是成长股")
+                result['priority_2'].append(f"- 执行: 分3次减仓,每次反弹时减{ratio*100/3:.0f}%")
+                result['priority_2'].append("")
+
+            result['priority_2'].append("**执行纪律**:")
+            result['priority_2'].append("- 单日减仓不超过总资产的5%")
+            result['priority_2'].append("- 优先在反弹日减仓 (涨幅>1%)")
+            result['priority_2'].append("- 避免在大跌时割肉")
+            result['priority_2'].append("")
+
+        # C. 周期品优化策略
+        result['priority_2'].append("**C. 周期品优化策略**")
+        result['priority_2'].append("")
+
+        # 找出周期品
+        cycle_positions = [
+            p for p in positions
+            if any(x in p.get('asset_name', '').lower() for x in ['化工', '煤炭'])
+        ]
+
+        if cycle_positions:
+            for p in cycle_positions:
+                asset_name = p.get('asset_name', '')
+                ratio = p.get('position_ratio', 0)
+                if '化工' in asset_name.lower():
+                    target = 0.10
+                    result['priority_2'].append(f"**{asset_name}** (当前{ratio*100:.0f}%):")
+                    result['priority_2'].append(f"- ✅ 保留,符合方案C+周期品配置")
+                    if ratio < target:
+                        result['priority_2'].append(f"- 建议: 跌破成本价时补仓至{target*100:.0f}%")
+                    elif ratio > target + 0.03:
+                        result['priority_2'].append(f"- 建议: 反弹时减仓至{target*100:.0f}%")
+                    else:
+                        result['priority_2'].append(f"- 建议: 维持在{target*100:.0f}%左右")
+                    result['priority_2'].append("")
+                elif '煤炭' in asset_name.lower():
+                    target = 0.05
+                    result['priority_2'].append(f"**{asset_name}** (当前{ratio*100:.0f}%):")
+                    result['priority_2'].append(f"- ✅ 保留,符合方案C+周期品配置")
+                    if ratio < target:
+                        result['priority_2'].append(f"- 建议: 稳定在{target*100:.0f}%左右")
+                    elif ratio > target + 0.02:
+                        result['priority_2'].append(f"- 建议: 减仓至{target*100:.0f}%")
+                    else:
+                        result['priority_2'].append(f"- 建议: 维持当前仓位")
+                    result['priority_2'].append("")
+
+        result['priority_2'].append(f"**目标周期配置**: 化工10% + 煤炭5% = 15% ✅")
+        result['priority_2'].append("")
+
+        # D. 资金流向规划表
+        result['priority_2'].append("**D. 资金流向规划表** (2026翻倍路径)")
+        result['priority_2'].append("")
+        result['priority_2'].append("| 调整项目 | 当前 | 目标 | 调整 | 释放/需要资金 | 时间表 |")
+        result['priority_2'].append("|---------|------|------|------|--------------|--------|")
+
+        # 减仓项
+        result['priority_2'].append("| **减仓** | | | | | |")
+        if defensive_ratio > 0:
+            defensive_value = total_value * defensive_ratio
+            result['priority_2'].append(
+                f"| 防守品种清仓 | {defensive_ratio*100:.0f}% | 0% | -{defensive_ratio*100:.0f}% | "
+                f"+¥{defensive_value/10000:.1f}万 | 分3个月 |"
+            )
+
+        # 加仓项
+        result['priority_2'].append("| **加仓** | | | | | |")
+        if tech_gap > 0:
+            tech_value = total_value * tech_gap
+            result['priority_2'].append(
+                f"| 科技成长 | {tech_ratio*100:.0f}% | 75% | +{tech_gap*100:.0f}% | "
+                f"-¥{tech_value/10000:.1f}万 | 分2个月 |"
+            )
+        if cycle_gap > 0:
+            cycle_value = total_value * cycle_gap
+            result['priority_2'].append(
+                f"| 周期品 | {cycle_ratio*100:.0f}% | 15% | +{cycle_gap*100:.0f}% | "
+                f"-¥{cycle_value/10000:.1f}万 | 择机 |"
+            )
+
+        # 现金
+        if cash_gap != 0:
+            cash_value = total_value * abs(cash_gap)
+            sign = "+" if cash_gap > 0 else "-"
+            result['priority_2'].append(
+                f"| 现金储备 | {cash_ratio*100:.0f}% | 10% | {sign}{abs(cash_gap)*100:.0f}% | "
+                f"{sign}¥{cash_value/10000:.1f}万 | 立即 |"
+            )
+
+        result['priority_2'].append("")
+        result['priority_2'].append("**资金平衡**:")
+        released = defensive_ratio * total_value
+        needed = tech_gap * total_value if tech_gap > 0 else 0
+        balance = released - needed
+        result['priority_2'].append(f"- 释放资金: ¥{released/10000:.1f}万")
+        result['priority_2'].append(f"- 需要资金: ¥{needed/10000:.1f}万")
+        result['priority_2'].append(f"- 净余额: {'+'if balance>=0 else ''}¥{balance/10000:.1f}万 ({'补充现金储备'if balance>0 else '需外部资金'})")
+        result['priority_2'].append("")
+
+        # ========== 重写第三优先级: 小仓位标的 (智能识别方案C+目标) ==========
+        # 清空父类生成的priority_3,重新生成
+        result['priority_3'] = []
+
+        # 定义方案C+的目标配置
+        target_configs = {
+            '化工': {'target': 0.10, 'min': 0.08, 'max': 0.12},
+            '煤炭': {'target': 0.05, 'min': 0.04, 'max': 0.06},
+        }
+
+        # 找出所有小仓位(<10%)
+        small_positions = [
+            p for p in positions
+            if p.get('position_ratio', 0) < 0.10
+        ]
+
+        if small_positions:
+            result['priority_3'].append("**小仓位标的处理建议**:")
+            result['priority_3'].append("")
+
+            for pos in small_positions:
+                asset_name = pos.get('asset_name', 'Unknown')
+                ratio = pos.get('position_ratio', 0)
+
+                # 检查是否属于方案C+目标配置
+                is_strategic = False
+                for key, config in target_configs.items():
+                    if key in asset_name.lower():
+                        is_strategic = True
+                        target = config['target']
+                        min_range = config['min']
+                        max_range = config['max']
+
+                        # 判断当前仓位与目标的关系
+                        if ratio < min_range:
+                            suggestion = f"✅ **保留** (方案C+目标{target*100:.0f}%) - 建议补仓至{target*100:.0f}%"
+                        elif ratio > max_range:
+                            suggestion = f"✅ **保留** (方案C+目标{target*100:.0f}%) - 建议减仓至{target*100:.0f}%"
+                        else:
+                            suggestion = f"✅ **保留** (方案C+目标{target*100:.0f}%) - 维持当前仓位"
+
+                        result['priority_3'].append(f"- {asset_name} ({ratio*100:.1f}%): {suggestion}")
+                        break
+
+                # 如果不属于战略配置,使用原有逻辑
+                if not is_strategic:
+                    result['priority_3'].append(
+                        f"- {asset_name} ({ratio*100:.1f}%): "
+                        f"⚠️ 不在方案C+配置中,建议择机清仓"
+                    )
+
+            result['priority_3'].append("")
+
+            # 更新checklist
+            # 移除父类添加的通用小仓位观察项
+            result['checklist'] = [
+                item for item in result['checklist']
+                if '观察小仓位标的表现' not in item
+            ]
+
+            # 添加更智能的checklist
+            result['checklist'].append(
+                f"- [ ] 📊 战略品种(化工/煤炭): 按方案C+目标调整"
+            )
+            result['checklist'].append(
+                f"- [ ] ⚠️ 非战略品种(阿里等): 择机清仓"
+            )
+
+        return result
 
     def save_report(
         self,
