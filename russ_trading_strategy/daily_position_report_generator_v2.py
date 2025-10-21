@@ -60,7 +60,8 @@ from russ_trading_strategy.core import (
     ExecutiveSummaryGenerator,
     ChartGenerator,
     PerformanceMetricsCalculator,
-    HistoricalPerformanceAnalyzer
+    HistoricalPerformanceAnalyzer,
+    VisualizationGenerator
 )
 from russ_trading_strategy.utils import (
     get_risk_profile,
@@ -96,6 +97,7 @@ class EnhancedReportGenerator(BaseGenerator):
         self.html_formatter = HTMLFormatter()
         self.performance_metrics_calc = PerformanceMetricsCalculator()
         self.historical_performance_analyzer = HistoricalPerformanceAnalyzer()
+        self.visualization_gen = VisualizationGenerator()
 
         logger.info(f"增强版报告生成器初始化完成 (风险偏好: {risk_profile})")
 
@@ -266,6 +268,14 @@ class EnhancedReportGenerator(BaseGenerator):
             include_metrics=True
         )
         lines.append(performance_report)
+
+        # 如果有历史数据，生成收益曲线
+        if performance.get('has_data') and 'dates' in performance and 'capitals' in performance:
+            equity_curve = self.visualization_gen.generate_equity_curve_ascii(
+                performance['dates'],
+                performance['capitals']
+            )
+            lines.append(equity_curve)
 
         lines.append("---")
         lines.append("")

@@ -13,6 +13,7 @@ from .executive_summary import ExecutiveSummaryGenerator
 from .chart_generator import ChartGenerator
 from .performance_metrics import PerformanceMetricsCalculator
 from .historical_performance import HistoricalPerformanceAnalyzer
+from .visualization import VisualizationGenerator
 
 __all__ = [
     'QuantAnalyzer',
@@ -23,4 +24,5 @@ __all__ = [
     'ChartGenerator',
     'PerformanceMetricsCalculator',
     'HistoricalPerformanceAnalyzer',
+    'VisualizationGenerator',
 ]
