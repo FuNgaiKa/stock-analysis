@@ -10,18 +10,47 @@
 目标: 最大化风险调整后收益,实现年化50-60%回报
 """
 
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 import numpy as np
 from typing import Dict, List, Tuple, Optional
 from datetime import datetime
 
-# 复用现有模块
-from leverage_management.kelly_calculator import kelly_criterion
-from russ_trading_strategy.dynamic_position_manager import DynamicPositionManager
-from russ_trading_strategy.risk_manager import RiskManager
+# Kelly公式(内联,避免外部依赖)
+def kelly_criterion(win_rate: float, avg_win: float, avg_loss: float) -> float:
+    """
+    Kelly公式: f* = (p × b - q) / b
+
+    Args:
+        win_rate: 胜率 (0-1)
+        avg_win: 平均盈利 (例如 0.05 表示5%)
+        avg_loss: 平均亏损 (例如 0.03 表示3%, 传入正数)
+
+    Returns:
+        最优仓位比例 (0-1)
+    """
+    if avg_loss <= 0:
+        return 0.0
+
+    p = win_rate  # 胜率
+    q = 1 - win_rate  # 败率
+    b = avg_win / avg_loss  # 赔率 (盈亏比)
+
+    # Kelly公式
+    kelly = (p * b - q) / b
+
+    return max(0.0, kelly)
+
+# 内部模块导入(同包内)
+try:
+    from .dynamic_position_manager import DynamicPositionManager
+    from .risk_manager import RiskManager
+except ImportError:
+    # 如果相对导入失败,尝试绝对导入
+    try:
+        from russ_trading_strategy.dynamic_position_manager import DynamicPositionManager
+        from russ_trading_strategy.risk_manager import RiskManager
+    except ImportError:
+        DynamicPositionManager = None
+        RiskManager = None
 
 
 class BaseSwingOptimizer:
@@ -44,7 +73,7 @@ class BaseSwingOptimizer:
         self.max_drawdown_tolerance = config.get('max_drawdown_tolerance', 0.25)
         self.target_annual_return = config.get('target_annual_return', 0.55)
 
-        self.risk_manager = RiskManager()
+        self.risk_manager = RiskManager() if RiskManager else None
 
     # ==================== 资产类别参数估算 ====================
 

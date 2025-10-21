@@ -11,16 +11,35 @@
 5. 动态再平衡建议
 """
 
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 import numpy as np
 from typing import Dict, List, Optional
 from datetime import datetime
 
-# 复用现有的Kelly公式
-from leverage_management.kelly_calculator import kelly_criterion
+
+# Kelly公式(内联,避免外部依赖)
+def kelly_criterion(win_rate: float, avg_win: float, avg_loss: float) -> float:
+    """
+    Kelly公式: f* = (p × b - q) / b
+
+    Args:
+        win_rate: 胜率 (0-1)
+        avg_win: 平均盈利 (例如 0.05 表示5%)
+        avg_loss: 平均亏损 (例如 0.03 表示3%, 传入正数)
+
+    Returns:
+        最优仓位比例 (0-1)
+    """
+    if avg_loss <= 0:
+        return 0.0
+
+    p = win_rate  # 胜率
+    q = 1 - win_rate  # 败率
+    b = avg_win / avg_loss  # 赔率 (盈亏比)
+
+    # Kelly公式
+    kelly = (p * b - q) / b
+
+    return max(0.0, kelly)
 
 
 class DynamicPositionManager:
