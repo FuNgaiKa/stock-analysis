@@ -1428,14 +1428,6 @@ class DailyPositionReportGenerator:
                     lines.append(item)
                 lines.append("")
 
-            # 第二优先级(本周内)
-            if action_items['priority_2']:
-                lines.append("### ⚠️ 第二优先级(本周内执行)")
-                lines.append("")
-                for item in action_items['priority_2']:
-                    lines.append(item)
-                lines.append("")
-
             # 第三优先级(未来1-2周)
             if action_items['priority_3']:
                 lines.append("### 📅 第三优先级(未来1-2周观察)")

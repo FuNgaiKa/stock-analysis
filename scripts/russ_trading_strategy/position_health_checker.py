@@ -323,9 +323,9 @@ class PositionHealthChecker:
         for check_name, check_result in checks.items():
             if check_name == 'single_positions':
                 if check_result['passed']:
-                    lines.append("✅ **单一标的仓位**: 全部符合要求(ETF≤30%, 个股≤20%)")
+                    lines.append("- ✅ **单一标的仓位**: 全部符合要求(ETF≤30%, 个股≤20%)")
                 else:
-                    lines.append("⚠️ **单一标的仓位**: 存在超标")
+                    lines.append("- ⚠️ **单一标的仓位**: 存在超标")
                     for warning in check_result['warnings']:
                         lines.append(f"  - {warning}")
             else:
@@ -352,14 +352,6 @@ class PositionHealthChecker:
                     f"¥{pos.get('current_value', 0):,.0f} | {status} |"
                 )
 
-            lines.append("")
-
-        # 警告信息
-        if result['warnings']:
-            lines.append("### ⚠️ 警告信息")
-            lines.append("")
-            for warning in result['warnings']:
-                lines.append(f"- {warning}")
             lines.append("")
 
         # 优化建议
