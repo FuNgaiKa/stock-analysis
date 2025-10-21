@@ -150,7 +150,7 @@ class DailyPositionReportGenerator:
 
     def fetch_market_data(self, date: str = None) -> Dict:
         """
-        获取市场数据
+        获取市场数据 (优先使用efinance,fallback到akshare)
 
         Args:
             date: 日期字符串 (YYYY-MM-DD)
@@ -160,17 +160,51 @@ class DailyPositionReportGenerator:
         """
         logger.info("获取市场数据...")
 
+        if date is None:
+            date = datetime.now().strftime('%Y-%m-%d')
+
+        market_data = {
+            'date': date,
+            'indices': {},
+            'technical': {}  # 存储技术分析结果
+        }
+
+        # 优先使用 efinance (更稳定)
+        try:
+            import efinance as ef
+
+            indices_map = {
+                '000300': 'HS300',
+                '399006': 'CYBZ',
+                '000688': 'KC50'
+            }
+
+            for code, name in indices_map.items():
+                try:
+                    df = ef.stock.get_quote_history(code, klt=101)  # 日线
+                    if df is not None and not df.empty:
+                        latest = df.iloc[-1]
+                        market_data['indices'][name] = {
+                            'current': float(latest['收盘']),
+                            'change_pct': float(latest['涨跌幅']),
+                            'date': str(latest['日期'])
+                        }
+                        market_data['technical'][name] = df
+                        logger.info(f"✅ {name}: {latest['收盘']:.2f} ({latest['涨跌幅']:+.2f}%)")
+                except Exception as e:
+                    logger.warning(f"efinance获取{name}失败: {e}")
+
+            if market_data['indices']:
+                return market_data
+
+        except ImportError:
+            logger.warning("efinance未安装,尝试使用akshare")
+        except Exception as e:
+            logger.warning(f"efinance获取失败: {e}, 尝试使用akshare")
+
+        # Fallback: 使用 akshare
         try:
             import akshare as ak
-
-            if date is None:
-                date = datetime.now().strftime('%Y-%m-%d')
-
-            market_data = {
-                'date': date,
-                'indices': {},
-                'technical': {}  # 存储技术分析结果
-            }
 
             # 沪深300
             try:
@@ -187,7 +221,6 @@ class DailyPositionReportGenerator:
                         'change_pct': float(latest['涨跌幅']),
                         'date': latest['日期']
                     }
-                    # 存储历史数据用于技术分析
                     market_data['technical']['HS300'] = hs300
                     logger.info(f"✅ 沪深300: {latest['收盘']:.2f} ({latest['涨跌幅']:+.2f}%)")
             except Exception as e:
@@ -236,7 +269,7 @@ class DailyPositionReportGenerator:
             return market_data
 
         except ImportError:
-            logger.error("akshare未安装，请运行: pip install akshare")
+            logger.error("akshare和efinance都未安装，请运行: pip install efinance")
             return {'date': date, 'indices': {}}
         except Exception as e:
             logger.error(f"获取市场数据失败: {e}")
