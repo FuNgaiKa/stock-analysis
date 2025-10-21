@@ -11,6 +11,7 @@ from .scenario_analyzer import ScenarioAnalyzer
 from .attribution_analyzer import AttributionAnalyzer
 from .executive_summary import ExecutiveSummaryGenerator
 from .chart_generator import ChartGenerator
+from .performance_metrics import PerformanceMetricsCalculator
 
 __all__ = [
     'QuantAnalyzer',
@@ -19,4 +20,5 @@ __all__ = [
     'AttributionAnalyzer',
     'ExecutiveSummaryGenerator',
     'ChartGenerator',
+    'PerformanceMetricsCalculator',
 ]
