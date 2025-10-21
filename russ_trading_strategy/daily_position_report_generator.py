@@ -82,7 +82,7 @@ class DailyPositionReportGenerator:
 
         # 根据风险阈值初始化健康检查器
         strategy_config = {
-            'min_position': 0.80 if risk_profile == 'ultra_aggressive' else 0.50,
+            'min_position': 0.70 if risk_profile == 'ultra_aggressive' else 0.50,
             'max_position': self.thresholds.get('max_total_position', 0.90),
             'max_single_position_etf': self.thresholds.get('max_single_etf_position',
                                                            self.thresholds.get('max_single_position', 0.30)),
@@ -149,8 +149,8 @@ class DailyPositionReportGenerator:
                 'max_single_etf_position': 0.40,  # 单ETF最高40%
                 'max_single_stock_position': 0.30,  # 单个股最高30%
                 'max_single_position': 0.40,  # 保留兼容性
-                'max_total_position': 0.95,
-                'min_cash_reserve': 0.05,
+                'max_total_position': 0.90,
+                'min_cash_reserve': 0.10,
                 'stop_loss': 0.25,
                 'warning_loss': 0.20,
                 'target_annual_return': 0.60,  # 年化60%目标
