@@ -179,7 +179,12 @@ class PerformanceTracker:
                         prev_target = self.initial_capital
                     else:
                         prev_target = self.stage_targets[i - 1]
-                    current_stage_progress = (current_capital - prev_target) / (target - prev_target)
+
+                    # 防止除零错误
+                    if target - prev_target > 0:
+                        current_stage_progress = (current_capital - prev_target) / (target - prev_target)
+                    else:
+                        current_stage_progress = 0.0
 
         return {
             'completed_stages': completed_stages,
