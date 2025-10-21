@@ -289,7 +289,8 @@ class UnifiedAnalysisRunner:
 
             current_price = hist.get('current_price', 0)
             change_pct = hist.get('current_change_pct', 0)
-            change_emoji = "📈" if change_pct >= 0 else "📉"
+            # 中国股市习惯: 红涨绿跌
+            change_emoji = "🔴" if change_pct >= 0 else "🟢"
 
             # 综合判断
             judgment = data.get('comprehensive_judgment', {})
@@ -309,6 +310,14 @@ class UnifiedAnalysisRunner:
             # 20日上涨概率 (comprehensive 和 sector 使用相同字段)
             stats_20d = hist.get('20d', {})
             up_prob_20d = stats_20d.get('up_prob', 0)
+            # 给上涨概率添加颜色: >=60%红色(看涨), <40%绿色(看跌), 40-60%无色
+            if up_prob_20d >= 0.6:
+                prob_emoji = "🔴"
+            elif up_prob_20d < 0.4:
+                prob_emoji = "🟢"
+            else:
+                prob_emoji = ""
+            prob_display = f"{up_prob_20d:.1%} {prob_emoji}" if prob_emoji else f"{up_prob_20d:.1%}"
 
             # 风险等级
             risk = data.get('risk_assessment', {})
@@ -334,7 +343,7 @@ class UnifiedAnalysisRunner:
             lines.append(
                 f"| {asset_name} | {current_price:.2f} | "
                 f"{change_pct:+.2f}% {change_emoji} | {direction_with_emoji} | {position} | "
-                f"{up_prob_20d:.1%} | {risk_with_emoji} | {hold_suggestion} |"
+                f"{prob_display} | {risk_with_emoji} | {hold_suggestion} |"
             )
 
         return '\n'.join(lines)
@@ -356,7 +365,8 @@ class UnifiedAnalysisRunner:
             lines.append(f"- **最新价格**: {hist['current_price']:.2f}")
 
             change_pct = hist.get('current_change_pct', 0)
-            change_emoji = "📈" if change_pct >= 0 else "📉"
+            # 中国股市习惯: 红涨绿跌
+            change_emoji = "🔴" if change_pct >= 0 else "🟢"
             lines.append(f"- **涨跌幅**: {change_pct:+.2f}% {change_emoji}")
             lines.append(f"- **数据日期**: {hist.get('current_date', 'N/A')}")
             lines.append("")
