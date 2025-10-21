@@ -309,12 +309,13 @@ class EnhancedReportGenerator(BaseGenerator):
             # 基本面数据
             lines.append("### 💼 市场估值水平")
             lines.append("")
-            lines.append("| 指数 | PE(TTM) | PB | ROE | 股息率 | 估值评级 |")
-            lines.append("|------|---------|-----|-----|--------|---------|")
+            lines.append("| 指数 | PE(TTM) | PE分位 | PB | ROE | 股息率 | 估值评级 |")
+            lines.append("|------|---------|--------|-----|-----|--------|---------|")
 
             if 'HS300' in indices:
                 hs300 = indices['HS300']
                 pe = hs300.get('pe', 0)
+                pe_percentile = hs300.get('pe_percentile', 0)
                 pb = hs300.get('pb', 0)
                 roe = hs300.get('roe', 0)
                 dividend_yield = hs300.get('dividend_yield', 0)
@@ -331,15 +332,17 @@ class EnhancedReportGenerator(BaseGenerator):
                     valuation = "N/A"
 
                 pe_str = f"{pe:.1f}" if pe > 0 else "N/A"
+                pe_pct_str = f"{pe_percentile:.1f}%" if pe_percentile > 0 else "N/A"
                 pb_str = f"{pb:.2f}" if pb > 0 else "N/A"
                 roe_str = f"{roe:.1f}%" if roe > 0 else "N/A"
                 div_str = f"{dividend_yield:.2f}%" if dividend_yield > 0 else "N/A"
 
-                lines.append(f"| **沪深300** | {pe_str} | {pb_str} | {roe_str} | {div_str} | {valuation} |")
+                lines.append(f"| **沪深300** | {pe_str} | {pe_pct_str} | {pb_str} | {roe_str} | {div_str} | {valuation} |")
 
             if 'CYBZ' in indices:
                 cybz = indices['CYBZ']
                 pe = cybz.get('pe', 0)
+                pe_percentile = cybz.get('pe_percentile', 0)
                 pb = cybz.get('pb', 0)
                 roe = cybz.get('roe', 0)
                 dividend_yield = cybz.get('dividend_yield', 0)
@@ -356,15 +359,17 @@ class EnhancedReportGenerator(BaseGenerator):
                     valuation = "N/A"
 
                 pe_str = f"{pe:.1f}" if pe > 0 else "N/A"
+                pe_pct_str = f"{pe_percentile:.1f}%" if pe_percentile > 0 else "N/A"
                 pb_str = f"{pb:.2f}" if pb > 0 else "N/A"
                 roe_str = f"{roe:.1f}%" if roe > 0 else "N/A"
                 div_str = f"{dividend_yield:.2f}%" if dividend_yield > 0 else "N/A"
 
-                lines.append(f"| **创业板指** | {pe_str} | {pb_str} | {roe_str} | {div_str} | {valuation} |")
+                lines.append(f"| **创业板指** | {pe_str} | {pe_pct_str} | {pb_str} | {roe_str} | {div_str} | {valuation} |")
 
             lines.append("")
             lines.append("**估值说明**:")
             lines.append("- PE(TTM): 市盈率(滚动12个月)")
+            lines.append("- PE分位: PE十年分位数(当前PE在过去10年中的排名)")
             lines.append("- PB: 市净率")
             lines.append("- ROE: 净资产收益率")
             lines.append("- 股息率: 年化股息收益率")

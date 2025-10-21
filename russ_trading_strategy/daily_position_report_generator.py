@@ -235,7 +235,17 @@ class DailyPositionReportGenerator:
                             latest_pe = df_pe.iloc[-1]
                             pe = float(latest_pe['滚动市盈率'])  # 使用滚动市盈率(TTM)
                             market_data['indices']['HS300']['pe'] = pe
-                            logger.info(f"✅ 沪深300 PE(TTM): {pe:.2f}")
+
+                            # 计算PE十年分位数 (取最近10年数据,约2520个交易日)
+                            recent_10y = df_pe.tail(2520) if len(df_pe) > 2520 else df_pe
+                            pe_values = recent_10y['滚动市盈率'].dropna()
+                            if len(pe_values) > 0:
+                                pe_percentile = (pe_values < pe).sum() / len(pe_values) * 100
+                                market_data['indices']['HS300']['pe_percentile'] = pe_percentile
+                                logger.info(f"✅ 沪深300 PE(TTM): {pe:.2f}, 十年分位: {pe_percentile:.1f}%")
+                            else:
+                                market_data['indices']['HS300']['pe_percentile'] = 0
+                                logger.info(f"✅ 沪深300 PE(TTM): {pe:.2f}")
 
                         if df_pb is not None and not df_pb.empty:
                             latest_pb = df_pb.iloc[-1]
@@ -255,7 +265,7 @@ class DailyPositionReportGenerator:
                         market_data['indices']['HS300']['roe'] = 0
                         market_data['indices']['HS300']['dividend_yield'] = 0
 
-                # 获取创业板估值数据
+                # 获取创业板估值数据 (使用创业板50作为参考,API无创业板指)
                 if 'CYBZ' in market_data['indices']:
                     try:
                         df_pe = ak.stock_index_pe_lg(symbol='创业板50')
@@ -265,7 +275,17 @@ class DailyPositionReportGenerator:
                             latest_pe = df_pe.iloc[-1]
                             pe = float(latest_pe['滚动市盈率'])
                             market_data['indices']['CYBZ']['pe'] = pe
-                            logger.info(f"✅ 创业板指 PE(TTM): {pe:.2f}")
+
+                            # 计算PE十年分位数 (取最近10年数据,约2520个交易日)
+                            recent_10y = df_pe.tail(2520) if len(df_pe) > 2520 else df_pe
+                            pe_values = recent_10y['滚动市盈率'].dropna()
+                            if len(pe_values) > 0:
+                                pe_percentile = (pe_values < pe).sum() / len(pe_values) * 100
+                                market_data['indices']['CYBZ']['pe_percentile'] = pe_percentile
+                                logger.info(f"✅ 创业板指 PE(TTM): {pe:.2f}, 十年分位: {pe_percentile:.1f}%")
+                            else:
+                                market_data['indices']['CYBZ']['pe_percentile'] = 0
+                                logger.info(f"✅ 创业板指 PE(TTM): {pe:.2f}")
 
                         if df_pb is not None and not df_pb.empty:
                             latest_pb = df_pb.iloc[-1]
