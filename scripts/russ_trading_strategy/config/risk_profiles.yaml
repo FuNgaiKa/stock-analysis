@@ -1,0 +1,70 @@
+# 风险配置文件
+# Risk Profile Configuration
+
+# 保守型配置
+conservative:
+  name: "保守型"
+  description: "适合风险厌恶投资者,追求稳健收益"
+  max_drawdown_alert: 0.10      # 最大回撤预警线
+  max_drawdown_warning: 0.08    # 最大回撤警告线
+  volatility_limit: 0.20         # 波动率上限
+  max_single_position_etf: 0.15  # 单ETF最大仓位
+  max_single_position_stock: 0.10 # 单个股最大仓位
+  max_total_position: 0.70       # 最大总仓位
+  min_cash_reserve: 0.30         # 最低现金储备
+  stop_loss: 0.10                # 止损线
+  warning_loss: 0.08             # 预警损失线
+  target_annual_return: 0.08     # 目标年化收益
+  min_assets: 5                  # 最少持仓数量
+  max_assets: 8                  # 最多持仓数量
+
+# 稳健型配置
+moderate:
+  name: "稳健型"
+  description: "平衡风险与收益,适合大多数投资者"
+  max_drawdown_alert: 0.15
+  max_drawdown_warning: 0.12
+  volatility_limit: 0.30
+  max_single_position_etf: 0.20
+  max_single_position_stock: 0.15
+  max_total_position: 0.85
+  min_cash_reserve: 0.15
+  stop_loss: 0.15
+  warning_loss: 0.12
+  target_annual_return: 0.12
+  min_assets: 3
+  max_assets: 6
+
+# 积极型配置 (当前Russ使用)
+aggressive:
+  name: "积极型"
+  description: "追求高收益,可承受较大回撤"
+  max_drawdown_alert: 0.25
+  max_drawdown_warning: 0.20
+  volatility_limit: 0.50
+  max_single_position_etf: 0.30
+  max_single_position_stock: 0.20
+  max_total_position: 0.90
+  min_cash_reserve: 0.10
+  stop_loss: 0.20
+  warning_loss: 0.16
+  target_annual_return: 0.15
+  min_assets: 3
+  max_assets: 5
+
+# 超激进型配置 (翻倍目标)
+ultra_aggressive:
+  name: "超激进型"
+  description: "极致追求高收益,承受极大波动"
+  max_drawdown_alert: 0.30
+  max_drawdown_warning: 0.25
+  volatility_limit: 0.70
+  max_single_position_etf: 0.40
+  max_single_position_stock: 0.30
+  max_total_position: 0.95
+  min_cash_reserve: 0.05
+  stop_loss: 0.25
+  warning_loss: 0.20
+  target_annual_return: 0.60     # 年化60%目标
+  min_assets: 2
+  max_assets: 3

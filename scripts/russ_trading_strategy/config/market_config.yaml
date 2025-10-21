@@ -1,0 +1,96 @@
+# 市场配置文件
+# Market Configuration
+
+# 基准点位 (2025-01-01)
+benchmarks:
+  hs300: 3145.0    # 沪深300
+  cybz: 2060.0     # 创业板指
+  kc50: 955.0      # 科创50
+  sse: 3210.0      # 上证指数
+  szse: 10850.0    # 深证成指
+
+# 市场状态阈值
+market_state:
+  bull_rally:        # 强势牛市
+    total_score_min: 1.2
+    description: "牛市上升期"
+    emoji: "🚀"
+    recommended_position: [0.70, 0.90]
+
+  bull_consolidation:  # 牛市震荡
+    total_score_min: 0.5
+    description: "牛市震荡期"
+    emoji: "📈"
+    recommended_position: [0.60, 0.80]
+
+  sideways:  # 震荡市
+    total_score_min: -0.3
+    description: "震荡市"
+    emoji: "🟡"
+    recommended_position: [0.50, 0.70]
+
+  bear_rally:  # 熊市反弹
+    total_score_min: -0.8
+    description: "熊市反弹期"
+    emoji: "⚠️"
+    recommended_position: [0.40, 0.60]
+
+  bear_decline:  # 熊市下跌
+    total_score_min: -999  # 默认最低
+    description: "熊市下跌期"
+    emoji: "📉"
+    recommended_position: [0.30, 0.50]
+
+# 历史危机数据 (用于压力测试)
+historical_crises:
+  - name: "2015股灾"
+    date: "2015-06-15"
+    market_drop: -0.40
+    duration_days: 90
+    recovery_days: 365
+
+  - name: "2018贸易战"
+    date: "2018-10-01"
+    market_drop: -0.25
+    duration_days: 60
+    recovery_days: 180
+
+  - name: "2020疫情"
+    date: "2020-02-03"
+    market_drop: -0.30
+    duration_days: 30
+    recovery_days: 120
+
+  - name: "2022美联储加息"
+    date: "2022-04-01"
+    market_drop: -0.20
+    duration_days: 180
+    recovery_days: 270
+
+# 情景分析参数
+scenario_analysis:
+  optimistic:
+    probability: 0.30
+    name: "乐观情景"
+    emoji: "🟢"
+    market_return: 0.15
+
+  neutral:
+    probability: 0.50
+    name: "中性情景"
+    emoji: "🟡"
+    market_return: 0.05
+
+  pessimistic:
+    probability: 0.20
+    name: "悲观情景"
+    emoji: "🔴"
+    market_return: -0.10
+
+# 缓存配置
+cache:
+  enabled: true
+  ttl_seconds: 86400  # 缓存24小时
+  redis_host: "localhost"
+  redis_port: 6379
+  redis_db: 0
