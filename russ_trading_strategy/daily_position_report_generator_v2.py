@@ -169,8 +169,8 @@ class EnhancedReportGenerator(BaseGenerator):
         if market_data and market_data.get('indices'):
             lines.append("### 📊 市场数据")
             lines.append("")
-            lines.append("| 指数 | 最新点位 | 涨跌幅 | 状态 |")
-            lines.append("|------|---------|--------|------|")
+            lines.append("| 指数 | 最新点位 | 涨跌幅 | 成交量 | 量比 | 状态 |")
+            lines.append("|------|---------|--------|--------|------|------|")
 
             indices = market_data['indices']
 
@@ -178,29 +178,196 @@ class EnhancedReportGenerator(BaseGenerator):
                 hs300 = indices['HS300']
                 emoji = "🔴" if hs300['change_pct'] >= 0 else "🟢"
                 status = "上涨" if hs300['change_pct'] > 0 else ("下跌" if hs300['change_pct'] < 0 else "平盘")
+
+                # 量价关系
+                volume = hs300.get('volume', 0)
+                volume_ratio = hs300.get('volume_ratio', 0)
+                if volume > 0:
+                    volume_str = f"{volume/100000000:.0f}亿" if volume >= 100000000 else f"{volume/10000:.0f}万"
+                else:
+                    volume_str = "N/A"
+
+                if volume_ratio > 0:
+                    if volume_ratio > 1.5:
+                        volume_status = f"{volume_ratio:.1f}倍 📈放量"
+                    elif volume_ratio < 0.8:
+                        volume_status = f"{volume_ratio:.1f}倍 📉缩量"
+                    else:
+                        volume_status = f"{volume_ratio:.1f}倍 ➡️平量"
+                else:
+                    volume_status = "N/A"
+
                 lines.append(
                     f"| **沪深300** | {hs300['current']:.2f} | "
-                    f"{hs300['change_pct']:+.2f}% {emoji} | {status} |"
+                    f"{hs300['change_pct']:+.2f}% {emoji} | {volume_str} | {volume_status} | {status} |"
                 )
 
             if 'CYBZ' in indices:
                 cybz = indices['CYBZ']
                 emoji = "🔴" if cybz['change_pct'] >= 0 else "🟢"
                 status = "上涨" if cybz['change_pct'] > 0 else ("下跌" if cybz['change_pct'] < 0 else "平盘")
+
+                # 量价关系
+                volume = cybz.get('volume', 0)
+                volume_ratio = cybz.get('volume_ratio', 0)
+                if volume > 0:
+                    volume_str = f"{volume/100000000:.0f}亿" if volume >= 100000000 else f"{volume/10000:.0f}万"
+                else:
+                    volume_str = "N/A"
+
+                if volume_ratio > 0:
+                    if volume_ratio > 1.5:
+                        volume_status = f"{volume_ratio:.1f}倍 📈放量"
+                    elif volume_ratio < 0.8:
+                        volume_status = f"{volume_ratio:.1f}倍 📉缩量"
+                    else:
+                        volume_status = f"{volume_ratio:.1f}倍 ➡️平量"
+                else:
+                    volume_status = "N/A"
+
                 lines.append(
                     f"| **创业板指** | {cybz['current']:.2f} | "
-                    f"{cybz['change_pct']:+.2f}% {emoji} | {status} |"
+                    f"{cybz['change_pct']:+.2f}% {emoji} | {volume_str} | {volume_status} | {status} |"
                 )
 
             if 'KC50ETF' in indices:
                 kc50 = indices['KC50ETF']
                 emoji = "🔴" if kc50['change_pct'] >= 0 else "🟢"
                 status = "上涨" if kc50['change_pct'] > 0 else ("下跌" if kc50['change_pct'] < 0 else "平盘")
+
+                # 量价关系
+                volume = kc50.get('volume', 0)
+                volume_ratio = kc50.get('volume_ratio', 0)
+                if volume > 0:
+                    volume_str = f"{volume/100000000:.0f}亿" if volume >= 100000000 else f"{volume/10000:.0f}万"
+                else:
+                    volume_str = "N/A"
+
+                if volume_ratio > 0:
+                    if volume_ratio > 1.5:
+                        volume_status = f"{volume_ratio:.1f}倍 📈放量"
+                    elif volume_ratio < 0.8:
+                        volume_status = f"{volume_ratio:.1f}倍 📉缩量"
+                    else:
+                        volume_status = f"{volume_ratio:.1f}倍 ➡️平量"
+                else:
+                    volume_status = "N/A"
+
                 lines.append(
                     f"| **科创50ETF** | {kc50['current']:.2f} | "
-                    f"{kc50['change_pct']:+.2f}% {emoji} | {status} |"
+                    f"{kc50['change_pct']:+.2f}% {emoji} | {volume_str} | {volume_status} | {status} |"
                 )
 
+            lines.append("")
+
+            # 量价配合度分析
+            lines.append("### 📈 量价关系分析")
+            lines.append("")
+
+            # 分析沪深300
+            if 'HS300' in indices:
+                hs300 = indices['HS300']
+                price_change = hs300.get('change_pct', 0)
+                volume_ratio = hs300.get('volume_ratio', 0)
+
+                if volume_ratio > 0:
+                    if price_change > 0 and volume_ratio > 1.2:
+                        vp_analysis = "✅ **价涨量增** - 多头强势，健康上涨"
+                    elif price_change > 0 and volume_ratio < 0.8:
+                        vp_analysis = "⚠️ **价涨量缩** - 上涨乏力，警惕回调"
+                    elif price_change < 0 and volume_ratio > 1.2:
+                        vp_analysis = "🚨 **价跌量增** - 空头占优，注意风险"
+                    elif price_change < 0 and volume_ratio < 0.8:
+                        vp_analysis = "✅ **价跌量缩** - 抛压减弱，可能企稳"
+                    else:
+                        vp_analysis = "➡️ **量价平衡** - 观望情绪，等待方向"
+
+                    lines.append(f"**沪深300**: {vp_analysis}")
+
+            # 分析创业板
+            if 'CYBZ' in indices:
+                cybz = indices['CYBZ']
+                price_change = cybz.get('change_pct', 0)
+                volume_ratio = cybz.get('volume_ratio', 0)
+
+                if volume_ratio > 0:
+                    if price_change > 0 and volume_ratio > 1.2:
+                        vp_analysis = "✅ **价涨量增** - 多头强势，健康上涨"
+                    elif price_change > 0 and volume_ratio < 0.8:
+                        vp_analysis = "⚠️ **价涨量缩** - 上涨乏力，警惕回调"
+                    elif price_change < 0 and volume_ratio > 1.2:
+                        vp_analysis = "🚨 **价跌量增** - 空头占优，注意风险"
+                    elif price_change < 0 and volume_ratio < 0.8:
+                        vp_analysis = "✅ **价跌量缩** - 抛压减弱，可能企稳"
+                    else:
+                        vp_analysis = "➡️ **量价平衡** - 观望情绪，等待方向"
+
+                    lines.append(f"**创业板指**: {vp_analysis}")
+
+            lines.append("")
+
+            # 基本面数据
+            lines.append("### 💼 市场估值水平")
+            lines.append("")
+            lines.append("| 指数 | PE(TTM) | PB | ROE | 股息率 | 估值评级 |")
+            lines.append("|------|---------|-----|-----|--------|---------|")
+
+            if 'HS300' in indices:
+                hs300 = indices['HS300']
+                pe = hs300.get('pe', 0)
+                pb = hs300.get('pb', 0)
+                roe = hs300.get('roe', 0)
+                dividend_yield = hs300.get('dividend_yield', 0)
+
+                # 估值评级 (基于历史PE区间)
+                if pe > 0:
+                    if pe > 15:
+                        valuation = "🔴 偏高"
+                    elif pe > 12:
+                        valuation = "🟡 合理"
+                    else:
+                        valuation = "🟢 偏低"
+                else:
+                    valuation = "N/A"
+
+                pe_str = f"{pe:.1f}" if pe > 0 else "N/A"
+                pb_str = f"{pb:.2f}" if pb > 0 else "N/A"
+                roe_str = f"{roe:.1f}%" if roe > 0 else "N/A"
+                div_str = f"{dividend_yield:.2f}%" if dividend_yield > 0 else "N/A"
+
+                lines.append(f"| **沪深300** | {pe_str} | {pb_str} | {roe_str} | {div_str} | {valuation} |")
+
+            if 'CYBZ' in indices:
+                cybz = indices['CYBZ']
+                pe = cybz.get('pe', 0)
+                pb = cybz.get('pb', 0)
+                roe = cybz.get('roe', 0)
+                dividend_yield = cybz.get('dividend_yield', 0)
+
+                # 估值评级 (创业板历史PE区间更高)
+                if pe > 0:
+                    if pe > 50:
+                        valuation = "🔴 偏高"
+                    elif pe > 35:
+                        valuation = "🟡 合理"
+                    else:
+                        valuation = "🟢 偏低"
+                else:
+                    valuation = "N/A"
+
+                pe_str = f"{pe:.1f}" if pe > 0 else "N/A"
+                pb_str = f"{pb:.2f}" if pb > 0 else "N/A"
+                roe_str = f"{roe:.1f}%" if roe > 0 else "N/A"
+                div_str = f"{dividend_yield:.2f}%" if dividend_yield > 0 else "N/A"
+
+                lines.append(f"| **创业板指** | {pe_str} | {pb_str} | {roe_str} | {div_str} | {valuation} |")
+
+            lines.append("")
+            lines.append("**估值说明**:")
+            lines.append("- PE(TTM): 市盈率(滚动12个月)")
+            lines.append("- PB: 市净率")
+            lines.append("- ROE: 净资产收益率")
+            lines.append("- 股息率: 年化股息收益率")
             lines.append("")
 
             # 市场状态识别

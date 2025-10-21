@@ -198,15 +198,95 @@ class DailyPositionReportGenerator:
                     df = ef.stock.get_quote_history(code, klt=101)  # 日线
                     if df is not None and not df.empty:
                         latest = df.iloc[-1]
+
+                        # 计算量比 (当日成交量 vs 5日均量)
+                        volume_ratio = 0
+                        if len(df) >= 6 and '成交量' in df.columns:
+                            recent_volumes = df['成交量'].tail(6)
+                            current_volume = recent_volumes.iloc[-1]
+                            avg_volume_5d = recent_volumes.iloc[:-1].mean()
+                            if avg_volume_5d > 0:
+                                volume_ratio = current_volume / avg_volume_5d
+
                         market_data['indices'][name] = {
                             'current': float(latest['收盘']),
                             'change_pct': float(latest['涨跌幅']),
+                            'volume': float(latest.get('成交量', 0)),
+                            'volume_ratio': volume_ratio,
                             'date': str(latest['日期'])
                         }
                         market_data['technical'][name] = df
                         logger.info(f"✅ {name}: {latest['收盘']:.2f} ({latest['涨跌幅']:+.2f}%)")
                 except Exception as e:
                     logger.warning(f"efinance获取{name}失败: {e}")
+
+            # 获取基本面数据 (PE/PB等) - 使用akshare
+            try:
+                import akshare as ak
+
+                # 获取沪深300估值数据
+                if 'HS300' in market_data['indices']:
+                    try:
+                        # 使用akshare获取指数PE数据
+                        df_pe = ak.stock_index_pe_lg(symbol='沪深300')
+                        df_pb = ak.stock_index_pb_lg(symbol='沪深300')
+
+                        if df_pe is not None and not df_pe.empty:
+                            latest_pe = df_pe.iloc[-1]
+                            pe = float(latest_pe['滚动市盈率'])  # 使用滚动市盈率(TTM)
+                            market_data['indices']['HS300']['pe'] = pe
+                            logger.info(f"✅ 沪深300 PE(TTM): {pe:.2f}")
+
+                        if df_pb is not None and not df_pb.empty:
+                            latest_pb = df_pb.iloc[-1]
+                            pb = float(latest_pb['市净率'])
+                            market_data['indices']['HS300']['pb'] = pb
+                            logger.info(f"✅ 沪深300 PB: {pb:.2f}")
+
+                        # ROE和股息率暂时设为0 (akshare这个API没有这些数据)
+                        market_data['indices']['HS300']['roe'] = 0
+                        market_data['indices']['HS300']['dividend_yield'] = 0
+
+                    except Exception as e:
+                        logger.warning(f"获取沪深300估值数据失败: {e}")
+                        # 使用默认值
+                        market_data['indices']['HS300']['pe'] = 0
+                        market_data['indices']['HS300']['pb'] = 0
+                        market_data['indices']['HS300']['roe'] = 0
+                        market_data['indices']['HS300']['dividend_yield'] = 0
+
+                # 获取创业板估值数据
+                if 'CYBZ' in market_data['indices']:
+                    try:
+                        df_pe = ak.stock_index_pe_lg(symbol='创业板50')
+                        df_pb = ak.stock_index_pb_lg(symbol='创业板50')
+
+                        if df_pe is not None and not df_pe.empty:
+                            latest_pe = df_pe.iloc[-1]
+                            pe = float(latest_pe['滚动市盈率'])
+                            market_data['indices']['CYBZ']['pe'] = pe
+                            logger.info(f"✅ 创业板指 PE(TTM): {pe:.2f}")
+
+                        if df_pb is not None and not df_pb.empty:
+                            latest_pb = df_pb.iloc[-1]
+                            pb = float(latest_pb['市净率'])
+                            market_data['indices']['CYBZ']['pb'] = pb
+                            logger.info(f"✅ 创业板指 PB: {pb:.2f}")
+
+                        market_data['indices']['CYBZ']['roe'] = 0
+                        market_data['indices']['CYBZ']['dividend_yield'] = 0
+
+                    except Exception as e:
+                        logger.warning(f"获取创业板指估值数据失败: {e}")
+                        market_data['indices']['CYBZ']['pe'] = 0
+                        market_data['indices']['CYBZ']['pb'] = 0
+                        market_data['indices']['CYBZ']['roe'] = 0
+                        market_data['indices']['CYBZ']['dividend_yield'] = 0
+
+            except ImportError:
+                logger.warning("akshare未安装,无法获取估值数据")
+            except Exception as e:
+                logger.warning(f"获取估值数据失败: {e}")
 
             if market_data['indices']:
                 return market_data

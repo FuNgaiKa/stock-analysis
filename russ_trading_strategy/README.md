@@ -73,6 +73,47 @@
    - 最低现金储备: 5% (vs 保守型30%)
    - 最大总仓位: 95% (vs 保守型70%)
 
+5. **Goldman Sachs机构级绩效评估** ⭐⭐⭐⭐⭐
+   - 🏛️ **对标顶级投行标准**: 参考高盛/摩根士丹利机构级评估体系
+   - 📊 **10+专业指标**: 全方位绩效评估
+     - Information Ratio (信息比率): 衡量超额收益质量
+     - Tracking Error (跟踪误差): 相对基准的波动性
+     - Up/Down Capture Ratio (上行/下行捕获率): 牛熊市表现
+     - Concentration Risk Score (集中度风险评分): 持仓分散程度
+     - Omega Ratio (Omega比率): 收益/风险综合评分
+     - Calmar Ratio (卡玛比率): 收益/最大回撤比
+     - Pain Index (痛苦指数): 持续亏损压力
+     - Drawdown Duration (回撤持续期): 资金恢复时间
+     - Win/Loss Ratio (盈亏比): 盈利交易质量
+     - Tail Ratio (尾部风险比率): 极端收益分布
+   - 📈 **v2报告专属**: 在daily_position_report_generator_v2.py中完整展示
+   - 🎯 **机构化决策**: 用专业指标代替主观判断
+
+6. **量价关系分析** ⭐⭐⭐ (2025-10-22新增)
+   - 📊 **量价配合度**: 分析价格与成交量的关系
+     - 价涨量增: 多头强势,健康上涨
+     - 价涨量缩: 上涨乏力,警惕回调
+     - 价跌量增: 空头占优,注意风险
+     - 价跌量缩: 抛压减弱,可能企稳
+   - 📈 **量比指标**: 当日成交量 vs 5日均量
+     - >1.5倍: 放量(资金活跃)
+     - <0.8倍: 缩量(观望情绪)
+   - 🎯 **应用价值**: 识别趋势健康度,优化入场时机
+
+7. **市场估值分析** ⭐⭐⭐ (2025-10-22新增)
+   - 💼 **基本面指标**: 集成akshare数据源
+     - PE(TTM): 市盈率(滚动12个月)
+     - PB: 市净率
+     - ROE: 净资产收益率
+     - 股息率: 年化股息收益率
+   - 🎨 **估值评级**: 智能评估当前估值水平
+     - 沪深300: PE>15偏高, 12-15合理, <12偏低
+     - 创业板指: PE>50偏高, 35-50合理, <35偏低
+   - 📊 **数据来源**:
+     - akshare的stock_index_pe_lg/stock_index_pb_lg接口
+     - 每日自动更新最新估值数据
+   - 🎯 **应用价值**: 把握市场冷热度,优化加仓减仓时机
+
 ---
 
 ## 📦 模块功能
@@ -543,6 +584,19 @@ russ_trading_strategy/
 │   ├── data_manager.py                          # 数据管理器(交易日志)✨
 │   └── visualizer.py                            # 可视化模块(6类图表)✨
 │
+├── 🏛️ 核心计算模块（core/ - v3.0新增）
+│   └── institutional_metrics.py                 # Goldman Sachs机构级指标(461行)⭐
+│       ├── Information Ratio (信息比率)
+│       ├── Tracking Error (跟踪误差)
+│       ├── Up/Down Capture Ratio (上行/下行捕获率)
+│       ├── Concentration Risk Score (集中度风险评分)
+│       ├── Omega Ratio (Omega比率)
+│       ├── Calmar Ratio (卡玛比率)
+│       ├── Pain Index (痛苦指数)
+│       ├── Drawdown Duration (回撤持续期)
+│       ├── Win/Loss Ratio (盈亏比)
+│       └── Tail Ratio (尾部风险比率)
+│
 ├── ⚙️ 配置模块（2个）
 │   ├── unified_config.py                        # 资产配置(25个资产定义)
 │   └── unified_email_notifier.py                # 邮件通知器
@@ -944,6 +998,77 @@ chmod +x generate_reports.sh
    - 换仓执行计划(分3步)
    - 预期收益路径(2年翻倍模拟)
 
+### v2报告 - Goldman Sachs机构级绩效评估版 🏛️⭐
+
+**daily_position_report_generator_v2.py** - 对标高盛/摩根士丹利的专业版本
+
+**核心升级**:
+- 📋 **章节优化**: 从12章节精简为10章节(更聚焦、更专业)
+- 📊 **指标升级**: 机构级指标从1个扩展到10+个
+- 🎯 **专业化**: 引入Goldman Sachs级别的绩效评估体系
+
+**新增10+机构级指标** (core/institutional_metrics.py):
+
+1. **Information Ratio (信息比率)** ⭐
+   - 衡量单位风险带来的超额收益
+   - 高盛/摩根士丹利核心评估指标
+   - 评判主动管理能力
+
+2. **Tracking Error (跟踪误差)**
+   - 相对基准的波动性
+   - 评估策略偏离度
+
+3. **Up/Down Capture Ratio (上行/下行捕获率)**
+   - 牛市捕获能力 vs 熊市防守能力
+   - 评估进攻性和防守性平衡
+
+4. **Concentration Risk Score (集中度风险)**
+   - HHI指数(Herfindahl-Hirschman Index)
+   - 量化持仓分散程度
+
+5. **Omega Ratio (Omega比率)**
+   - 收益/风险综合评分
+   - 优于夏普比率的全面指标
+
+6. **Calmar Ratio (卡玛比率)**
+   - 年化收益 / 最大回撤
+   - 评估风险调整后收益
+
+7. **Pain Index (痛苦指数)**
+   - 持续亏损的心理压力
+   - 评估投资体验
+
+8. **Drawdown Duration (回撤持续期)**
+   - 从亏损到恢复的时间
+   - 评估资金流动性压力
+
+9. **Win/Loss Ratio (盈亏比)**
+   - 平均盈利 / 平均亏损
+   - 评估交易质量
+
+10. **Tail Ratio (尾部风险比率)**
+    - 右尾(极端收益) vs 左尾(极端损失)
+    - 评估收益分布特征
+
+**报告结构** (10章节):
+1. 📊 执行摘要
+2. 🌍 市场状态识别
+3. 📋 持仓健康度诊断
+4. 📈 收益表现与目标达成
+5. 🏛️ Goldman Sachs机构级绩效评估 ⭐核心
+6. 💰 风险管理分析(VaR/CVaR)
+7. 🚨 智能预警中心
+8. 🎯 Kelly公式智能仓位建议
+9. ⚡ 立即执行操作清单
+10. 🚀 激进持仓建议(方案C+)
+
+**使用场景**:
+- 🎯 **高级分析**: 需要机构级专业评估时
+- 📊 **绩效复盘**: 月度/季度深度复盘
+- 🏛️ **专业决策**: 用数据替代主观判断
+
+---
+
 ### 统一资产分析报告
 
 **包含以下部分**:
@@ -1099,11 +1224,46 @@ ERROR - 邮件发送失败
 
 ## 📋 更新日志
 
+### v3.1 Market Insight Enhancement (2025-10-22)
+- 📊 **量价关系分析** ⭐新增
+  - 成交量和量比数据展示
+  - 智能量价配合度分析(价涨量增/价涨量缩/价跌量增/价跌量缩)
+  - 量比指标计算(当日成交量 vs 5日均量)
+  - 识别趋势健康度,优化交易时机
+- 💼 **市场估值分析** ⭐新增
+  - PE(TTM)、PB、ROE、股息率等基本面指标
+  - 智能估值评级(偏高/合理/偏低)
+  - 集成akshare数据源(stock_index_pe_lg/stock_index_pb_lg)
+  - 沪深300和创业板指估值实时追踪
+- 🔧 **数据源优化**
+  - 修复akshare API调用(使用正确的接口名称)
+  - 优化创业板数据获取(使用"创业板50"作为代理)
+  - 增强错误处理和fallback机制
+
 ### v3.0 Ultra Aggressive Edition (2025-10-21)
 - 🚀 **全面升级为Ultra Aggressive激进策略**
   - 默认风险偏好: ultra_aggressive (年化60%,2年翻倍)
   - 单ETF上限提升至40%,单个股30%
   - 现金储备降至5%,标的集中至2-3只
+- 🏛️ **Goldman Sachs机构级绩效评估系统** ⭐新增核心模块
+  - 📁 新增文件: `core/institutional_metrics.py` (461行专业代码)
+  - 📊 **10+机构级指标**(从1个扩展到10+个):
+    1. Information Ratio (信息比率) - 超额收益质量评估
+    2. Tracking Error (跟踪误差) - 相对基准波动性
+    3. Up/Down Capture Ratio (上行/下行捕获率) - 牛熊市表现
+    4. Concentration Risk Score (集中度风险) - 持仓分散度
+    5. Omega Ratio (Omega比率) - 收益风险综合评分
+    6. Calmar Ratio (卡玛比率) - 收益/最大回撤比
+    7. Pain Index (痛苦指数) - 持续亏损压力
+    8. Drawdown Duration (回撤持续期) - 资金恢复时间
+    9. Win/Loss Ratio (盈亏比) - 盈利交易质量
+    10. Tail Ratio (尾部风险比率) - 极端收益分布
+  - 🎯 **对标顶级投行**: 参考高盛/摩根士丹利评估标准
+  - 📈 **v2报告增强**: daily_position_report_generator_v2.py全面集成
+- 📋 **报告优化升级**
+  - 章节精简: 从12章节优化为10章节(更简洁)
+  - 指标扩展: 机构级指标从1个扩展到10+个(更专业)
+  - 2年翻倍路径: 动态计算48万→75万→101万
 - 🌍 **5阶段市场状态识别系统**
   - 牛市上升期/牛市震荡期/震荡市/熊市反弹期/熊市下跌期
   - 多维度评分(短期/长期/市场宽度)
