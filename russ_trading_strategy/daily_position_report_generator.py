@@ -691,21 +691,43 @@ class DailyPositionReportGenerator:
 
         # ========== 预期效果 ==========
         expected_lines = []
+
+        # 计算减仓总额和目标仓位
+        total_reduction = sum(
+            (p.get('position_ratio', 0) - 0.20) * 100
+            for p in overweight
+        )
+        target_position = current_position_pct - total_reduction
+        target_cash = 100 - target_position
+
+        # 计算现金缺口
+        shortage_pct = 0
+        if cash_ratio < self.thresholds['min_cash_reserve']:
+            shortage_pct = (self.thresholds['min_cash_reserve'] - cash_ratio) * 100
+
+        # 添加资金流向表格
+        expected_lines.append("**资金流向明细**:")
+        expected_lines.append("")
+        expected_lines.append("| 项目 | 当前 | 调整 | 目标 | 说明 |")
+        expected_lines.append("|------|------|------|------|------|")
+        expected_lines.append(f"| **总仓位** | {current_position_pct:.1f}% | -{total_reduction:.1f}% | **{target_position:.1f}%** | 降低集中度风险 |")
+        expected_lines.append(f"| **现金储备** | {cash_ratio*100:.1f}% | +{total_reduction:.1f}% | **{target_cash:.1f}%** | 增强抗风险能力 |")
+
+        if shortage_pct > 0:
+            expected_lines.append(f"|   └─ 补充至安全线 | {cash_ratio*100:.1f}% | +{shortage_pct:.1f}% | {self.thresholds['min_cash_reserve']*100:.0f}% | 应对黑天鹅 |")
+            expected_lines.append(f"|   └─ 进一步降仓 | {self.thresholds['min_cash_reserve']*100:.0f}% | +{total_reduction-shortage_pct:.1f}% | {target_cash:.1f}% | 优化仓位结构 |")
+
+        expected_lines.append("")
         expected_lines.append("**如果按建议执行**:")
         expected_lines.append("")
 
         if overweight:
             expected_lines.append(f"- ✅ 降低集中度风险,组合波动率预计下降{expected_risk_reduction:.1f}%")
 
-        if cash_ratio < self.thresholds['min_cash_reserve']:
-            shortage_pct = (self.thresholds['min_cash_reserve'] - cash_ratio) * 100
-            expected_lines.append(f"- ✅ 现金储备增加{shortage_pct:.1f}%,应对黑天鹅能力增强")
+        if shortage_pct > 0:
+            expected_lines.append(f"- ✅ 现金储备增加{total_reduction:.1f}%,应对黑天鹅能力增强")
 
-        target_position = current_position_pct - sum(
-            (p.get('position_ratio', 0) - 0.20) * 100
-            for p in overweight
-        )
-        expected_lines.append(f"- ✅ 总仓位从{current_position_pct:.1f}%降至约{target_position:.1f}%,进入合理区间")
+        expected_lines.append(f"- ✅ 总仓位从{current_position_pct:.1f}%降至{target_position:.1f}%,进入合理区间")
         expected_lines.append(f"- ✅ 为优质标的预留加仓空间")
         expected_lines.append("")
 
@@ -719,7 +741,7 @@ class DailyPositionReportGenerator:
 
         # 添加通用提醒
         result['checklist'].append("- [ ] ⚠️ 白酒、阿里、三花等小仓位继续持有观察")
-        result['checklist'].append(f"- [ ] 🎯 **仓位目标**: 通过上述操作将总仓位降至85-90%区间")
+        result['checklist'].append(f"- [ ] 🎯 **仓位目标**: 通过上述操作将总仓位降至{target_position:.1f}%,现金增至{target_cash:.1f}%")
 
         return result
 
