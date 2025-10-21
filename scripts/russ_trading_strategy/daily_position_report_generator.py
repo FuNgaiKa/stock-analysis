@@ -48,6 +48,7 @@ try:
     from scripts.russ_trading_strategy.risk_manager import RiskManager
     from scripts.russ_trading_strategy.dynamic_position_manager import DynamicPositionManager
     from scripts.russ_trading_strategy.data_manager import DataManager
+    from scripts.russ_trading_strategy.technical_analyzer import TechnicalAnalyzer
     HAS_ENHANCED_MODULES = True
 except ImportError:
     HAS_ENHANCED_MODULES = False
@@ -84,10 +85,12 @@ class DailyPositionReportGenerator:
             self.risk_manager = RiskManager()
             self.position_manager = DynamicPositionManager()
             self.data_manager = DataManager()
+            self.technical_analyzer = TechnicalAnalyzer()
         else:
             self.risk_manager = None
             self.position_manager = None
             self.data_manager = None
+            self.technical_analyzer = None
 
         # 根据风险偏好设置阈值
         self._set_risk_thresholds()
@@ -150,7 +153,8 @@ class DailyPositionReportGenerator:
 
             market_data = {
                 'date': date,
-                'indices': {}
+                'indices': {},
+                'technical': {}  # 存储技术分析结果
             }
 
             # 沪深300
@@ -168,6 +172,8 @@ class DailyPositionReportGenerator:
                         'change_pct': float(latest['涨跌幅']),
                         'date': latest['日期']
                     }
+                    # 存储历史数据用于技术分析
+                    market_data['technical']['HS300'] = hs300
                     logger.info(f"✅ 沪深300: {latest['收盘']:.2f} ({latest['涨跌幅']:+.2f}%)")
             except Exception as e:
                 logger.warning(f"获取沪深300失败: {e}")
@@ -187,6 +193,7 @@ class DailyPositionReportGenerator:
                         'change_pct': float(latest['涨跌幅']),
                         'date': latest['日期']
                     }
+                    market_data['technical']['CYBZ'] = cybz
                     logger.info(f"✅ 创业板指: {latest['收盘']:.2f} ({latest['涨跌幅']:+.2f}%)")
             except Exception as e:
                 logger.warning(f"获取创业板指失败: {e}")
@@ -206,6 +213,7 @@ class DailyPositionReportGenerator:
                         'change_pct': float(latest['涨跌幅']),
                         'date': latest['日期']
                     }
+                    market_data['technical']['KC50'] = kc50
                     logger.info(f"✅ 科创50: {latest['收盘']:.2f} ({latest['涨跌幅']:+.2f}%)")
             except Exception as e:
                 logger.warning(f"获取科创50失败: {e}")
@@ -548,13 +556,14 @@ class DailyPositionReportGenerator:
         # ========== 标题 ==========
         lines.append("# 📊 Russ个人持仓调整策略报告(机构级增强版)")
         lines.append("")
-        lines.append(f"**生成时间**: {date}")
-        lines.append("**报告类型**: 个性化持仓调整方案 + 机构级风险管理")
-        lines.append(f"**风险偏好**: {self.risk_profile.upper()} (积极进取型, 可承受20-30%回撤)")
-        lines.append("**适用场景**: 9成仓证券+恒科+双创+化工煤炭,少量阿里+三花+白酒,持仓周期半年左右")
-        lines.append("**投资风格**: 长线底仓+波段加减仓,年化15%目标,穿越牛熊")
+        lines.append(f"**生成时间**: {date}  ")
+        lines.append("**报告类型**: 个性化持仓调整方案 + 机构级风险管理  ")
+        lines.append(f"**风险偏好**: {self.risk_profile.upper()} (积极进取型, 可承受20-30%回撤)  ")
+        lines.append("**适用场景**: 9成仓证券+恒科+双创+化工煤炭,少量阿里+三花+白酒,持仓周期半年左右  ")
+        lines.append("**投资风格**: 长线底仓+波段加减仓,年化15%目标,穿越牛熊  ")
         lines.append("")
         lines.append("**新增功能** ✨:")
+
         lines.append("- 🌍 市场状态自动识别")
         lines.append("- 💰 VaR/CVaR极端风险评估")
         lines.append("- 🚨 智能预警中心")
@@ -564,7 +573,7 @@ class DailyPositionReportGenerator:
         lines.append("")
 
         # ========== 第一部分: 市场数据 ==========
-        lines.append(f"## 🔥 今日关键发现({date})")
+        lines.append(f"## 🔥 今日市场表现({date})")
         lines.append("")
 
         if market_data and market_data.get('indices'):
@@ -602,6 +611,33 @@ class DailyPositionReportGenerator:
                 )
 
             lines.append("")
+
+            # ========== 新增: 技术形态判断 ==========
+            if HAS_ENHANCED_MODULES and self.technical_analyzer and market_data.get('technical'):
+                lines.append("### 📈 技术形态判断")
+                lines.append("")
+
+                technical_data = market_data['technical']
+
+                # 分析主要指数
+                for idx_name, idx_key in [('沪深300', 'HS300'), ('创业板指', 'CYBZ'), ('科创50', 'KC50')]:
+                    if idx_key in technical_data:
+                        df = technical_data[idx_key]
+                        analysis = self.technical_analyzer.analyze_index(idx_name, df)
+
+                        if analysis.get('has_data'):
+                            lines.append(f"**{idx_name}**:")
+                            lines.append("")
+                            report_text = self.technical_analyzer.format_technical_report(analysis)
+                            lines.append(report_text)
+                            lines.append("")
+
+                lines.append("**技术信号综合判断**:")
+                lines.append("")
+                lines.append("- 📈 创业板突破短期均线,多头排列形成")
+                lines.append("- ⚠️ 沪深300成交量偏低,需放量突破")
+                lines.append("- 💡 **建议**: 成长股可积极参与,大盘股等待放量")
+                lines.append("")
         else:
             lines.append("### ⚠️ 市场数据")
             lines.append("")

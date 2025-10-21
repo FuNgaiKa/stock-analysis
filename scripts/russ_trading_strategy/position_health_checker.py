@@ -264,9 +264,7 @@ class PositionHealthChecker:
         """生成Markdown格式的健康度报告"""
         lines = []
 
-        # 标题
-        lines.append("## 📊 持仓健康度检查")
-        lines.append("")
+        # 标题(不要重复,外层已有"持仓健康度诊断")
         lines.append(f"**检查时间**: {result['check_time']}")
         lines.append("")
 
