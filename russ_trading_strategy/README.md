@@ -1,481 +1,1203 @@
-# 📊 统一资产分析工具
+# 📊 Russ个人交易策略系统(机构级增强版)
 
-> ⚠️ **文档状态**: 本文档为旧版说明，建议查看以下最新文档:
-> - 📖 **主文档**: [README_RUSS.md](./README_RUSS.md)
-> - 🚀 **快速开始**: [快速开始.md](./快速开始.md)
-> - 📊 **机构级增强**: [机构化分析增强方案.md](./机构化分析增强方案.md)
-> - 📝 **实施总结**: [实施完成总结.md](./实施完成总结.md)
+> **专属个人投资策略管理系统** - 整合仓位管理、收益追踪、风险分析和智能预警
+>
+> **版本**: v3.0 Ultra Aggressive Edition (激进翻倍版)
+> **最后更新**: 2025-10-21
+> **系统状态**: ✅ 生产就绪
 
 ---
 
-一次运行分析所有标的(指数、板块、个股)
+## 🎯 系统概述
 
-整合了 `comprehensive_asset_analysis` 和 `sector_analysis` 的所有功能。
+这是一个完整的个人投资策略管理系统,基于你的投资理念和**超激进型风险偏好(Ultra Aggressive)**设计。
 
-## ✨ 特性
+### 核心策略原则(Ultra Aggressive版)
+- 🎯 **收益目标**: 年化60%,2年翻倍(48万→100万+)
+- 💼 **仓位管理**: 80-95%重仓进攻,仅留5%现金应急
+- 🔥 **标的选择**: 极致集中2-3只,单一标的≤40%
+- 📈 **投资节奏**: 重仓科技底仓 + 波段高抛低吸
+- ⚠️ **风险承受**: 25-30%最大回撤(超激进型)
 
-- 🎯 **统一配置**: 所有资产在一个配置文件中管理
-- 🚀 **一键运行**: 一次运行获取所有资产分析报告
-- 📈 **多类资产**: 支持指数、ETF、个股、商品、加密货币
-- 📄 **多种格式**: 支持 Markdown 和文本格式报告
-- 🔧 **灵活筛选**: 可以选择分析特定资产或全部资产
+> ⚠️ **风险提示**: 此策略为极高风险配置,仅适合能承受高波动的激进投资者
 
-## 📦 支持的资产类型
+### 收益目标
 
-### 指数类 (7个)
-- 📈 **四大科技指数**: 创业板指、科创50、恒生科技、纳斯达克
-- 📊 **宽基指数**: 沪深300
-- 🏆 **大宗商品**: 黄金
-- 💰 **加密货币**: 比特币
+**Ultra Aggressive目标**: 年化60%,2年翻倍
 
-### 板块ETF类 (16个)
-- 💊 **医疗健康**: 港股创新药
-- 🔋 **新能源**: 港股电池
-- 🧪 **化工**: A股化工
-- ⛏️ **煤炭**: A股煤炭
-- 🍷 **消费**: A股白酒
-- 💼 **金融**: A股证券、A股银行、A股保险
-- 🎮 **传媒娱乐**: A股游戏、A股传媒
-- 💻 **科技**: A股半导体、A股软件
-- 🏗️ **材料**: A股钢铁、A股有色金属、A股稀土
+**三大目标**(到2026年底,按优先级排序):
+1. 🥇 **资金达到100万** (当前48万,需+108%)
+2. 🥈 **跑赢沪深300** (从2025.1.1起计算)
+3. 🥉 **资金翻倍**/100%涨幅 (48万→96万+)
 
-### 个股类 (3个)
-- 🏭 **先进制造**: 三花智控
-- 💻 **科技**: 阿里巴巴(港股)、指南针
+**实现路径**: 方案C+(科技75%+周期20%+现金5%)
+- 2025年: 48万 × 1.57 = 75万
+- 2026年: 75万 × 1.35 = 101万 ✅
 
-**总计**: 25 个资产
+---
+
+## ✨ 最新功能(2025-10-21更新)
+
+### 🆕 机构级专业分析
+
+1. **VaR/CVaR风险值分析** ⭐⭐⭐
+   - 单日VaR(95%): 预测单日最大可能亏损
+   - 单日CVaR: 极端情况下的平均损失
+   - 20日VaR: 未来20个交易日风险评估
+   - 现金缓冲评估: 是否有足够现金应对黑天鹅
+
+2. **市场状态自动识别(多维度增强版)** ⭐⭐⭐⭐
+   - **细分市场阶段**: 区分牛市上升期、牛市震荡期、震荡市、熊市反弹期、熊市下跌期
+   - **多维度判断**:
+     - 短期趋势: 当日平均涨跌幅分析
+     - 长期趋势: 年初至今累计涨幅(基于2025-01-01基准)
+     - 市场宽度: 主要指数共振情况(普涨/普跌/分化)
+   - **智能仓位建议**:
+     - 牛市上升期: 70%-90% (符合你的7-9层仓策略)
+     - 牛市震荡期: 60%-80%
+     - 震荡市: 50%-70%
+     - 熊市反弹期: 40%-60%
+     - 熊市下跌期: 30%-50%
+   - **详细分析报告**: 展示综合评分、各维度评分、置信度等
+
+3. **智能预警中心** ⭐⭐⭐
+   - 🔴 紧急预警: 需要立即处理的风险
+   - 🟡 关注预警: 3日内需要处理的问题
+   - 🟢 正常监控: 一切正常的提示
+   - 自动检测仓位超标、现金不足等风险
+
+4. **动态风险阈值(Ultra Aggressive)** ⭐⭐
+   - 根据你的风险偏好(ultra_aggressive)定制
+   - 最大回撤警戒线: 30% (vs 保守型10%)
+   - 单标的仓位上限: 40% (vs 保守型15%)
+   - 最低现金储备: 5% (vs 保守型30%)
+   - 最大总仓位: 95% (vs 保守型70%)
+
+---
+
+## 📦 模块功能
+
+### 1. 持仓激进度检查 (`position_health_checker.py`)
+**功能**:检查持仓是否符合Ultra Aggressive策略规则
+
+**检查项(Ultra Aggressive标准)**:
+- ✅ 总仓位是否在80-95%区间
+- ✅ 现金预留是否≥5%
+- ✅ 单一ETF是否≤40%
+- ✅ 单一个股是否≤30%
+- ✅ 标的数量是否为2-3只
+- ✅ 科技占比是否≥70%
+
+**输出**:
+- 激进度评分(0-100分)
+- 激进等级(优秀/良好/尚可/保守)
+- 具体问题和激进化建议
+
+---
+
+### 2. 收益追踪对比 (`performance_tracker.py`)
+**功能**:追踪投资收益并与基准对比
+
+**追踪指标**:
+- 总收益率和年化收益率(Ultra Aggressive目标60%)
+- 与沪深300对比(超额收益)
+- 阶段性目标进度(48万→75万→100万)
+- 2年翻倍目标进度(48万→100万+,108%涨幅)
+- 三大目标达成情况
+
+**输出**:
+- 收益概况表
+- 基准对比表
+- 阶段目标完成度
+- 激进化优化建议
+
+---
+
+### 3. 潜在空间评估 (`potential_analyzer.py`)
+**功能**:基于历史牛市数据评估上涨潜力
+
+**历史数据库**:
+- 沪深300: 历史涨幅1.69-4.82倍
+- 创业板: 历史涨幅1.97-3.33倍
+- 科创50: 历史涨幅1.7-2.5倍
+
+**评估场景**:
+- 保守场景:基于历史最低涨幅
+- 平均场景:基于历史平均涨幅
+- 乐观场景:基于历史最高涨幅
+
+**输出**:
+- 各场景目标点位和上涨空间
+- 风险收益比评估
+- 投资价值判断
+- 资产对比排名
+
+---
+
+### 4. 月度计划生成器 (`monthly_plan_generator.py`)
+**功能**:生成月度投资计划
+
+**输入数据**:
+- 大盘数据(市场走势、技术面、资金面)
+- 博主观点(雪球、公众号等)
+- 机构数据(券商研报、基金持仓)
+- 当前持仓情况
+
+**输出内容**:
+- 市场评估和综合判断
+- 仓位调整策略
+- 资产配置建议
+- 具体行动清单(按优先级)
+- 风险提示和投资机会
+- 月度目标和复盘清单
+
+---
+
+### 5. 风险管理器 (`risk_manager.py`) **[新增]**
+**功能**:全面的风险评估和监控
+
+**风险指标**:
+- 最大回撤(Maximum Drawdown)
+- 波动率(Volatility)
+- 夏普比率(Sharpe Ratio)
+- Sortino比率
+- Calmar比率
+- VaR (Value at Risk)
+- Beta系数
+- 信息比率(Information Ratio)
+- 相关性矩阵
+- 止损检查
+
+**输出**:
+- 完整风险报告
+- 风险评级和警告
+- 风险控制建议
+
+---
+
+### 6. 动态仓位管理器 (`dynamic_position_manager.py`) **[新增]**
+**功能**:智能仓位调整建议
+
+**核心算法**:
+- Kelly公式(最优仓位计算)
+- 波动率目标法
+- 市场环境识别(牛市/熊市/震荡)
+- 风险平价模型
+
+**输出**:
+- 综合仓位建议
+- 多策略对比
+- 动态调仓方案
+
+---
+
+### 7. 增强版回测引擎 (`backtest_engine_enhanced.py`) **[新增]**
+**功能**:历史回测和压力测试
+
+**核心功能**:
+- 简单回测
+- 压力测试(市场崩盘、熊市等场景)
+- 蒙特卡洛模拟
+- 敏感性分析
+- 多场景回测
+
+**输出**:
+- 回测结果报告
+- 压力测试结果
+- 模拟统计分析
+
+---
+
+### 8. 数据管理器 (`data_manager.py`) **[新增]**
+**功能**:统一数据接口和交易日志
+
+**核心功能**:
+- 交易记录管理
+- 持仓快照跟踪
+- 权益曲线记录
+- CSV导出功能
+
+**输出**:
+- 汇总报告
+- 交易统计
+- 历史数据查询
+
+---
+
+### 9. 可视化模块 (`visualizer.py`) **[新增]**
+**功能**:生成各类图表
+
+**图表类型**:
+- 权益曲线图
+- 回撤分析图
+- 收益率分布图
+- 相关性热力图
+- 月度收益热力图
+- 综合仪表盘
+
+**输出**:
+- 高清PNG图表
+- 多维度可视化分析
+
+---
 
 ## 🚀 快速开始
 
-### 1. 列出所有可用资产
+### 基础用法
 
 ```bash
-python scripts/unified_analysis/run_unified_analysis.py --list
+# 进入目录
+cd /Users/russ/PycharmProjects/stock-analysis/scripts/russ_trading_strategy
+
+# 查看帮助
+python russ_strategy_runner.py --help
 ```
 
-### 2. 分析所有资产
-
-```bash
-python scripts/unified_analysis/run_unified_analysis.py
-```
-
-### 3. 分析指定资产
-
-```bash
-# 只分析创业板指和港股创新药
-python scripts/unified_analysis/run_unified_analysis.py --assets CYBZ HK_BIOTECH
-
-# 分析多个资产
-python scripts/unified_analysis/run_unified_analysis.py --assets CYBZ NASDAQ HK_BIOTECH CN_SEMICONDUCTOR SANHUA_A
-```
-
-### 4. 保存报告到文件
-
-```bash
-# 保存为 Markdown 格式
-python scripts/unified_analysis/run_unified_analysis.py --save reports/unified_report.md
-
-# 保存为文本格式
-python scripts/unified_analysis/run_unified_analysis.py --format text --save reports/unified_report.txt
-```
-
-### 5. 发送邮件报告
-
-```bash
-# 分析并发送邮件到配置的所有收件人
-python scripts/unified_analysis/run_unified_analysis.py --email
-
-# 分析、保存并发送邮件
-python scripts/unified_analysis/run_unified_analysis.py --save reports/report.md --email
-```
-
-### 6. 显示详细日志
-
-```bash
-python scripts/unified_analysis/run_unified_analysis.py --verbose
-```
-
-## 📧 邮件配置
-
-### 配置文件位置
-
-`config/email_config.yaml`
-
-### 配置示例
-
-```yaml
-# SMTP 服务器配置
-smtp:
-  server: smtp.qq.com
-  port: 465
-
-# 发件人信息
-sender:
-  email: your_email@qq.com
-  password: your_auth_code  # QQ邮箱授权码
-  name: 科技指数分析系统
-
-# 收件人列表
-recipients:
-  - user1@qq.com
-  - user2@foxmail.com
-  - user3@qq.com
-```
-
-### 临时修改收件人
-
-**方式1: 注释不需要的收件人 (推荐)**
-
-如果只想发送给部分收件人,可以临时注释掉其他收件人:
-
-```yaml
-recipients:
-  # - user1@qq.com      # 临时不发送
-  # - user2@foxmail.com # 临时不发送
-  - user3@qq.com        # 只发送给这个
-```
-
-**方式2: 创建临时配置文件**
-
-复制一份配置文件,只保留需要的收件人:
-
-```bash
-cp config/email_config.yaml config/email_config_temp.yaml
-# 编辑 email_config_temp.yaml,只保留需要的收件人
-# 然后在代码中指定使用临时配置
-```
-
-**注意事项:**
-
-1. 邮件会发送给配置文件中**所有未注释的收件人**
-2. 每个收件人会单独收到一封邮件(独立SMTP连接)
-3. 部分发送失败不影响其他收件人
-4. 发送完成后建议恢复配置文件的原始状态
-
-## 📝 配置文件
-
-所有资产配置在 `unified_config.py` 中:
-
-```python
-UNIFIED_ASSETS = {
-    'CYBZ': {
-        'type': 'index',
-        'analyzer_type': 'comprehensive',
-        'market': 'CN',
-        'name': '创业板指',
-        'code': 'CYBZ',
-        'category': 'tech_index',
-        'description': 'A股创业板指数，科技成长股聚集地'
-    },
-    # ... 更多资产配置
-}
-```
-
-### 字段说明
-
-- `type`: 资产类型 (`index`/`etf`/`stock`/`commodity`/`crypto`)
-- `analyzer_type`: 分析器类型 (`comprehensive`/`sector`)
-- `market`: 市场 (`CN`/`HK`/`US`)
-- `name`: 资产名称
-- `code`: 资产代码
-- `category`: 分类标签
-- `description`: 描述信息
-- `symbols`: (ETF/个股专用) 标的代码列表
-- `weights`: (ETF专用) 权重配置
-
-## 🔧 添加新资产
-
-在 `unified_config.py` 的 `UNIFIED_ASSETS` 字典中添加新配置:
-
-```python
-'NEW_ASSET': {
-    'type': 'etf',
-    'analyzer_type': 'sector',
-    'market': 'CN',
-    'name': '新板块',
-    'symbols': ['512xxx'],
-    'weights': None,
-    'category': 'tech',
-    'description': '新板块描述'
-},
-```
-
-## 📊 报告格式
-
-### Markdown 格式 (默认)
-
-```bash
-python scripts/unified_analysis/run_unified_analysis.py --format markdown
-```
-
-生成带 emoji 的美观 Markdown 报告,适合阅读和分享。
-
-### 文本格式
-
-```bash
-python scripts/unified_analysis/run_unified_analysis.py --format text
-```
-
-生成纯文本报告,适合命令行查看。
-
-## 🛠️ 技术架构
-
-```
-unified_analysis/
-├── unified_config.py         # 统一资产配置
-├── run_unified_analysis.py   # 统一运行脚本
-├── __init__.py               # 模块初始化
-└── README.md                 # 本文档
-```
-
-### 分析器集成
-
-- **ComprehensiveAssetReporter**: 分析指数、商品、加密货币
-  - 来源: `scripts/comprehensive_asset_analysis/asset_reporter.py`
-  - 特点: 11维度深度分析
-
-- **SectorReporter**: 分析板块ETF和个股
-  - 来源: `scripts/sector_analysis/sector_reporter.py`
-  - 特点: 灵活的数据源切换,支持个股和板块分析
+---
 
 ## 📖 使用示例
 
-### 示例1: 分析科技板块
+### 示例1: 生成完整策略报告
 
 ```bash
-python scripts/unified_analysis/run_unified_analysis.py \
-    --assets CYBZ KECHUANG50 HKTECH NASDAQ CN_SEMICONDUCTOR \
-    --save reports/tech_analysis.md
+python russ_strategy_runner.py \
+    --full-report \
+    --positions data/positions.json \
+    --capital 550000 \
+    --hs300 4538 \
+    --save reports/russ_strategy_20251020.md
 ```
 
-### 示例2: 分析个股
+**positions.json 示例**:
+```json
+[
+    {
+        "asset_name": "证券ETF",
+        "asset_key": "CN_SECURITIES",
+        "position_ratio": 0.40,
+        "current_value": 200000
+    },
+    {
+        "asset_name": "恒生科技",
+        "asset_key": "HKTECH",
+        "position_ratio": 0.30,
+        "current_value": 150000
+    },
+    {
+        "asset_name": "煤炭ETF",
+        "asset_key": "CN_COAL",
+        "position_ratio": 0.15,
+        "current_value": 75000
+    },
+    {
+        "asset_name": "白酒ETF",
+        "asset_key": "CN_LIQUOR",
+        "position_ratio": 0.08,
+        "current_value": 40000
+    }
+]
+```
+
+---
+
+### 示例2: 持仓激进度检查(Ultra Aggressive)
 
 ```bash
-python scripts/unified_analysis/run_unified_analysis.py \
-    --assets SANHUA_A BABA_HK \
-    --format markdown \
-    --save reports/stocks_analysis.md
+python russ_strategy_runner.py \
+    --health-check \
+    --positions data/positions.json
 ```
 
-### 示例3: 分析金融板块
-
-```bash
-python scripts/unified_analysis/run_unified_analysis.py \
-    --assets CN_SECURITIES CN_BANK CN_INSURANCE \
-    --save reports/finance_analysis.md
-```
-
-## ⚠️ 注意事项
-
-1. **数据源依赖**:
-   - A股数据使用 akshare
-   - 港股数据使用 yfinance
-   - 美股数据使用 yfinance
-
-2. **网络要求**: 需要网络连接获取实时数据
-
-3. **运行时间**: 分析所有资产可能需要几分钟时间
-
-4. **错误处理**: 单个资产分析失败不影响其他资产
-
-## 🔄 与原有模块的关系
-
-- ✅ **兼容**: 不影响原有的 `comprehensive_asset_analysis` 和 `sector_analysis` 模块
-- ✅ **复用**: 直接调用原有模块的分析器,无需重复实现
-- ✅ **扩展**: 可以轻松添加新的资产和分析器
-
-## 📄 许可证
-
-本项目遵循 MIT 许可证。
-
-## 👨‍💻 作者
-
-Claude Code
-
-## 📊 每日自动更新持仓调整建议
-
-### 功能说明
-
-本工具可以配合 Claude 每日自动更新持仓调整建议文档,无需编写复杂的自动化脚本。
-
-### 工作流程
-
-**方案**: 混合模式(推荐) 🎯
-
-1. **每天自动邮件** ✅ (已有功能)
-   - 每天运行 `run_unified_analysis.py --email`
-   - 自动分析25个资产的最新数据
-   - 自动发送到邮箱
-
-2. **持仓调整文档由 Claude 更新** ✅ (更灵活)
-   - 你每天给 Claude 一个简单命令:
-     - "更新持仓文档"
-     - 或者使用快捷命令
-   - Claude 会:
-     - 运行统一分析获取最新数据
-     - 提取关键指标变化
-     - 对比预测验证准确性
-     - 分析市场动态
-     - 更新操作建议
-     - 自动 commit 并 push (需要你的许可)
-
-3. **重大事件主动提醒** 🔔 (可选)
-   - 如果出现以下情况,Claude 会特别提醒:
-     - 创业板单日涨跌超过3%
-     - 恒科突破关键点位(6000点)
-     - RSI超买超卖极值
-     - 预测准确率异常
-
-### 每日使用方法
-
-#### 方法1: 直接让 Claude 更新(最简单)
-
-每天对 Claude 说:
-```
-更新持仓文档
-```
-
-或者更详细:
-```
-帮我更新今天的持仓调整建议,包括:
-1. 最新市场数据
-2. 验证之前的预测
-3. 更新操作建议
-```
-
-#### 方法2: 运行分析脚本后让 Claude 解读
-
-```bash
-# 先运行统一分析
-python scripts/unified_analysis/run_unified_analysis.py
-
-# 然后让 Claude 分析结果并更新文档
-```
-
-### Claude 每日更新的内容
-
-1. **关键指标对比**
-   - 对比昨日 vs 今日价格变化
-   - 验证之前的预测是否准确
-
-2. **市场动态分析**
-   - 创业板、恒科、纳斯达克等核心指数走势
-   - 证券、煤炭等关键板块表现
-   - 市场情绪变化(恐慌指数等)
-
-3. **预测验证**
-   - 验证之前预测的底部是否成立
-   - 验证止盈止损点位是否触发
-   - 更新准确率统计
-
-4. **操作建议更新**
-   - 基于最新数据更新加仓减仓建议
-   - 更新止盈止损提醒
-   - 调整优先级排序
-
-5. **风险提示**
-   - 新出现的风险点
-   - 需要注意的技术信号
-
-### 示例:10月20日更新
-
-**输入**: "更新持仓文档"
-
-**Claude 输出**:
+**输出示例**:
 ```markdown
-## 🔥 10月20日最新市场动态
+## 📊 持仓激进度检查(Ultra Aggressive)
 
-**核心发现**: 10月17日触底后,10月20日市场强势反弹!
+**检查时间**: 2025-10-21 22:50
 
-| 指数 | 10月17日 | 10月20日 | 变化 | 验证结论 |
-|------|---------|---------|------|---------|
-| 创业板指 | 2935.37 | 2993.45 | +58点 (+1.98%) | ✅ 底部确认! |
-| 恒生科技 | 5.74 | 5.91 | +2.87% | ✅ 反弹开始! |
-| 煤炭 | 1.17 | 1.22 | +4.19% | 🚨 立即止盈! |
+### 🟡 激进度评分: 70.0分 (尚可)
 
-### 🎯 预测验证
-- ✅ 创业板2935点底部预测100%准确
-- ✅ 证券板块弱势判断准确
-- ✅ 煤炭止盈时机已到
+### 持仓概况
 
-### ⚠️ 今日操作建议
-1. 🔥 煤炭立即止盈1.24
-2. ⚠️ 证券反弹减仓良机
-3. ✅ 创业板反弹验证底部
+- **总仓位**: 93.0%
+- **现金预留**: 7.0%
+- **标的数量**: 5只
+
+### 检查结果(Ultra Aggressive标准)
+
+- ✅ 总仓位93.0%符合激进要求(80-95%)
+- ✅ 现金预留7.0%符合激进要求(5-10%)
+- ❌ 科技仓位28.0%严重不足(应≥70%)
+- ⚠️ 防守品种45.0%拖累进攻性(应≤20%)
+- ⚠️ 持仓标的数量5只偏多(建议2-3只)
+
+### 💡 激进化建议
+
+- 大幅增加科技仓位至70%以上(恒科+创业板+科创50)
+- 逐步清理防守品种(证券ETF、白酒ETF)
+- 集中到2-3只核心标的
+- 参考方案C+: 科技75% + 周期20% + 现金5%
 ```
 
-### 优势
+---
 
-1. **灵活性** ✅
-   - 可根据突发事件调整
-   - 加入人工判断,不是机械执行
-   - 考虑市场情绪、政策等非量化因素
+### 示例3: 收益追踪对比(Ultra Aggressive目标)
 
-2. **快速启动** ✅
-   - 无需开发自动化脚本
-   - 立即可用
+```bash
+python russ_strategy_runner.py \
+    --performance \
+    --capital 480000 \
+    --hs300 4607.87
+```
 
-3. **高准确率** ✅
-   - Claude 会深度分析数据
-   - 验证预测准确性
-   - 提供有价值的洞察
+**输出示例**:
+```markdown
+## 📈 收益追踪对比(Ultra Aggressive)
 
-4. **节省时间** ✅
-   - 每天只需一句话
-   - 自动提取关键信息
-   - 自动生成更新文档
+**追踪日期**: 2025-10-21
+**基准日期**: 2025-01-01 (已运行294天/0.81年)
 
-### 未来扩展(可选)
+### 收益概况
 
-如果需要完全自动化,可以开发:
+- **初始资金**: ¥480,000
+- **当前资金**: ¥480,000
+- **总收益率**: 0.00%
+- **年化收益率**: 0.00%
+- **Ultra Aggressive目标年化**: 60% ⚠️
+
+### 📊 基准对比(沪深300)
+
+| 指标 | 我的收益 | 沪深300 | 超额收益 |
+|------|---------|---------|---------|
+| 总收益率 | 0.00% | 46.51% | -46.51% |
+
+⚠️ **严重落后沪深300约46.51%**
+
+### 🎯 三大目标达成情况(Ultra Aggressive)
+
+#### 🥇 目标1: 资金达到100万(最优先)
+- 当前进度: 48.0%
+- 还需: ¥520,000 (52.0万)
+- **2年路径**: 48万→75万(2025)→101万(2026)
+
+#### ❌ 目标2: 跑赢沪深300(次优先)
+- 落后幅度: -46.51%
+
+#### 🔄 目标3: 资金翻倍108%(第三优先)
+- 当前进度: 48.0%
+- 翻倍目标: ¥998,400 (48万×2.08)
+- 还需: ¥518,400 (51.8万)
+```
+
+---
+
+### 示例4: 潜在空间评估
+
+```bash
+python russ_strategy_runner.py \
+    --potential \
+    --assets CYBZ,HS300,KECHUANG50 \
+    --prices '{"CYBZ": 2993, "HS300": 4538, "KECHUANG50": 1368}'
+```
+
+**输出示例**:
+```markdown
+## 🚀 潜在空间对比评估
+
+**分析日期**: 2025-10-20
+**场景**: average (平均场景)
+
+### 📊 上涨空间排名
+
+| 排名 | 指数 | 当前点位 | 目标点位 | 上涨空间 |
+|------|------|---------|---------|---------|
+| 🥇 | 创业板指 | 2993 | 7932 | **165.1%** |
+| 🥈 | 沪深300 | 4538 | 13750 | **203.0%** |
+| 🥉 | 科创50 | 1368 | 2326 | **70.0%** |
+
+### 📈 各指数详细分析
+
+#### 创业板指
+- **当前点位**: 2993
+- **相对年初**: +45.29%
+- **目标点位**: 7932
+- **上涨空间**: 165.1%
+- **建议**: ✅ 创业板具备翻倍潜力,适合作为核心配置
+
+#### 沪深300
+- **当前点位**: 4538
+- **相对年初**: +44.32%
+- **目标点位**: 13750
+- **上涨空间**: 203.0%
+- **建议**: 💡 沪深300作为大盘基准,适合作为底仓配置
+```
+
+---
+
+### 示例5: 生成月度计划
+
+首先准备市场数据文件 `market_data.json`:
+
+```json
+{
+    "market_sentiment": "bullish",
+    "trend": "uptrend",
+    "fear_greed_index": 65,
+    "indices": {
+        "HS300": {
+            "name": "沪深300",
+            "current": 4538,
+            "change_pct": "+0.53%",
+            "judgment": "企稳"
+        },
+        "CYBZ": {
+            "name": "创业板指",
+            "current": 2993,
+            "change_pct": "+1.98%",
+            "judgment": "底部反弹,可加仓"
+        },
+        "KECHUANG50": {
+            "name": "科创50",
+            "current": 1368,
+            "change_pct": "+0.35%",
+            "judgment": "震荡"
+        }
+    }
+}
+```
+
+运行命令:
+
+```bash
+python russ_strategy_runner.py \
+    --monthly-plan \
+    --month 2025-11 \
+    --market-data data/market_data.json \
+    --positions data/positions.json \
+    --save reports/monthly_plan_2025-11.md
+```
+
+**输出包含**:
+- 📊 市场评估(情绪、趋势、综合判断)
+- 🎯 仓位策略(当前仓位、目标区间、调整建议)
+- 💼 资产配置建议(推荐配置、建议减仓)
+- ✅ 本月行动清单(按优先级分类)
+- ⚠️ 风险提示
+- 💡 投资机会
+- 🎯 月度目标(收益目标、操作目标、纪律目标)
+- 📋 月末复盘清单
+
+---
+
+## 🛠️ 配置说明
+
+系统默认使用**Ultra Aggressive**配置,也可以通过修改代码自定义:
 
 ```python
-# scripts/update_position_report.py
-"""
-每日持仓调整建议更新脚本
-使用方式: python scripts/update_position_report.py
-"""
-
-def main():
-    # 1. 运行统一分析获取最新数据
-    run_unified_analysis()
-
-    # 2. 提取关键指标
-    data = extract_key_metrics()
-
-    # 3. 生成更新内容
-    update_content = generate_update(data)
-
-    # 4. 更新文档
-    update_markdown(update_content)
-
-    # 5. Git commit & push
-    git_commit_and_push()
-
-    print("✅ 持仓调整建议已更新!")
+config = {
+    'strategy': {
+        'min_position': 0.80,           # 最小仓位80% (Ultra Aggressive)
+        'max_position': 0.95,           # 最大仓位95% (Ultra Aggressive)
+        'max_single_position_etf': 0.40,    # 单一ETF最大40% (Ultra Aggressive)
+        'max_single_position_stock': 0.30,  # 单一个股最大30% (Ultra Aggressive)
+        'black_swan_reserve': 0.05,     # 黑天鹅预留5% (Ultra Aggressive)
+        'min_assets': 2,                # 最少2只 (Ultra Aggressive)
+        'max_assets': 3,                # 最多3只 (Ultra Aggressive)
+        'target_annual_return': 0.60,   # 年化60% (Ultra Aggressive)
+        'risk_preference': 'ultra_aggressive'   # 风险偏好
+    },
+    'targets': {
+        'stage_targets': [480000, 750000, 1000000],  # 阶段目标(Ultra Aggressive)
+        'base_date': '2025-01-01',                   # 基准日期
+        'initial_capital': 480000,                   # 初始资金
+        'target_annual_return': 0.60                 # 年化60%
+    },
+    'benchmarks': {
+        'hs300_base': 3145.0,      # 沪深300基准点位(2025.1.1)
+        'cybz_base': 2060.0,       # 创业板基准点位
+        'kechuang50_base': 955.0   # 科创50基准点位
+    }
+}
 ```
 
-但目前推荐使用 Claude 手动更新,因为:
-- 更灵活
-- 更准确
-- 可以加入人工判断
-- 快速启动
+---
 
-## 📅 更新日志
+## 📁 目录结构
 
-### 2025-10-20 (v3)
-- 📝 新增每日自动更新持仓调整建议说明
-- 🎯 文档10月17日底部预测验证准确率99.2%
-- 📊 完善Claude每日更新工作流程
+```
+russ_trading_strategy/
+├── 📋 核心程序（3个）
+│   ├── daily_position_report_generator.py       # ⭐ v1主版本(Ultra Aggressive,1721行)
+│   ├── run_unified_analysis.py                  # ⭐ 统一资产分析(651行)
+│   └── monthly_plan_generator.py                # 月度计划生成(687行)
+│
+├── 🎯 基础分析模块（4个）
+│   ├── position_health_checker.py               # 持仓健康度检查
+│   ├── performance_tracker.py                   # 收益追踪对比(增强版✨)
+│   ├── potential_analyzer.py                    # 潜在空间分析
+│   └── monthly_plan_generator.py                # 月度计划生成
+│
+├── 🛡️ 机构级增强模块（5个 - v2.0新增）
+│   ├── risk_manager.py                          # 风险管理器(10+指标)✨
+│   ├── dynamic_position_manager.py              # 智能仓位管理(Kelly公式)✨
+│   ├── backtest_engine_enhanced.py              # 增强回测引擎(压力测试)✨
+│   ├── data_manager.py                          # 数据管理器(交易日志)✨
+│   └── visualizer.py                            # 可视化模块(6类图表)✨
+│
+├── ⚙️ 配置模块（2个）
+│   ├── unified_config.py                        # 资产配置(25个资产定义)
+│   └── unified_email_notifier.py                # 邮件通知器
+│
+├── 📖 文档（主文档）
+│   ├── README.md                                # ⭐ 本文档(主用户文档)
+│   └── archive/                                 # 历史文档存档
+│       ├── 机构化分析增强方案.md
+│       ├── 实施完成总结.md
+│       └── 今日工作总结_20251021.md
+│
+└── __init__.py                                  # 模块初始化文件
+```
 
-### 2025-10-16 (v2)
-- ✨ 新增3个标的: 软件ETF、稀土ETF、指南针
-- 📧 完善邮件配置说明
-- 📝 新增临时修改收件人的操作指南
-- 📦 资产总数增至25个
+### 版本说明
 
-### 2025-10-16 (v1)
-- ✨ 初始版本
-- 📦 整合 22 个资产配置
-- 🚀 实现统一运行脚本
-- 📝 支持 Markdown 和文本格式报告
+**当前推荐使用**: `daily_position_report_generator.py` (v1主版本)
+
+| 版本 | 文件 | 行数 | 特点 | 使用场景 |
+|------|------|------|------|---------|
+| **v1主版本** ⭐ | daily_position_report_generator.py | 1721行 | Ultra Aggressive策略,默认风险偏好ultra_aggressive,集成所有核心功能 | **日常使用** |
+| v2增强版 | daily_position_report_generator_v2.py | 541行 | 12项新功能(执行摘要、归因分析、情景分析等),依赖core模块 | 高级分析场景 |
+| v1备份 | daily_position_report_generator_v1_backup.py | - | v1升级前的备份版本 | 仅用于回滚 |
+
+---
+
+## 🤖 自动化报告生成系统
+
+### 数据源说明
+
+**市场数据获取**:
+- **主数据源**: efinance (更稳定,速度快)
+- **备用数据源**: akshare (efinance失败时自动切换)
+- **科创50数据**: 改用科创50ETF (588000) 代替科创50指数
+
+**安装依赖**:
+```bash
+pip install efinance  # 主数据源
+pip install akshare   # 备用数据源
+```
+
+### 报告生成策略
+
+系统支持**自动化报告生成**,每天/每周自动生成分析报告:
+
+```
+📅 每日报告 (交易日 17:00-17:30):
+├── 1. 持仓调整建议 (Ultra Aggressive版) 🚀    ← 自动生成
+│   ├── 🌍 5阶段市场状态识别 (NEW)
+│   ├── 💰 VaR/CVaR极端风险评估 (NEW)
+│   ├── 🚨 三级智能预警系统 (NEW)
+│   ├── 📊 动态风险阈值(激进型定制) (NEW)
+│   ├── 持仓健康度分析
+│   ├── 收益追踪对比
+│   ├── Kelly公式智能仓位建议
+│   └── 🚀 激进持仓建议(方案C+) (NEW)
+│
+└── 2. 统一资产分析 (增强版)                    ← 自动生成 + 邮件
+    ├── 25个资产11维度分析
+    ├── 风险指标(夏普/回撤/VaR)
+    ├── Kelly仓位建议
+    └── 风险预警
+
+📅 每月报告 (月初):
+└── 月度投资计划                                ← 手动生成
+    ├── 市场评估分析
+    ├── 仓位策略制定
+    ├── 资产配置建议
+    └── 行动清单
+
+📅 每周报告 (周日 20:00):
+└── 周度总结与复盘                              ← [计划中]
+    ├── 本周市场回顾
+    ├── 我的持仓表现
+    ├── 收益归因分析
+    └── 下周操作计划
+```
+
+### 1. 每日持仓报告生成
+
+**手动生成**:
+```bash
+# 生成今日报告(自动获取市场数据)
+python russ_trading_strategy/daily_position_report_generator.py --auto-update
+
+# 生成指定日期报告
+python russ_trading_strategy/daily_position_report_generator.py \
+    --date 2025-10-21 \
+    --auto-update
+
+# 指定持仓文件
+python russ_trading_strategy/daily_position_report_generator.py \
+    --positions data/positions_20251021.json \
+    --auto-update
+```
+
+**自动化设置** (crontab):
+```bash
+# 编辑crontab
+crontab -e
+
+# 添加定时任务(每个交易日17:00)
+0 17 * * 1-5 cd /Users/russ/PycharmProjects/stock-analysis && \
+    /usr/local/bin/python3 russ_trading_strategy/daily_position_report_generator.py --auto-update >> logs/daily_report.log 2>&1
+```
+
+**报告特色**(v3.0 Ultra Aggressive版):
+- ✅ 自动获取最新市场数据(efinance优先,akshare备份)
+- ✅ 🌍 5阶段市场状态识别(牛市上升/牛市震荡/震荡市/熊市反弹/熊市下跌)
+- ✅ 💰 VaR/CVaR极端风险评估(单日VaR/CVaR + 20日VaR)
+- ✅ 🚨 三级智能预警系统(紧急/关注/正常)
+- ✅ 📊 动态风险阈值(基于激进型风格定制)
+- ✅ 🚀 激进持仓建议(科技75% + 周期20% + 现金5%)
+- ✅ Kelly公式智能仓位建议
+
+### 2. 统一资产分析报告
+
+**手动生成**:
+```bash
+# 生成并发送邮件
+python russ_trading_strategy/run_unified_analysis.py --email
+
+# 保存到文件
+python russ_trading_strategy/run_unified_analysis.py \
+    --save reports/daily/$(date +%Y-%m)/unified_analysis_$(date +%Y%m%d).md
+
+# 分析指定资产
+python russ_trading_strategy/run_unified_analysis.py \
+    --assets CYBZ HKTECH KECHUANG50 \
+    --email
+```
+
+**自动化设置** (crontab):
+```bash
+# 每个交易日17:30发送邮件报告
+30 17 * * 1-5 cd /Users/russ/PycharmProjects/stock-analysis && \
+    /usr/local/bin/python3 russ_trading_strategy/run_unified_analysis.py --email >> logs/unified_analysis.log 2>&1
+```
+
+### 3. 月度投资计划
+
+**手动生成**:
+```bash
+# 生成当月计划
+python russ_trading_strategy/monthly_plan_generator.py --month 2025-11
+
+# 指定市场数据
+python russ_trading_strategy/monthly_plan_generator.py \
+    --month 2025-11 \
+    --market-data data/market_data.json
+```
+
+### 报告输出路径
+
+```
+reports/
+└── daily/
+    └── YYYY-MM/
+        ├── 持仓调整建议_YYYYMMDD_增强版.md     ← 每日自动生成
+        └── unified_analysis_YYYYMMDD.md         ← 每日自动生成 + 邮件
+```
+
+---
+
+## 🎓 使用流程建议
+
+### 每日流程(自动化)
+1. **早盘前**: 查看昨日自动生成的报告
+   - 📄 `reports/daily/2025-10/持仓调整建议_昨日日期_增强版.md`
+2. **盘中**: 观察持仓走势,记录重要信号
+3. **下午17:00**: 系统自动生成今日报告
+4. **晚上18:00**:
+   - 查看今日持仓建议
+   - 查看操作清单并执行
+   - 查看收到的邮件(统一资产分析)
+
+### 每日流程(手动)
+1. **早盘前**: 查看隔夜市场动态
+2. **盘中**: 观察持仓走势,记录重要信号
+3. **收盘后**:
+   - 运行 `--health-check` 检查持仓健康度
+   - 运行 `--performance` 追踪收益情况
+   - 更新持仓调整建议文档
+
+### 每周流程
+1. **周末**:
+   - 运行 `--potential` 评估各指数潜在空间
+   - 复盘本周操作,检查是否符合策略
+   - 调整下周操作计划
+   - 查看周报(待实现)
+
+### 每月流程
+1. **月初**:
+   - 运行 `--monthly-plan` 生成本月计划
+   - 制定本月仓位调整和资产配置方案
+2. **月末**:
+   - 运行 `--full-report` 生成完整报告
+   - 复盘本月执行情况
+   - 评估目标达成度
+
+---
+
+## 💡 进阶技巧
+
+### 1. 批量生成报告
+
+创建shell脚本 `generate_reports.sh`:
+
+```bash
+#!/bin/bash
+
+DATE=$(date +%Y%m%d)
+REPORT_DIR="reports/$DATE"
+mkdir -p $REPORT_DIR
+
+# 健康度检查
+python russ_strategy_runner.py \
+    --health-check \
+    --positions data/positions.json \
+    --save "$REPORT_DIR/health_check.md"
+
+# 收益追踪
+python russ_strategy_runner.py \
+    --performance \
+    --capital 550000 \
+    --hs300 4538 \
+    --save "$REPORT_DIR/performance.md"
+
+# 完整报告
+python russ_strategy_runner.py \
+    --full-report \
+    --positions data/positions.json \
+    --capital 550000 \
+    --hs300 4538 \
+    --save "$REPORT_DIR/full_report.md"
+
+echo "报告生成完成: $REPORT_DIR"
+```
+
+### 2. 结合现有的unified_analysis
+
+```bash
+# 先运行资产分析
+python run_unified_analysis.py --assets CYBZ HKTECH CN_COAL CN_LIQUOR
+
+# 再运行策略报告
+python russ_strategy_runner.py --full-report --positions data/positions.json
+```
+
+### 3. 定时任务
+
+使用crontab设置定时任务:
+
+```bash
+# 每个交易日收盘后19:00运行
+0 19 * * 1-5 cd /Users/russ/PycharmProjects/stock-analysis/scripts/russ_trading_strategy && ./generate_reports.sh
+```
+
+---
+
+## 📊 与其他工具整合
+
+### 与持仓调整建议文档整合
+
+在每日持仓更新文档中嵌入策略模块结果:
+
+```markdown
+# 持仓调整建议_20251020
+
+## 📊 持仓健康度检查
+[嵌入 health_check 输出]
+
+## 📈 收益追踪对比
+[嵌入 performance 输出]
+
+## 🚀 潜在空间评估
+[嵌入 potential 输出]
+
+## 操作建议
+...
+```
+
+### Python脚本调用
+
+```python
+from russ_trading_strategy.russ_strategy_runner import RussStrategyRunner
+
+# 创建运行器
+runner = RussStrategyRunner()
+
+# 持仓数据
+positions = [...]
+
+# 运行健康检查
+health_report = runner.run_health_check(positions)
+
+# 运行收益追踪
+perf_report = runner.run_performance_tracking(550000, 4538)
+
+# 组合输出
+with open('daily_report.md', 'w') as f:
+    f.write(health_report)
+    f.write("\n\n")
+    f.write(perf_report)
+```
+
+---
+
+## 🐛 故障排查
+
+### 问题1: 找不到模块
+
+**错误**: `ModuleNotFoundError: No module named 'russ_trading_strategy'`
+
+**解决**:
+```bash
+cd /Users/russ/PycharmProjects/stock-analysis/scripts
+python russ_trading_strategy/russ_strategy_runner.py --help
+```
+
+### 问题2: JSON格式错误
+
+**错误**: `JSONDecodeError: Expecting value`
+
+**解决**: 检查JSON文件格式是否正确,使用在线工具验证: https://jsonlint.com/
+
+### 问题3: 权限不足
+
+**错误**: `PermissionError: [Errno 13] Permission denied`
+
+**解决**:
+```bash
+chmod +x russ_strategy_runner.py
+chmod +x generate_reports.sh
+```
+
+---
+
+## 📊 报告内容详解
+
+### 持仓调整建议报告（Ultra Aggressive v3.0）
+
+**包含以下部分**:
+
+1. **今日市场表现**
+   - 市场数据(沪深300、创业板指、科创50ETF)
+   - 📈 **技术形态判断** (基于MACD/RSI/KDJ等指标)
+   - 🌍 **5阶段市场状态识别** ✨
+     - 牛市上升期/牛市震荡期/震荡市/熊市反弹期/熊市下跌期
+     - 多维度评分(短期/长期/市场宽度)
+     - 动态仓位建议(30%-90%)
+
+2. **持仓健康度诊断**
+   - 健康评分(0-100分)
+   - 当前持仓明细
+   - Ultra Aggressive定制阈值:
+     - 单ETF上限: 40%
+     - 单个股上限: 30%
+     - 现金储备: 5%
+     - 标的数量: 2-3只
+
+3. **收益表现与目标达成**
+   - 三大目标完成情况
+   - 收益统计
+   - 对比沪深300基准
+   - 超额收益分析
+
+4. **机构级风险管理分析** ✨
+   - 💰 **VaR/CVaR极端风险评估**
+     - 单日VaR(95%置信度)
+     - 单日CVaR(极端损失预期)
+     - 20日VaR(中期风险)
+     - 现金缓冲充足性评估
+   - 📊 **动态风险指标**(激进型定制)
+     - 集中度风险(单标的≤40%)
+     - 流动性风险(现金≥5%)
+     - 最大回撤风险(可承受25-30%)
+
+5. **🚨 智能预警中心** ✨
+   - 🔴 紧急预警(立即处理)
+   - 🟡 关注预警(3日内处理)
+   - 🟢 正常监控
+   - 自动检测: 仓位超标、现金不足、风险异常
+
+6. **智能仓位建议(Kelly公式)**
+   - 理论最优仓位计算
+   - 当前仓位 vs 建议仓位
+   - 调整幅度和理由
+
+7. **立即执行操作清单**
+   - ⚡ 第一优先级(今晚设置,明天执行)
+   - 📅 第三优先级(未来1-2周观察)
+   - 📝 操作执行清单(checkbox格式)
+   - 💰 预期效果(资金流向明细表)
+
+8. **🚀 激进持仓建议(方案C+)** ✨
+   - 策略对比表(保守 vs 激进)
+   - 激进持仓结构(科技75% + 周期20% + 现金5%)
+   - 换仓执行计划(分3步)
+   - 预期收益路径(2年翻倍模拟)
+
+### 统一资产分析报告
+
+**包含以下部分**:
+
+1. **分析概览**
+   - 总资产数
+   - 成功/失败统计
+
+2. **标的汇总表**
+   - 25个资产核心指标
+   - 涨跌幅、方向判断、建议仓位
+   - 20日上涨概率、风险等级
+
+3. **详细分析**(每个资产)
+   - 当前点位
+   - 历史点位分析
+   - 技术面分析
+   - 资金面分析
+   - 估值分析(A股)
+   - 情绪分析
+   - 风险评估
+   - 成交量分析
+   - 支撑压力位
+   - 市场宽度
+   - 恐慌指数
+   - ✨ 机构级风险指标(新增)
+   - ✨ Kelly仓位建议(新增)
+   - ✨ 风险预警(新增)
+
+---
+
+## ⚙️ 配置文件说明
+
+### 持仓配置文件 (data/positions_YYYYMMDD.json)
+
+```json
+[
+  {
+    "asset_name": "证券ETF",
+    "asset_key": "512880",
+    "position_ratio": 0.45,
+    "current_value": 450000
+  },
+  {
+    "asset_name": "恒生科技ETF",
+    "asset_key": "513180",
+    "position_ratio": 0.18,
+    "current_value": 180000
+  }
+]
+```
+
+**字段说明**:
+- `asset_name`: 标的名称
+- `asset_key`: 标的代码
+- `position_ratio`: 仓位占比(0-1之间)
+- `current_value`: 当前市值(元)
+
+### 邮件配置 (config/email_config.yaml)
+
+```yaml
+smtp:
+  host: "smtp.example.com"
+  port: 587
+  username: "your_email@example.com"
+  password: "your_password"
+  use_tls: true
+
+recipients:
+  - "recipient1@example.com"
+
+sender:
+  name: "Russ Trading Strategy"
+  email: "your_email@example.com"
+```
+
+---
+
+## 🔧 故障排查
+
+### 问题1: 市场数据获取失败
+
+**症状**:
+```
+WARNING - 获取沪深300失败: HTTPSConnectionPool...
+```
+
+**解决方案**:
+1. 检查网络连接
+2. 确认数据源安装:
+   ```bash
+   pip install efinance  # 主数据源（推荐）
+   pip install akshare   # 备用数据源
+   ```
+3. 等待几分钟后重试(API限流)
+4. 系统会自动切换数据源(efinance失败时用akshare)
+
+### 问题2: 持仓文件未找到
+
+**症状**:
+```
+WARNING - 未找到持仓文件,使用默认持仓
+```
+
+**解决方案**:
+1. 创建持仓文件: `data/positions_YYYYMMDD.json`
+2. 或指定文件路径: `--positions /path/to/positions.json`
+
+### 问题3: 邮件发送失败
+
+**症状**:
+```
+ERROR - 邮件发送失败
+```
+
+**解决方案**:
+1. 检查邮件配置: `config/email_config.yaml`
+2. 检查SMTP服务器设置
+3. 检查收件人地址
+
+---
+
+## 💡 最佳实践
+
+### 每日工作流
+
+1. **早上9:00**: 查看昨日报告
+2. **下午17:00**: 自动生成今日报告
+3. **晚上18:00**:
+   - 查看持仓健康度
+   - 查看操作清单
+   - 制定明日计划
+4. **睡前**: 设置条件单
+
+### 每周工作流
+
+1. **周末**:
+   - 查看周报
+   - 总结本周操作
+   - 制定下周计划
+2. **月初**:
+   - 月度收益复盘
+   - 调整策略参数
+
+### 持仓更新
+
+**建议每天更新持仓数据**:
+1. 收盘后更新 `positions_YYYYMMDD.json`
+2. 重新生成报告
+3. 对比昨日建议
+
+---
+
+## 📋 更新日志
+
+### v3.0 Ultra Aggressive Edition (2025-10-21)
+- 🚀 **全面升级为Ultra Aggressive激进策略**
+  - 默认风险偏好: ultra_aggressive (年化60%,2年翻倍)
+  - 单ETF上限提升至40%,单个股30%
+  - 现金储备降至5%,标的集中至2-3只
+- 🌍 **5阶段市场状态识别系统**
+  - 牛市上升期/牛市震荡期/震荡市/熊市反弹期/熊市下跌期
+  - 多维度评分(短期/长期/市场宽度)
+  - 动态仓位建议(30%-90%)
+- 💰 **VaR/CVaR极端风险评估**
+  - 单日VaR/CVaR计算
+  - 20日中期风险预测
+  - 现金缓冲充足性评估
+- 🚨 **三级智能预警系统**
+  - 紧急/关注/正常三级预警
+  - 自动检测仓位超标、现金不足
+- 📊 **数据源升级**
+  - 主数据源: efinance (更稳定)
+  - 备用数据源: akshare
+  - 科创50数据: 改用科创50ETF (588000)
+- 🚀 **激进持仓建议(方案C+)**
+  - 科技75% + 周期20% + 现金5%
+  - 底仓+波段双轨制
+  - 2年翻倍收益路径模拟
+- 📖 **文档整合**
+  - 合并README_RUSS.md、报告生成系统使用指南.md、文件夹结构说明.md
+  - 创建archive目录存放历史文档
+  - 统一为单一README.md主文档
+
+### v2.0 Enhanced Edition (2025-10-15)
+- 新增12项机构级分析功能
+- 执行摘要、归因分析、情景分析
+- 压力测试、相关性矩阵
+
+### v1.0 Initial Release (2025-10-10)
+- 基础持仓健康度检查
+- 收益追踪对比
+- Kelly公式仓位建议
+
+---
+
+## 📞 维护说明
+
+### 更新基准数据
+
+如果需要更新基准点位(如新一年开始):
+
+```python
+# 在 daily_position_report_generator.py 中修改:
+'benchmarks': {
+    'hs300_base': 3145.0,      # 更新为新基准点位
+    'cybz_base': 2060.0,
+    'kechuang50_base': 955.0
+}
+
+'targets': {
+    'base_date': '2025-01-01',  # 更新为新基准日期
+    'initial_capital': 480000    # 更新为新起始资金
+}
+```
+
+---
+
+## 📝 免责声明
+
+本系统基于历史数据和技术分析,仅供个人参考和学习使用,不构成任何投资建议。
+
+**投资有风险,入市需谨慎。**
+
+所有投资决策应基于个人独立判断,本系统开发者不对任何投资损失承担责任。
+
+---
+
+## 🎉 总结
+
+这个系统整合了你的投资策略核心原则,提供了:
+
+✅ **系统化**: 完整的策略执行和监控体系
+✅ **自动化**: 一键生成各类报告
+✅ **数据驱动**: 基于历史数据和实时数据决策
+✅ **纪律性**: 强制执行仓位管理和风险控制规则
+
+坚持使用这个系统,配合每日/每周/每月复盘,相信能帮助你实现:
+- 📈 **Ultra Aggressive目标**: 年化60%,2年翻倍(48万→100万+)
+- 💰 **三大目标**(到2026年底,按优先级):
+  1. 🥇 100万资金 (最优先,当前48万,需+108%)
+  2. 🥈 跑赢沪深300 (次优先)
+  3. 🥉 资金翻倍 (第三优先,48万→96万+)
+
+**实现路径**: 方案C+(科技75%+周期20%+现金5%)
+- 2025年: 48万 × 1.57 = 75万
+- 2026年: 75万 × 1.35 = 101万 ✅
+
+**记住**: 系统只是工具,最重要的是激进执行纪律! 💪
+
+---
+
+**文档维护**: Claude Code
+**最后更新**: 2025-10-21
+**系统版本**: v3.0 Ultra Aggressive Edition
+
+**Happy Trading! 🎯**
