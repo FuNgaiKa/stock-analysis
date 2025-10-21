@@ -3,7 +3,7 @@
 
 基于用户的投资策略,检查持仓是否符合以下规则:
 1. 仓位控制在5-9成(50%-90%)
-2. 单一标的仓位不超过20%
+2. 单一ETF仓位不超过30%, 单一个股仓位不超过20%
 3. 预留至少1成(10%)应对黑天鹅事件
 4. 标的数量控制在3-5只
 """
@@ -23,7 +23,8 @@ class PositionHealthChecker:
             strategy_config: 策略配置字典,包含:
                 - min_position: 最小仓位 (默认50%)
                 - max_position: 最大仓位 (默认90%)
-                - max_single_position: 单一标的最大仓位 (默认20%)
+                - max_single_position_etf: 单一ETF最大仓位 (默认30%)
+                - max_single_position_stock: 单一个股最大仓位 (默认20%)
                 - black_swan_reserve: 黑天鹅预留 (默认10%)
                 - min_assets: 最少标的数量 (默认3)
                 - max_assets: 最多标的数量 (默认5)
@@ -33,7 +34,8 @@ class PositionHealthChecker:
 
         self.min_position = strategy_config.get('min_position', 0.50)
         self.max_position = strategy_config.get('max_position', 0.90)
-        self.max_single_position = strategy_config.get('max_single_position', 0.20)
+        self.max_single_position_etf = strategy_config.get('max_single_position_etf', 0.30)
+        self.max_single_position_stock = strategy_config.get('max_single_position_stock', 0.20)
         self.black_swan_reserve = strategy_config.get('black_swan_reserve', 0.10)
         self.min_assets = strategy_config.get('min_assets', 3)
         self.max_assets = strategy_config.get('max_assets', 5)
@@ -162,30 +164,48 @@ class PositionHealthChecker:
                 'penalty': 0
             }
 
+    def _is_etf(self, asset_name: str, asset_key: str) -> bool:
+        """判断是否为ETF"""
+        # ETF判断逻辑: 名称包含ETF，或代码符合ETF特征
+        if 'ETF' in asset_name.upper():
+            return True
+        # 常见ETF代码特征
+        etf_code_patterns = ['51', '56', '58', '15']  # A股ETF常见代码开头
+        for pattern in etf_code_patterns:
+            if asset_key.startswith(pattern):
+                return True
+        return False
+
     def _check_single_positions(self, positions: List[Dict]) -> Dict:
-        """检查单一标的仓位"""
+        """检查单一标的仓位(ETF和个股分开限制)"""
         warnings = []
         suggestions = []
         penalty = 0
 
         overweight_assets = []
         for pos in positions:
-            if pos['position_ratio'] > self.max_single_position:
+            is_etf = self._is_etf(pos['asset_name'], pos.get('asset_key', ''))
+            max_limit = self.max_single_position_etf if is_etf else self.max_single_position_stock
+            asset_type = "ETF" if is_etf else "个股"
+
+            if pos['position_ratio'] > max_limit:
                 overweight_assets.append({
                     'name': pos['asset_name'],
+                    'type': asset_type,
                     'ratio': pos['position_ratio'],
-                    'excess': pos['position_ratio'] - self.max_single_position
+                    'limit': max_limit,
+                    'excess': pos['position_ratio'] - max_limit
                 })
                 warnings.append(
-                    f"⚠️ {pos['asset_name']}仓位{pos['position_ratio']*100:.1f}%超过{self.max_single_position*100:.0f}%限制"
+                    f"⚠️ {pos['asset_name']}({asset_type})仓位{pos['position_ratio']*100:.1f}%超过{max_limit*100:.0f}%限制"
                 )
                 penalty += 10.0
 
         if overweight_assets:
-            suggestions.append(f"建议将单一标的仓位控制在{self.max_single_position*100:.0f}%以内")
+            suggestions.append(f"建议将ETF仓位控制在{self.max_single_position_etf*100:.0f}%以内, 个股控制在{self.max_single_position_stock*100:.0f}%以内")
             for asset in overweight_assets:
                 excess_pct = asset['excess'] * 100
-                suggestions.append(f"- {asset['name']}: 建议减仓{excess_pct:.1f}%")
+                suggestions.append(f"- {asset['name']}({asset['type']}): 建议减仓{excess_pct:.1f}%")
 
             return {
                 'passed': False,
@@ -303,7 +323,7 @@ class PositionHealthChecker:
         for check_name, check_result in checks.items():
             if check_name == 'single_positions':
                 if check_result['passed']:
-                    lines.append("✅ **单一标的仓位**: 全部符合要求(≤20%)")
+                    lines.append("✅ **单一标的仓位**: 全部符合要求(ETF≤30%, 个股≤20%)")
                 else:
                     lines.append("⚠️ **单一标的仓位**: 存在超标")
                     for warning in check_result['warnings']:
@@ -323,7 +343,9 @@ class PositionHealthChecker:
             lines.append("|---------|---------|---------|---------|------|")
 
             for pos in result['positions']:
-                status = "✅" if pos['position_ratio'] <= self.max_single_position else "⚠️超标"
+                is_etf = self._is_etf(pos['asset_name'], pos.get('asset_key', ''))
+                max_limit = self.max_single_position_etf if is_etf else self.max_single_position_stock
+                status = "✅" if pos['position_ratio'] <= max_limit else "⚠️超标"
                 lines.append(
                     f"| {pos['asset_name']} | {pos['asset_key']} | "
                     f"{pos['position_ratio']*100:.1f}% | "
@@ -353,7 +375,8 @@ class PositionHealthChecker:
         lines.append("")
         lines.append(f"- 仓位控制: {self.min_position*100:.0f}%-{self.max_position*100:.0f}%")
         lines.append(f"- 现金预留: ≥{self.black_swan_reserve*100:.0f}%")
-        lines.append(f"- 单一标的: ≤{self.max_single_position*100:.0f}%")
+        lines.append(f"- 单一ETF: ≤{self.max_single_position_etf*100:.0f}%")
+        lines.append(f"- 单一个股: ≤{self.max_single_position_stock*100:.0f}%")
         lines.append(f"- 标的数量: {self.min_assets}-{self.max_assets}只")
         lines.append("")
 
