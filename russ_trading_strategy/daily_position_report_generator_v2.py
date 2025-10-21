@@ -58,7 +58,9 @@ from russ_trading_strategy.core import (
     ScenarioAnalyzer,
     AttributionAnalyzer,
     ExecutiveSummaryGenerator,
-    ChartGenerator
+    ChartGenerator,
+    PerformanceMetricsCalculator,
+    HistoricalPerformanceAnalyzer
 )
 from russ_trading_strategy.utils import (
     get_risk_profile,
@@ -92,6 +94,8 @@ class EnhancedReportGenerator(BaseGenerator):
         self.executive_summary_gen = ExecutiveSummaryGenerator()
         self.chart_generator = ChartGenerator()
         self.html_formatter = HTMLFormatter()
+        self.performance_metrics_calc = PerformanceMetricsCalculator()
+        self.historical_performance_analyzer = HistoricalPerformanceAnalyzer()
 
         logger.info(f"增强版报告生成器初始化完成 (风险偏好: {risk_profile})")
 
@@ -244,7 +248,29 @@ class EnhancedReportGenerator(BaseGenerator):
         lines.append("---")
         lines.append("")
 
-        # ========== 7. 操作建议 ==========
+        # ========== 7. 历史表现回测 (NEW!) ==========
+        logger.info("分析历史表现...")
+        performance = self.historical_performance_analyzer.analyze_performance()
+
+        # 如果有历史数据，计算性能指标
+        if performance.get('has_data') and 'returns' in performance:
+            sharpe = self.performance_metrics_calc.calculate_sharpe_ratio(performance['returns'])
+            sortino = self.performance_metrics_calc.calculate_sortino_ratio(performance['returns'])
+            if sharpe:
+                performance['sharpe_ratio'] = sharpe
+            if sortino:
+                performance['sortino_ratio'] = sortino
+
+        performance_report = self.historical_performance_analyzer.format_performance_report(
+            performance,
+            include_metrics=True
+        )
+        lines.append(performance_report)
+
+        lines.append("---")
+        lines.append("")
+
+        # ========== 8. 操作建议 ==========
         lines.append("## 📋 立即执行操作清单")
         lines.append("")
 
