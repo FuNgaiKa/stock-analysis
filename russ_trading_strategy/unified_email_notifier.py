@@ -663,6 +663,212 @@ class UnifiedEmailNotifier:
         return html
 
 
+    def send_position_report(self, report_data: Dict, text_content: str, date: str) -> bool:
+        """
+        发送持仓调整报告邮件
+
+        Args:
+            report_data: 报告元数据字典
+            text_content: Markdown格式报告内容
+            date: 报告日期
+
+        Returns:
+            是否发送成功
+        """
+        # 构建邮件主题
+        subject = f"📊 持仓调整建议报告 v2.0 - {date}"
+
+        # 构建HTML邮件内容
+        html_content = self._format_position_report_html(text_content, date)
+
+        # 从配置文件获取收件人列表
+        recipients = self.config.get('recipients', ['1264947688@qq.com'])
+
+        # 发送邮件 - 给每个收件人单独发送一封
+        success_count = 0
+        failed_recipients = []
+
+        for recipient in recipients:
+            try:
+                # 每个收件人建立独立的SMTP连接
+                smtp = smtplib.SMTP_SSL(
+                    self.config['smtp']['server'],
+                    self.config['smtp']['port']
+                )
+                smtp.login(
+                    self.config['sender']['email'],
+                    self.config['sender']['password']
+                )
+
+                # 创建邮件
+                message = MIMEMultipart('alternative')
+                message['From'] = self.config['sender']['email']
+                message['To'] = recipient
+                message['Subject'] = Header(subject, 'utf-8')
+                message['X-Priority'] = '3'
+
+                # 添加纯文本和HTML版本
+                text_part = MIMEText(text_content, 'plain', 'utf-8')
+                html_part = MIMEText(html_content, 'html', 'utf-8')
+                message.attach(text_part)
+                message.attach(html_part)
+
+                # 发送给当前收件人
+                smtp.sendmail(
+                    self.config['sender']['email'],
+                    [recipient],
+                    message.as_string()
+                )
+
+                smtp.quit()
+                success_count += 1
+                self.logger.info(f"✅ 邮件发送成功: {recipient}")
+
+            except Exception as e:
+                failed_recipients.append(recipient)
+                self.logger.error(f"❌ 发送到 {recipient} 失败: {str(e)}")
+                try:
+                    smtp.quit()
+                except:
+                    pass
+
+        # 汇总结果
+        if success_count == len(recipients):
+            self.logger.info(f"🎉 所有邮件发送成功(共{success_count}个收件人): {subject}")
+            return True
+        elif success_count > 0:
+            self.logger.warning(f"⚠️ 部分邮件发送成功({success_count}/{len(recipients)}),失败的收件人: {', '.join(failed_recipients)}")
+            return True
+        else:
+            self.logger.error(f"❌ 所有邮件发送失败")
+            return False
+
+    def _format_position_report_html(self, markdown_content: str, date: str) -> str:
+        """
+        将Markdown持仓报告转换为HTML邮件格式
+
+        Args:
+            markdown_content: Markdown格式报告
+            date: 报告日期
+
+        Returns:
+            HTML格式邮件内容
+        """
+        # 简单的Markdown转HTML（保留关键格式）
+        html_body = markdown_content.replace('\n', '<br>\n')
+        html_body = html_body.replace('###', '<h3>').replace('##', '<h2>').replace('#', '<h1>')
+        html_body = html_body.replace('**', '<strong>').replace('*', '<em>')
+
+        # 构建完整HTML
+        html = f"""
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+    body {{
+        font-family: Arial, 'Microsoft YaHei', sans-serif;
+        line-height: 1.6;
+        margin: 0;
+        padding: 0;
+        background-color: #f5f5f5;
+    }}
+    .container {{
+        max-width: 1000px;
+        margin: 20px auto;
+        background-color: white;
+    }}
+    .header {{
+        background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%);
+        color: white;
+        padding: 30px 20px;
+        text-align: center;
+    }}
+    .header h1 {{
+        margin: 0;
+        font-size: 28px;
+    }}
+    .header .subtitle {{
+        font-size: 16px;
+        margin-top: 10px;
+        opacity: 0.9;
+    }}
+    .content {{
+        padding: 30px;
+    }}
+    .content h2 {{
+        color: #4ECDC4;
+        border-left: 4px solid #4ECDC4;
+        padding-left: 12px;
+        margin-top: 30px;
+    }}
+    .content h3 {{
+        color: #44A08D;
+        margin-top: 20px;
+    }}
+    table {{
+        width: 100%;
+        border-collapse: collapse;
+        margin: 15px 0;
+        font-size: 13px;
+    }}
+    th {{
+        background-color: #4ECDC4;
+        color: white;
+        padding: 12px 8px;
+        text-align: left;
+        font-weight: 600;
+    }}
+    td {{
+        padding: 10px 8px;
+        border-bottom: 1px solid #e9ecef;
+    }}
+    tr:hover {{
+        background-color: #f8f9fa;
+    }}
+    .positive {{ color: #28a745; font-weight: bold; }}
+    .negative {{ color: #dc3545; font-weight: bold; }}
+    .footer {{
+        background-color: #343a40;
+        color: white;
+        padding: 20px;
+        text-align: center;
+        font-size: 12px;
+    }}
+    pre {{
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-left: 4px solid #4ECDC4;
+        overflow-x: auto;
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+    }}
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>📊 持仓调整建议报告 v2.0</h1>
+        <div class="subtitle">机构级量化分析 | 持仓健康诊断 + 风险优化策略</div>
+        <div class="subtitle">{date}</div>
+    </div>
+
+    <div class="content">
+        {html_body}
+    </div>
+
+    <div class="footer">
+        <p>📊 Claude Code 量化分析系统 | Russ个人持仓策略 v2.0</p>
+        <p>分析维度: 执行摘要 | 量化指标 | 归因分析 | 压力测试 | 情景分析</p>
+        <p>生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+        <p>本邮件由系统自动生成,请勿直接回复</p>
+    </div>
+</div>
+</body>
+</html>
+"""
+        return html
+
+
 if __name__ == '__main__':
     """测试代码"""
     logging.basicConfig(

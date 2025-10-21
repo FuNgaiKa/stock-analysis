@@ -48,6 +48,7 @@ sys.path.insert(0, str(project_root))
 
 # 导入原有模块
 from russ_trading_strategy.position_health_checker import PositionHealthChecker
+from russ_trading_strategy.unified_email_notifier import UnifiedEmailNotifier
 from russ_trading_strategy.performance_tracker import PerformanceTracker
 from russ_trading_strategy.daily_position_report_generator import DailyPositionReportGenerator as BaseGenerator
 
@@ -444,6 +445,11 @@ def main():
         action='store_true',
         help='显示详细日志'
     )
+    parser.add_argument(
+        '--email',
+        action='store_true',
+        help='生成报告后发送邮件通知'
+    )
 
     args = parser.parse_args()
 
@@ -487,6 +493,40 @@ def main():
         if args.format in ['html', 'both']:
             html_path = generator.save_report(report, date, 'html')
             print(f"[OK] HTML report: {html_path}")
+
+        # 发送邮件通知（如果指定）
+        if args.email:
+            try:
+                print("\n" + "=" * 80)
+                print("Sending email notification...")
+                print("=" * 80)
+
+                # 创建邮件通知器
+                email_notifier = UnifiedEmailNotifier()
+
+                # 准备邮件数据
+                email_data = {
+                    'date': date,
+                    'report_type': 'position_adjustment',
+                    'report_title': f'持仓调整建议报告 v2.0 - {date}',
+                    'assets': {}  # 空字典，因为这是持仓报告而非资产分析
+                }
+
+                # 发送邮件
+                success = email_notifier.send_position_report(
+                    email_data,
+                    report,
+                    date
+                )
+
+                if success:
+                    print("[OK] Email sent successfully!")
+                else:
+                    print("[WARNING] Email sending failed - check logs")
+
+            except Exception as e:
+                logger.error(f"邮件发送失败: {e}", exc_info=True)
+                print(f"[ERROR] Email sending failed: {e}")
 
         print("=" * 80)
         print("Report generated successfully!")

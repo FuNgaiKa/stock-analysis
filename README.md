@@ -197,7 +197,18 @@ python russ_trading_strategy/daily_position_report_generator_v2.py --format html
 
 # 同时生成Markdown和HTML
 python russ_trading_strategy/daily_position_report_generator_v2.py --format both
+
+# 生成报告并发送邮件通知
+python russ_trading_strategy/daily_position_report_generator_v2.py --email
+
+# 生成HTML报告并发送邮件
+python russ_trading_strategy/daily_position_report_generator_v2.py --format html --email
 ```
+
+**邮件通知功能**:
+- 需要先配置 `config/email_config.yaml`（参考 `config/email_config.yaml.template`）
+- 支持多个收件人，自动发送精美HTML格式报告
+- 包含完整的持仓分析、风险评估和操作建议
 
 ### 💡 进一步优化方向
 
