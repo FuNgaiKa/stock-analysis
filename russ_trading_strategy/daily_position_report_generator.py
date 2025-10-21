@@ -176,7 +176,7 @@ class DailyPositionReportGenerator:
             indices_map = {
                 '000300': 'HS300',
                 '399006': 'CYBZ',
-                '000688': 'KC50'
+                '588000': 'KC50ETF'  # 科创50ETF,因为科创50指数数据不准确
             }
 
             for code, name in indices_map.items():
