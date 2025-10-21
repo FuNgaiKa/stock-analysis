@@ -78,12 +78,12 @@ logger = setup_logger('report_generator_v2', level=logging.INFO)
 class EnhancedReportGenerator(BaseGenerator):
     """增强版报告生成器 (集成v2.0新功能)"""
 
-    def __init__(self, risk_profile: str = 'aggressive'):
+    def __init__(self, risk_profile: str = 'ultra_aggressive'):
         """
         初始化增强版生成器
 
         Args:
-            risk_profile: 风险偏好
+            risk_profile: 风险偏好 (默认ultra_aggressive,2年翻倍目标)
         """
         # 调用父类初始化
         super().__init__(risk_profile)

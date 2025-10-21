@@ -65,9 +65,9 @@ logger = logging.getLogger(__name__)
 class DailyPositionReportGenerator:
     """每日持仓报告生成器(机构级增强版)"""
 
-    def __init__(self, risk_profile: str = 'aggressive'):
+    def __init__(self, risk_profile: str = 'ultra_aggressive'):
         """
-        初始化生成器
+        初始化生成器 (默认ultra_aggressive,2年翻倍目标)
 
         Args:
             risk_profile: 风险偏好 ('conservative', 'moderate', 'aggressive')
@@ -76,7 +76,24 @@ class DailyPositionReportGenerator:
                 - aggressive: 积极型 (最大回撤25%, 波动率50%)
         """
         self.risk_profile = risk_profile
-        self.health_checker = PositionHealthChecker()
+
+        # 先设置风险阈值
+        self._set_risk_thresholds()
+
+        # 根据风险阈值初始化健康检查器
+        strategy_config = {
+            'min_position': 0.80 if risk_profile == 'ultra_aggressive' else 0.50,
+            'max_position': self.thresholds.get('max_total_position', 0.90),
+            'max_single_position_etf': self.thresholds.get('max_single_etf_position',
+                                                           self.thresholds.get('max_single_position', 0.30)),
+            'max_single_position_stock': self.thresholds.get('max_single_stock_position',
+                                                             self.thresholds.get('max_single_position', 0.20)),
+            'black_swan_reserve': self.thresholds.get('min_cash_reserve', 0.10),
+            'min_assets': self.thresholds.get('min_assets', 3),
+            'max_assets': self.thresholds.get('max_assets', 5)
+        }
+
+        self.health_checker = PositionHealthChecker(strategy_config)
         self.performance_tracker = PerformanceTracker()
         self.potential_analyzer = PotentialAnalyzer()
 
@@ -91,9 +108,6 @@ class DailyPositionReportGenerator:
             self.position_manager = None
             self.data_manager = None
             self.technical_analyzer = None
-
-        # 根据风险偏好设置阈值
-        self._set_risk_thresholds()
 
     def _set_risk_thresholds(self):
         """根据风险偏好设置阈值"""
