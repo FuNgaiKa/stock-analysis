@@ -26,12 +26,17 @@ class UnifiedEmailNotifier:
         Args:
             config_path: 配置文件路径,默认为项目根目录的 config/email_config.yaml
         """
+        # 先初始化logger
+        self.logger = logging.getLogger(__name__)
+
         if config_path is None:
-            project_root = Path(__file__).parent.parent.parent
+            # __file__ = .../stock-analysis/russ_trading_strategy/unified_email_notifier.py
+            # parent = .../stock-analysis/russ_trading_strategy
+            # parent.parent = .../stock-analysis (项目根目录)
+            project_root = Path(__file__).parent.parent
             config_path = project_root / 'config' / 'email_config.yaml'
 
         self.config = self._load_config(config_path)
-        self.logger = logging.getLogger(__name__)
 
     def _load_config(self, config_path: Path) -> Dict:
         """加载邮箱配置"""
@@ -471,7 +476,7 @@ class UnifiedEmailNotifier:
 
     def _render_assets_by_category(self, assets_data: Dict) -> str:
         """按类别渲染资产详情"""
-        from scripts.unified_analysis.unified_config import UNIFIED_ASSETS
+        from russ_trading_strategy.unified_config import UNIFIED_ASSETS
 
         # 按类别分组
         categories = {}
