@@ -428,8 +428,13 @@ def main():
         # 加载持仓
         positions = generator.load_positions(args.positions)
 
-        # 获取市场数据 (可选)
-        market_data = None
+        # 获取市场数据
+        try:
+            market_data = generator.fetch_market_data(date)
+            logger.info("✅ 市场数据获取成功")
+        except Exception as e:
+            logger.warning(f"市场数据获取失败: {e}")
+            market_data = None
 
         # 生成报告
         report = generator.generate_enhanced_report(
