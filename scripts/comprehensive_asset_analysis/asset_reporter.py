@@ -279,25 +279,36 @@ class ComprehensiveAssetReporter:
                         ret = (future_price - df['close'].iloc[idx_loc]) / df['close'].iloc[idx_loc]
                         future_returns_20d.append(ret)
 
-                if not future_returns_20d:
-                    return {'error': '无足够未来数据'}
-
-                up_count = sum(1 for r in future_returns_20d if r > 0)
-                down_count = len(future_returns_20d) - up_count
-
-                return {
+                # 返回基本信息（即使无未来数据）
+                result = {
                     'current_price': float(current_price),
                     'current_date': df.index[-1].strftime('%Y-%m-%d'),
-                    'current_change_pct': float((df['close'].iloc[-1] - df['close'].iloc[-2]) / df['close'].iloc[-2] * 100),
-                    'similar_periods_count': len(similar_indices),
-                    '20d': {
+                    'current_change_pct': float((df['close'].iloc[-1] - df['close'].iloc[-2]) / df['close'].iloc[-2] * 100) if len(df) > 1 else 0.0,
+                    'similar_periods_count': len(similar_indices)
+                }
+
+                if future_returns_20d:
+                    up_count = sum(1 for r in future_returns_20d if r > 0)
+                    down_count = len(future_returns_20d) - up_count
+
+                    result['20d'] = {
                         'up_prob': up_count / len(future_returns_20d),
                         'down_prob': down_count / len(future_returns_20d),
                         'mean_return': float(np.mean(future_returns_20d)),
                         'median_return': float(np.median(future_returns_20d)),
                         'confidence': min(100, len(future_returns_20d) / 30 * 100) / 100
                     }
-                }
+                else:
+                    result['20d'] = {
+                        'up_prob': 0.0,
+                        'down_prob': 0.0,
+                        'mean_return': 0.0,
+                        'median_return': 0.0,
+                        'confidence': 0.0
+                    }
+                    result['note'] = '无足够未来数据计算预测'
+
+                return result
 
             # 指数使用原有分析器
             if market == 'CN':
