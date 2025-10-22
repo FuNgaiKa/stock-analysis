@@ -414,6 +414,10 @@ class EnhancedReportGenerator(BaseGenerator):
 
                 lines.append(f"| **沪深300** | {pe_str} | {pe_pct_str} | {pb_str} | {roe_str} | {div_str} | {valuation} |")
 
+            # 科创50ETF (ETF没有传统估值指标)
+            if 'KC50ETF' in indices:
+                lines.append(f"| **科创50** | N/A | N/A | N/A | N/A | N/A | - |")
+
             if 'CYBZ' in indices:
                 cybz = indices['CYBZ']
                 pe = cybz.get('pe', 0)
