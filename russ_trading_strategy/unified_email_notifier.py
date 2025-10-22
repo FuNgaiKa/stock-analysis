@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-统一资产分析报告邮件发送模块
-Unified Asset Analysis Email Notifier
+市场标的洞察报告邮件发送模块
+Market Targets Insight Email Notifier
 """
 
 import smtplib
@@ -17,7 +17,7 @@ from pathlib import Path
 
 
 class UnifiedEmailNotifier:
-    """统一资产分析报告邮件通知器"""
+    """市场标的洞察报告邮件通知器"""
 
     def __init__(self, config_path: str = None):
         """
@@ -54,7 +54,7 @@ class UnifiedEmailNotifier:
 
     def send_unified_report(self, report: Dict, text_content: str) -> bool:
         """
-        发送统一资产分析报告邮件
+        发送市场标的洞察报告邮件
 
         Args:
             report: 报告数据字典
@@ -84,11 +84,11 @@ class UnifiedEmailNotifier:
 
         # 确定邮件主题
         if bullish_count >= total_count * 0.6:
-            subject = f"📈 【偏多】统一资产分析 - {bullish_count}个看多"
+            subject = f"📈 【偏多】市场标的洞察 - {bullish_count}个看多"
         elif bearish_count >= total_count * 0.6:
-            subject = f"📉 【偏空】统一资产分析 - {bearish_count}个看空"
+            subject = f"📉 【偏空】市场标的洞察 - {bearish_count}个看空"
         else:
-            subject = f"➡️ 【中性】统一资产分析 - 多空分化"
+            subject = f"➡️ 【中性】市场标的洞察 - 多空分化"
 
         subject += f" ({total_count}个标的, {date})"
 
@@ -352,7 +352,7 @@ class UnifiedEmailNotifier:
 <body>
 <div class="container">
     <div class="header">
-        <h1>{trend_icon} 统一资产分析报告</h1>
+        <h1>{trend_icon} 市场标的洞察报告</h1>
         <div class="subtitle">指数 + 板块 + 个股 全面分析</div>
         <div class="subtitle">整体趋势: {trend_text} | 分析标的: {total_count}个 | {date}</div>
     </div>
@@ -378,7 +378,7 @@ class UnifiedEmailNotifier:
 
         html += f"""
     <div class="footer">
-        <p>📊 Claude Code 量化分析系统 | 统一资产专项分析</p>
+        <p>📊 Claude Code 量化分析系统 | 市场标的洞察专项分析</p>
         <p>分析维度: 11大维度全面覆盖</p>
         <p>生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
         <p>本邮件由系统自动生成,请勿直接回复</p>
