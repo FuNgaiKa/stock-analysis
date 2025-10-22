@@ -357,6 +357,7 @@ class EnhancedReportGenerator(BaseGenerator):
                         vp_analysis = "➡️ **量价平衡** - 观望情绪，等待方向"
 
                     lines.append(f"**沪深300**: {vp_analysis}")
+                    lines.append("")
 
             # 分析创业板
             if 'CYBZ' in indices:
