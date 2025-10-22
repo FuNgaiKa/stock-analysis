@@ -72,6 +72,11 @@ from russ_trading_strategy.utils import (
 )
 from russ_trading_strategy.formatters import HTMLFormatter
 
+# 导入恐慌指数分析器
+sys.path.insert(0, str(project_root / 'src' / 'analyzers' / 'position' / 'analyzers' / 'market_indicators'))
+from cn_volatility_index import CNVolatilityIndex
+from hk_volatility_index import HKVolatilityIndex
+
 # 设置日志
 logger = setup_logger('report_generator_v2', level=logging.INFO)
 
@@ -102,7 +107,76 @@ class EnhancedReportGenerator(BaseGenerator):
         self.visualization_gen = VisualizationGenerator()
         self.institutional_metrics_calc = InstitutionalMetricsCalculator()
 
+        # 初始化恐慌指数分析器
+        self.cn_volatility_analyzer = CNVolatilityIndex()
+        self.hk_volatility_analyzer = HKVolatilityIndex()
+
         logger.info(f"增强版报告生成器初始化完成 (风险偏好: {risk_profile})")
+
+    def fetch_panic_indices(self, market_data: Dict) -> Dict:
+        """
+        获取恐慌指数数据
+
+        Args:
+            market_data: 市场数据
+
+        Returns:
+            恐慌指数数据字典
+        """
+        panic_data = {
+            'cn_vix': None,
+            'hk_vix': None
+        }
+
+        try:
+            # 获取A股数据计算CNVI
+            if market_data and market_data.get('indices'):
+                import akshare as ak
+                import pandas as pd
+                import numpy as np
+
+                # 1. A股CNVI (基于沪深300/创业板指)
+                try:
+                    # 获取上证指数历史数据
+                    df_cn = ak.stock_zh_index_daily(symbol='sh000001')
+                    if df_cn is not None and len(df_cn) >= 60:
+                        # 重命名列以适配 CNVI 计算器
+                        df_cn = df_cn.rename(columns={'日期': 'date'})
+                        df_cn = df_cn.tail(250)  # 最近一年数据
+
+                        cnvi_result = self.cn_volatility_analyzer.calculate_cnvi(df_cn)
+                        if 'error' not in cnvi_result:
+                            panic_data['cn_vix'] = cnvi_result
+                            logger.info(f"✅ A股CNVI获取成功: {cnvi_result['cnvi_value']:.2f}")
+                except Exception as e:
+                    logger.warning(f"A股CNVI计算失败: {e}")
+
+                # 2. H股HKVI (基于恒生科技ETF作为代理)
+                try:
+                    # 方案1: 使用恒生科技ETF(513180)作为港股恐慌指数代理
+                    from datetime import datetime, timedelta
+                    end_date = datetime.now().strftime('%Y%m%d')
+                    start_date = (datetime.now() - timedelta(days=365)).strftime('%Y%m%d')
+
+                    df_hk = ak.index_zh_a_hist(symbol='513180', start_date=start_date, end_date=end_date)
+
+                    if df_hk is not None and len(df_hk) >= 60:
+                        # 重命名列以适配 HKVI 计算器
+                        df_hk = df_hk.rename(columns={'日期': 'date', '收盘': 'close', '开盘': 'open', '最高': 'high', '最低': 'low', '成交量': 'volume'})
+                        df_hk['date'] = pd.to_datetime(df_hk['date'])
+                        df_hk = df_hk.tail(250)  # 最近一年数据
+
+                        hkvi_result = self.hk_volatility_analyzer.calculate_hkvi(df_hk)
+                        if 'error' not in hkvi_result:
+                            panic_data['hk_vix'] = hkvi_result
+                            logger.info(f"✅ H股HKVI获取成功(基于恒生科技ETF): {hkvi_result['hkvi_value']:.2f}")
+                except Exception as e:
+                    logger.warning(f"H股HKVI计算失败: {e}")
+
+        except Exception as e:
+            logger.error(f"恐慌指数获取失败: {e}")
+
+        return panic_data
 
     def generate_enhanced_report(
         self,
@@ -447,6 +521,44 @@ class EnhancedReportGenerator(BaseGenerator):
                 lines.append(f"- **置信度**: {market_state['confidence']}%")
                 lines.append(f"- **建议仓位**: {market_state['recommended_position'][0]*100:.0f}%-{market_state['recommended_position'][1]*100:.0f}%")
                 lines.append("")
+
+            # ========== 恐慌指数监控 (NEW!) ==========
+            logger.info("获取恐慌指数数据...")
+            panic_data = self.fetch_panic_indices(market_data)
+
+            if panic_data.get('cn_vix') or panic_data.get('hk_vix'):
+                lines.append("### 😱 恐慌指数监控")
+                lines.append("")
+
+                # A股CNVI
+                if panic_data.get('cn_vix'):
+                    cnvi = panic_data['cn_vix']
+                    lines.append(f"**A股CNVI** (中国波动率指数): **{cnvi['cnvi_value']:.2f}** {cnvi['emoji']}")
+                    lines.append(f"- **状态**: {cnvi['status']}")
+                    lines.append(f"- **信号**: {cnvi['signal']['signal']}")
+                    lines.append(f"- **建议**: {cnvi['signal']['action']}")
+                    lines.append("")
+
+                # H股HKVI
+                if panic_data.get('hk_vix'):
+                    hkvi = panic_data['hk_vix']
+                    lines.append(f"**H股HKVI** (港股波动率指数): **{hkvi['hkvi_value']:.2f}** {hkvi['emoji']}")
+                    lines.append(f"- **状态**: {hkvi['status']}")
+                    lines.append(f"- **信号**: {hkvi['signal']['signal']}")
+                    lines.append(f"- **建议**: {hkvi['signal']['action']}")
+                    lines.append("")
+
+                # 恐慌指数参考标准
+                lines.append("**参考标准** (类比美股VIX):")
+                lines.append("")
+                lines.append("| VIX区间 | 市场状态 | 交易建议 |")
+                lines.append("|---------|---------|---------|")
+                lines.append("| **< 15** | 市场平静 | 正常操作 |")
+                lines.append("| **15-25** | 正常波动 | 保持观察 |")
+                lines.append("| **25-30** | 恐慌上升 | 控制仓位 |")
+                lines.append("| **> 30** | 极度恐慌 | 🔥 **大举加仓良机** 🔥 |")
+                lines.append("")
+
         else:
             lines.append("### ⚠️ 市场数据")
             lines.append("")
@@ -908,10 +1020,19 @@ class EnhancedReportGenerator(BaseGenerator):
             result['priority_2'].append("")
             result['priority_2'].append("**关键触发条件** (择时加仓):")
             result['priority_2'].append("")
+            result['priority_2'].append("**1. 单日跌幅触发:**")
             result['priority_2'].append("- 恒生科技单日跌幅>5%时加仓")
             result['priority_2'].append("- 创业板指单日跌幅>3%时加仓")
             result['priority_2'].append("- 科创50ETF跌破1.45时加仓")
-            result['priority_2'].append("- VIX恐慌指数>30时大举加仓")
+            result['priority_2'].append("")
+            result['priority_2'].append("**2. 恐慌指数触发 (最强信号):**")
+            result['priority_2'].append("- **CNVI (A股恐慌指数) > 30** 时大举加仓A股标的 🔥")
+            result['priority_2'].append("- **HKVI (港股恐慌指数) > 30** 时大举加仓港股标的 🔥")
+            result['priority_2'].append("- **美股VIX > 30** 时大举加仓美股标的")
+            result['priority_2'].append("")
+            result['priority_2'].append("**3. 组合触发 (满仓信号):**")
+            result['priority_2'].append("- CNVI/HKVI > 30 + 单日跌幅>5% → 🚀 **满仓冲锋**")
+            result['priority_2'].append("- 此时是历史级别的抄底良机,现金储备全力加仓")
             result['priority_2'].append("")
 
         # B. 防守品种退出策略
