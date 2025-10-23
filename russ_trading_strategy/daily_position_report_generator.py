@@ -1023,10 +1023,10 @@ class DailyPositionReportGenerator:
         etf_positions = [p for p in positions if 'ETF' in p.get('asset_name', '') or 'etf' in p.get('asset_name', '').lower()]
         stock_positions = [p for p in positions if 'ETF' not in p.get('asset_name', '') and 'etf' not in p.get('asset_name', '').lower()]
 
-        # 激进配置建议 - 方案C
-        result['ultra_positions'].append("**方案C：激进均衡版** (科技75% + 周期20% + 现金5%)")
+        # 激进配置建议 - 方案C+
+        result['ultra_positions'].append("**方案C+：极致进攻版** (科技75% + 周期15% + 现金10%)")
         result['ultra_positions'].append("")
-        result['ultra_positions'].append("| 标的 | 当前仓位 | **方案C建议** | 调整 | 理由 |")
+        result['ultra_positions'].append("| 标的 | 当前仓位 | **方案C+建议** | 调整 | 理由 |")
         result['ultra_positions'].append("|------|---------|-------------|------|------|")
         result['ultra_positions'].append("| **🔥 科技成长三核** | | | | |")
 
@@ -1035,25 +1035,12 @@ class DailyPositionReportGenerator:
             hengke = next((p for p in positions if '恒生科技' in p.get('asset_name', '') or '恒科' in p.get('asset_name', '')), None)
             if hengke:
                 current = hengke.get('position_ratio', 0) * 100
-                suggested = 30
+                suggested = 35
                 change = suggested - current
                 emoji = "⬆️" if change > 0 else ("⬇️" if change < 0 else "➡️")
                 result['ultra_positions'].append(
                     f"| {hengke['asset_name']} | {current:.1f}% | **{suggested}%** {emoji} | "
-                    f"{change:+.0f}% | 港股科技龙头,保持重仓 |"
-                )
-
-        # 科创50ETF
-        if any('科创' in p.get('asset_name', '') for p in positions):
-            kc50 = next((p for p in positions if '科创' in p.get('asset_name', '')), None)
-            if kc50:
-                current = kc50.get('position_ratio', 0) * 100
-                suggested = 25
-                change = suggested - current
-                emoji = "⬆️" if change > 0 else ("⬇️" if change < 0 else "➡️")
-                result['ultra_positions'].append(
-                    f"| {kc50['asset_name']} | {current:.1f}% | **{suggested}%** {emoji} | "
-                    f"{change:+.0f}% | 🚀硬科技国家队,大幅加仓 |"
+                    f"{change:+.0f}% | 互联网+AI龙头,腾讯阿里美团 |"
                 )
 
         # 创业板ETF
@@ -1061,41 +1048,54 @@ class DailyPositionReportGenerator:
             cyb = next((p for p in positions if '创业板' in p.get('asset_name', '')), None)
             if cyb:
                 current = cyb.get('position_ratio', 0) * 100
-                suggested = 20
+                suggested = 25
                 change = suggested - current
                 emoji = "⬆️" if change > 0 else ("⬇️" if change < 0 else "➡️")
                 result['ultra_positions'].append(
                     f"| {cyb['asset_name']} | {current:.1f}% | **{suggested}%** {emoji} | "
-                    f"{change:+.0f}% | 🚀成长股主战场,大幅加仓 |"
+                    f"{change:+.0f}% | 新能源+医药+半导体成长股 |"
+                )
+
+        # 科创50ETF
+        if any('科创' in p.get('asset_name', '') for p in positions):
+            kc50 = next((p for p in positions if '科创' in p.get('asset_name', '')), None)
+            if kc50:
+                current = kc50.get('position_ratio', 0) * 100
+                suggested = 15
+                change = suggested - current
+                emoji = "⬆️" if change > 0 else ("⬇️" if change < 0 else "➡️")
+                result['ultra_positions'].append(
+                    f"| {kc50['asset_name']} | {current:.1f}% | **{suggested}%** {emoji} | "
+                    f"{change:+.0f}% | 中国版纳斯达克,硬科技核心 |"
                 )
 
         # 周期股
         result['ultra_positions'].append("| **⚡ 周期股双核** | | | | |")
-
-        # 煤炭ETF
-        if any('煤炭' in p.get('asset_name', '') for p in positions):
-            mt = next((p for p in positions if '煤炭' in p.get('asset_name', '')), None)
-            if mt:
-                current = mt.get('position_ratio', 0) * 100
-                suggested = 12
-                change = suggested - current
-                emoji = "⬆️" if change > 0 else ("⬇️" if change < 0 else "➡️")
-                result['ultra_positions'].append(
-                    f"| {mt['asset_name']} | {current:.1f}% | **{suggested}%** {emoji} | "
-                    f"{change:+.0f}% | 周期股高弹性,加仓配置 |"
-                )
 
         # 化工ETF
         if any('化工' in p.get('asset_name', '') for p in positions):
             hg = next((p for p in positions if '化工' in p.get('asset_name', '')), None)
             if hg:
                 current = hg.get('position_ratio', 0) * 100
-                suggested = 8
+                suggested = 10
                 change = suggested - current
                 emoji = "⬆️" if change > 0 else ("⬇️" if change < 0 else "➡️")
                 result['ultra_positions'].append(
                     f"| {hg['asset_name']} | {current:.1f}% | **{suggested}%** {emoji} | "
-                    f"{change:+.0f}% | 与煤炭配合,保持仓位 |"
+                    f"{change:+.0f}% | 油价上行周期,PTA/MDI景气 |"
+                )
+
+        # 煤炭ETF
+        if any('煤炭' in p.get('asset_name', '') for p in positions):
+            mt = next((p for p in positions if '煤炭' in p.get('asset_name', '')), None)
+            if mt:
+                current = mt.get('position_ratio', 0) * 100
+                suggested = 5
+                change = suggested - current
+                emoji = "⬆️" if change > 0 else ("⬇️" if change < 0 else "➡️")
+                result['ultra_positions'].append(
+                    f"| {mt['asset_name']} | {current:.1f}% | **{suggested}%** {emoji} | "
+                    f"{change:+.0f}% | 能源安全底仓,分红高+政策支持 |"
                 )
 
         # 防守/价值股：建议清仓
@@ -1134,14 +1134,14 @@ class DailyPositionReportGenerator:
         # 现金
         current_cash = (1.0 - sum(p.get('position_ratio', 0) for p in positions)) * 100
         result['ultra_positions'].append(
-            f"| 现金 | {current_cash:.1f}% | **5%** | "
-            f"{5-current_cash:+.0f}% | 牛市降低现金储备 |"
+            f"| 现金 | {current_cash:.1f}% | **10%** | "
+            f"{10-current_cash:+.0f}% | 应对黑天鹅,保持灵活性 |"
         )
 
         result['ultra_positions'].append("")
 
-        # ========== 换仓计划（方案C） ==========
-        result['action_plan'].append("### 📋 方案C执行计划")
+        # ========== 换仓计划（方案C+） ==========
+        result['action_plan'].append("### 📋 方案C+执行计划")
         result['action_plan'].append("")
         result['action_plan'].append("#### **第一步：本周内清仓** (释放50%资金)")
         result['action_plan'].append("")
@@ -1173,20 +1173,20 @@ class DailyPositionReportGenerator:
 
         result['action_plan'].append("#### **第二步：下周加仓科技** (配置75%)")
         result['action_plan'].append("")
-        result['action_plan'].append("- [ ] 恒生科技ETF: 28% → **30%** (+2%)")
-        result['action_plan'].append("- [ ] 科创50ETF: 2% → **25%** (+23%, 重点加仓)")
-        result['action_plan'].append("- [ ] 创业板ETF: 2% → **20%** (+18%, 重点加仓)")
+        result['action_plan'].append("- [ ] 恒生科技ETF: 28% → **35%** (+7%)")
+        result['action_plan'].append("- [ ] 创业板ETF: 2% → **25%** (+23%, 重点加仓)")
+        result['action_plan'].append("- [ ] 科创50ETF: 2% → **15%** (+13%, 重点加仓)")
         result['action_plan'].append("")
 
-        result['action_plan'].append("#### **第三步：加仓周期股** (配置20%)")
+        result['action_plan'].append("#### **第三步：加仓周期股** (配置15%)")
         result['action_plan'].append("")
-        result['action_plan'].append("- [ ] 煤炭ETF: 4% → **12%** (+8%)")
-        result['action_plan'].append("- [ ] 化工ETF: 7% → **8%** (+1%)")
+        result['action_plan'].append("- [ ] 化工ETF: 7% → **10%** (+3%)")
+        result['action_plan'].append("- [ ] 煤炭ETF: 4% → **5%** (+1%)")
         result['action_plan'].append("")
 
-        result['action_plan'].append("#### **第四步：保留现金** (5%)")
+        result['action_plan'].append("#### **第四步：保留现金** (10%)")
         result['action_plan'].append("")
-        result['action_plan'].append("- [ ] 现金储备: 7% → **5%** (机动资金)")
+        result['action_plan'].append("- [ ] 现金储备: 7% → **10%** (+3%, 应对黑天鹅)")
         result['action_plan'].append("")
 
         result['action_plan'].append("#### **第三步：动态管理** (持续)")
@@ -1194,16 +1194,16 @@ class DailyPositionReportGenerator:
         result['action_plan'].append("**底仓+波段双轨制** (量化优化):")
         result['action_plan'].append("")
         result['action_plan'].append("根据Kelly公式和波动率分析,最优配置为:")
-        result['action_plan'].append("- **底仓65%** (约62%实际仓位): 长期持有,捕捉趋势")
-        result['action_plan'].append("- **波段35%** (约33%实际仓位): 择时操作,增强收益")
-        result['action_plan'].append("- **现金5%**: 应对黑天鹅事件")
+        result['action_plan'].append("- **底仓70%** (约63%实际仓位): 长期持有,捕捉趋势")
+        result['action_plan'].append("- **波段20%** (约18%实际仓位): 择时操作,增强收益")
+        result['action_plan'].append("- **现金10%**: 应对黑天鹅事件")
         result['action_plan'].append("")
         result['action_plan'].append("**操作策略**:")
         result['action_plan'].append("- 牛市延续: 底仓满仓持有,波段逢高减持3-5%")
         result['action_plan'].append("- 回调-5%: 波段仓逐步加仓")
-        result['action_plan'].append("- 回调-10%: 波段仓加满至35%,等待反弹")
+        result['action_plan'].append("- 回调-10%: 波段仓加满至20%,等待反弹")
         result['action_plan'].append("- 回调-20%: 触发警告,观察止跌信号")
-        result['action_plan'].append("- 回调-25%: 执行止损,底仓减至30%,保留本金")
+        result['action_plan'].append("- 回调-30%: 执行止损,底仓减至50%,保留本金")
         result['action_plan'].append("")
 
         # ========== 预期收益 ==========
@@ -1212,43 +1212,44 @@ class DailyPositionReportGenerator:
         return result
 
     def _calculate_aggressive_return(self, market_state: Dict) -> str:
-        """计算激进版预期收益（方案C）"""
+        """计算激进版预期收益（方案C+）"""
         lines = []
-        lines.append("### 💰 方案C预期收益(2026年底目标)")
+        lines.append("### 💰 方案C+预期收益(2026年底目标)")
         lines.append("")
         lines.append("**假设市场环境**: 牛市延续至2026年Q2,随后震荡")
         lines.append("")
         lines.append("| 板块 | 仓位 | 预期年化 | 贡献 | 逻辑 |")
         lines.append("|------|------|---------|------|------|")
         lines.append("| **科技成长(75%)** | | | | |")
-        lines.append("| 恒生科技ETF | 30% | 50% | **+15%** | 港股科技复苏 |")
-        lines.append("| 科创50ETF | 25% | 80% | **+20%** | 硬科技爆发 |")
-        lines.append("| 创业板ETF | 20% | 70% | **+14%** | 成长股轮动 |")
-        lines.append("| **周期股(20%)** | | | | |")
-        lines.append("| 煤炭ETF | 12% | 40% | **+4.8%** | 周期股反弹 |")
-        lines.append("| 化工ETF | 8% | 40% | **+3.2%** | 与煤炭共振 |")
-        lines.append("| **现金(5%)** | 5% | 0% | 0% | 机动资金 |")
-        lines.append("| **合计** | **95%** | - | **≈57%** | 年化收益 |")
+        lines.append("| 恒生科技ETF | 35% | 50% | **+17.5%** | 互联网+AI龙头复苏 |")
+        lines.append("| 创业板ETF | 25% | 70% | **+17.5%** | 新能源+医药主战场 |")
+        lines.append("| 科创50ETF | 15% | 80% | **+12%** | 硬科技国家队爆发 |")
+        lines.append("| **周期股(15%)** | | | | |")
+        lines.append("| 化工ETF | 10% | 40% | **+4%** | 油价上行景气周期 |")
+        lines.append("| 煤炭ETF | 5% | 40% | **+2%** | 能源安全+高分红 |")
+        lines.append("| **现金(10%)** | 10% | 0% | 0% | 应对黑天鹅 |")
+        lines.append("| **合计** | **90%** | - | **≈53%** | 年化收益 |")
         lines.append("")
         lines.append("**2年预期路径**:")
         lines.append("")
-        lines.append("- **2025年**: 48万 × 1.57 = **75万** ✅")
-        lines.append("- **2026年**: 75万 × 1.35 = **101万** ✅")
+        lines.append("- **2025年**: 52万 × 1.60 = **83万** ✅")
+        lines.append("- **2026年**: 83万 × 1.30 = **108万** ✅")
         lines.append("- **最终**: **超过100万目标** 🎯")
         lines.append("")
-        lines.append("**方案C优势**:")
+        lines.append("**方案C+优势**:")
         lines.append("")
-        lines.append("- ✅ **科技三核心**: 恒科+科创+创业板,全方位覆盖")
-        lines.append("- ✅ **周期对冲**: 煤炭+化工20%,科技回调时补充收益")
-        lines.append("- ✅ **年化57%**: 比纯科技更稳健,比保守版更激进")
-        lines.append("- ✅ **风险分散**: 5个品种分散单一板块风险")
+        lines.append("- ✅ **进攻性强**: 科技75%,牛市跑赢沪深300 40%+")
+        lines.append("- ✅ **科技三核心**: 恒科35%+创业板25%+科创15%,全方位覆盖")
+        lines.append("- ✅ **周期对冲**: 化工+煤炭15%,科技回调时降低回撤")
+        lines.append("- ✅ **现金充足**: 10%现金储备,应对黑天鹅+把握加仓机会")
+        lines.append("- ✅ **风险可控**: 止损-30%,最大回撤可控")
         lines.append("")
         lines.append("**风险提示**:")
         lines.append("")
-        lines.append("- ⚠️ 年化57%属于极高预期,需牛市配合")
-        lines.append("- ⚠️ 最大回撤可能达25-30%")
-        lines.append("- ⚠️ 周期股波动大,需严格止损")
-        lines.append("- ⚠️ 科创50和创业板波动率高,需承受短期回撤")
+        lines.append("- ⚠️ 年化60%属于极高预期,需牛市配合+严格执行")
+        lines.append("- ⚠️ 预期最大回撤-25%至-30%(2015股灾级别)")
+        lines.append("- ⚠️ 单次回撤触及-30%立即减仓至65%")
+        lines.append("- ⚠️ 需忍受季度级别-15%波动")
         lines.append("- ✅ **但不激进,无法实现翻倍目标**")
         lines.append("")
 
