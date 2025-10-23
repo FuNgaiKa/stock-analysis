@@ -190,7 +190,8 @@ class DailyPositionReportGenerator:
             indices_map = {
                 '000300': 'HS300',
                 '399006': 'CYBZ',
-                '588000': 'KC50ETF'  # 科创50ETF,因为科创50指数数据不准确
+                '588000': 'KC50ETF',  # 科创50ETF,因为科创50指数数据不准确
+                '513180': 'HSTECH'  # 恒生科技ETF
             }
 
             for code, name in indices_map.items():
@@ -1325,13 +1326,22 @@ class DailyPositionReportGenerator:
                     f"{cybz['change_pct']:+.2f}% {emoji} | {status} |"
                 )
 
-            if 'KC50' in indices:
-                kc50 = indices['KC50']
+            if 'KC50ETF' in indices:
+                kc50 = indices['KC50ETF']
                 emoji = "📈" if kc50['change_pct'] >= 0 else "📉"
                 status = "上涨" if kc50['change_pct'] > 0 else ("下跌" if kc50['change_pct'] < 0 else "平盘")
                 lines.append(
                     f"| **科创50** | {kc50['current']:.2f} | "
                     f"{kc50['change_pct']:+.2f}% {emoji} | {status} |"
+                )
+
+            if 'HSTECH' in indices:
+                hstech = indices['HSTECH']
+                emoji = "📈" if hstech['change_pct'] >= 0 else "📉"
+                status = "上涨" if hstech['change_pct'] > 0 else ("下跌" if hstech['change_pct'] < 0 else "平盘")
+                lines.append(
+                    f"| **恒生科技** | {hstech['current']:.2f} | "
+                    f"{hstech['change_pct']:+.2f}% {emoji} | {status} |"
                 )
 
             lines.append("")
@@ -1466,11 +1476,19 @@ class DailyPositionReportGenerator:
             lines.append("## 🎯 收益表现与目标达成")
             lines.append("")
 
-            # 这里需要实际的资金数据，先使用占位符
-            total_value = sum(p.get('current_value', 0) for p in positions) if positions else 0
-            if total_value > 0:
+            # 计算总资产(持仓市值+现金)
+            positions_value = sum(p.get('current_value', 0) for p in positions) if positions else 0
+            position_ratio_sum = sum(p.get('position_ratio', 0) for p in positions) if positions else 0
+
+            # 根据持仓比例推算总资产
+            if position_ratio_sum > 0 and position_ratio_sum < 1:
+                total_assets = positions_value / position_ratio_sum
+            else:
+                total_assets = positions_value
+
+            if total_assets > 0:
                 perf_result = self.performance_tracker.track_performance(
-                    current_capital=total_value,
+                    current_capital=total_assets,
                     hs300_current=market_data['indices']['HS300']['current'],
                     hs300_base=3145.0,  # 2025-01-01基准
                     current_date=date
@@ -1825,7 +1843,14 @@ def main():
     parser.add_argument(
         '--auto-update',
         action='store_true',
-        help='自动更新市场数据'
+        default=True,
+        help='自动更新市场数据(默认开启)'
+    )
+    parser.add_argument(
+        '--no-auto-update',
+        dest='auto_update',
+        action='store_false',
+        help='禁用自动更新市场数据'
     )
     parser.add_argument(
         '--verbose',
