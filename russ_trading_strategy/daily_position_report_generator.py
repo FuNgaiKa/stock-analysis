@@ -42,6 +42,7 @@ sys.path.insert(0, str(project_root))
 from russ_trading_strategy.position_health_checker import PositionHealthChecker
 from russ_trading_strategy.performance_tracker import PerformanceTracker
 from russ_trading_strategy.potential_analyzer import PotentialAnalyzer
+from russ_trading_strategy.market_depth_analyzer import MarketDepthAnalyzer
 
 # 尝试导入增强模块
 try:
@@ -96,6 +97,7 @@ class DailyPositionReportGenerator:
         self.health_checker = PositionHealthChecker(strategy_config)
         self.performance_tracker = PerformanceTracker()
         self.potential_analyzer = PotentialAnalyzer()
+        self.market_depth_analyzer = MarketDepthAnalyzer()
 
         # 初始化增强模块
         if HAS_ENHANCED_MODULES:
@@ -220,6 +222,11 @@ class DailyPositionReportGenerator:
                         logger.info(f"✅ {name}: {latest['收盘']:.2f} ({latest['涨跌幅']:+.2f}%)")
                 except Exception as e:
                     logger.warning(f"efinance获取{name}失败: {e}")
+
+            # 将KC50ETF的技术数据也存为KC50,供技术分析使用
+            if 'KC50ETF' in market_data['technical']:
+                market_data['technical']['KC50'] = market_data['technical']['KC50ETF']
+                logger.info("✅ 科创50技术数据已准备")
 
             # 获取基本面数据 (PE/PB等) - 使用akshare
             try:
@@ -1354,8 +1361,8 @@ class DailyPositionReportGenerator:
 
                 technical_data = market_data['technical']
 
-                # 分析主要指数
-                for idx_name, idx_key in [('沪深300', 'HS300'), ('创业板指', 'CYBZ'), ('科创50', 'KC50')]:
+                # 分析主要指数 (增加恒生科技)
+                for idx_name, idx_key in [('沪深300', 'HS300'), ('创业板指', 'CYBZ'), ('科创50', 'KC50'), ('恒生科技', 'HSTECH')]:
                     if idx_key in technical_data:
                         df = technical_data[idx_key]
                         analysis = self.technical_analyzer.analyze_index(idx_name, df)
@@ -1452,6 +1459,14 @@ class DailyPositionReportGenerator:
 
         lines.append("---")
         lines.append("")
+
+        # ========== 新增: 深度盘面分析 ==========
+        try:
+            logger.info("生成深度盘面分析...")
+            depth_report = self.market_depth_analyzer.generate_depth_report(date, market_data)
+            lines.append(depth_report)
+        except Exception as e:
+            logger.warning(f"深度盘面分析失败: {e}")
 
         # ========== 第二部分: 持仓健康度 ==========
         if positions:
