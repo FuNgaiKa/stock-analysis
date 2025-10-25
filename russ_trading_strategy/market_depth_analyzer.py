@@ -236,6 +236,12 @@ class MarketDepthAnalyzer:
         self.logger.info("正在获取资金流向数据...")
         return ak.stock_sector_fund_flow_rank(indicator="今日")
 
+    @retry_on_error(max_retries=3, delay=2)
+    def _fetch_realtime_quotes_with_retry(self):
+        """带重试的实时行情数据获取"""
+        self.logger.info("正在获取实时行情数据...")
+        return ak.stock_zh_a_spot_em()
+
     def _analyze_rotation_signal(self, data: Dict) -> str:
         """分析轮动信号"""
         try:
@@ -312,29 +318,34 @@ class MarketDepthAnalyzer:
         }
 
         try:
-            # 1. 获取涨跌停数据
+            # 1. 获取涨跌停数据（从实时行情统计，更准确）
             self.logger.info("获取涨跌停数据...")
             try:
-                # 获取涨停股
-                df_limit_up = ak.stock_zt_pool_em(date=datetime.now().strftime('%Y%m%d'))
-                if df_limit_up is not None:
-                    result['limit_up'] = len(df_limit_up)
-                    self.logger.info(f"✅ 涨停: {result['limit_up']}只")
+                df_realtime = self._fetch_realtime_quotes_with_retry()
 
-                # 获取跌停股
-                df_limit_down = ak.stock_dt_pool_em(date=datetime.now().strftime('%Y%m%d'))
-                if df_limit_down is not None:
-                    result['limit_down'] = len(df_limit_down)
-                    self.logger.info(f"✅ 跌停: {result['limit_down']}只")
+                if df_realtime is not None and len(df_realtime) > 0:
+                    # 统计涨停（考虑普通股和ST股的不同涨幅限制）
+                    # 普通股：涨跌幅 >= 9.9%
+                    # ST股、*ST股：涨跌幅 >= 4.9%
 
-            except Exception as e:
-                self.logger.warning(f"获取涨跌停数据失败: {e}")
+                    is_st = df_realtime['名称'].str.contains('ST|st', na=False, regex=True)
 
-            # 2. 获取涨跌家数
-            try:
-                # 使用实时行情统计
-                df_realtime = ak.stock_zh_a_spot_em()
-                if df_realtime is not None:
+                    # 普通涨停
+                    normal_limit_up = len(df_realtime[(~is_st) & (df_realtime['涨跌幅'] >= 9.9)])
+                    # ST涨停
+                    st_limit_up = len(df_realtime[is_st & (df_realtime['涨跌幅'] >= 4.9)])
+                    result['limit_up'] = normal_limit_up + st_limit_up
+
+                    # 普通跌停
+                    normal_limit_down = len(df_realtime[(~is_st) & (df_realtime['涨跌幅'] <= -9.9)])
+                    # ST跌停
+                    st_limit_down = len(df_realtime[is_st & (df_realtime['涨跌幅'] <= -4.9)])
+                    result['limit_down'] = normal_limit_down + st_limit_down
+
+                    self.logger.info(f"✅ 涨停: {result['limit_up']}只 (普通{normal_limit_up}+ST{st_limit_up})")
+                    self.logger.info(f"✅ 跌停: {result['limit_down']}只 (普通{normal_limit_down}+ST{st_limit_down})")
+
+                    # 同时统计涨跌家数（复用数据）
                     result['advance'] = len(df_realtime[df_realtime['涨跌幅'] > 0])
                     result['decline'] = len(df_realtime[df_realtime['涨跌幅'] < 0])
 
@@ -344,7 +355,7 @@ class MarketDepthAnalyzer:
                     self.logger.info(f"✅ 上涨: {result['advance']}只, 下跌: {result['decline']}只")
 
             except Exception as e:
-                self.logger.warning(f"获取涨跌家数失败: {e}")
+                self.logger.warning(f"获取涨跌停数据失败: {e}")
 
             # 3. 获取北向资金
             try:
