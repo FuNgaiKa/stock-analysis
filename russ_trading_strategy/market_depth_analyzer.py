@@ -11,27 +11,125 @@
 
 Author: Claude Code
 Created: 2025-10-24
+Updated: 2025-10-25 (添加重试和缓存机制)
 """
 
 import logging
+import time
+import json
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
-from datetime import datetime
+from datetime import datetime, timedelta
+from functools import wraps
 import akshare as ak
 import efinance as ef
 
 logger = logging.getLogger(__name__)
 
 
-class MarketDepthAnalyzer:
-    """市场深度分析器"""
+def retry_on_error(max_retries=3, delay=2):
+    """
+    重试装饰器 - 用于处理网络请求失败
 
-    def __init__(self):
-        """初始化分析器"""
+    Args:
+        max_retries: 最大重试次数
+        delay: 重试间隔（秒）
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    if attempt < max_retries - 1:
+                        logger.warning(f"{func.__name__} 失败 (尝试 {attempt + 1}/{max_retries}): {e}")
+                        time.sleep(delay)
+                    else:
+                        logger.error(f"{func.__name__} 最终失败: {e}")
+                        raise
+            return None
+        return wrapper
+    return decorator
+
+
+class MarketDepthAnalyzer:
+    """市场深度分析器（支持重试和缓存）"""
+
+    def __init__(self, cache_dir: str = None):
+        """
+        初始化分析器
+
+        Args:
+            cache_dir: 缓存目录路径，默认为 data/cache
+        """
         self.logger = logger
+
+        # 设置缓存目录
+        if cache_dir is None:
+            project_root = Path(__file__).parent.parent
+            cache_dir = project_root / 'data' / 'cache'
+
+        self.cache_dir = Path(cache_dir)
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+
+        self.logger.info(f"缓存目录: {self.cache_dir}")
+
+    def _get_cache_path(self, cache_name: str) -> Path:
+        """获取缓存文件路径"""
+        return self.cache_dir / f"{cache_name}.json"
+
+    def _save_cache(self, cache_name: str, data: Dict) -> None:
+        """保存数据到缓存"""
+        try:
+            cache_path = self._get_cache_path(cache_name)
+            cache_data = {
+                'timestamp': datetime.now().isoformat(),
+                'data': data
+            }
+            with open(cache_path, 'w', encoding='utf-8') as f:
+                json.dump(cache_data, f, ensure_ascii=False, indent=2)
+            self.logger.debug(f"缓存已保存: {cache_name}")
+        except Exception as e:
+            self.logger.warning(f"保存缓存失败: {e}")
+
+    def _load_cache(self, cache_name: str, max_age_hours: int = 24) -> Optional[Dict]:
+        """
+        从缓存加载数据
+
+        Args:
+            cache_name: 缓存名称
+            max_age_hours: 最大缓存时长（小时）
+
+        Returns:
+            缓存的数据，如果缓存过期或不存在则返回 None
+        """
+        try:
+            cache_path = self._get_cache_path(cache_name)
+            if not cache_path.exists():
+                return None
+
+            with open(cache_path, 'r', encoding='utf-8') as f:
+                cache_data = json.load(f)
+
+            # 检查缓存是否过期
+            cache_time = datetime.fromisoformat(cache_data['timestamp'])
+            age = datetime.now() - cache_time
+
+            if age > timedelta(hours=max_age_hours):
+                self.logger.debug(f"缓存已过期: {cache_name} (年龄: {age})")
+                return None
+
+            self.logger.info(f"使用缓存数据: {cache_name} (缓存时间: {cache_time.strftime('%Y-%m-%d %H:%M:%S')})")
+            return cache_data['data']
+
+        except Exception as e:
+            self.logger.warning(f"加载缓存失败: {e}")
+            return None
 
     def analyze_sector_rotation(self, date: str = None) -> Dict:
         """
-        分析板块轮动
+        分析板块轮动（支持缓存和重试）
 
         Args:
             date: 日期 (YYYY-MM-DD), 默认今天
@@ -39,63 +137,56 @@ class MarketDepthAnalyzer:
         Returns:
             板块轮动分析结果
         """
+        cache_name = 'sector_rotation'
         result = {
             'top_gainers': [],      # 领涨板块
             'top_losers': [],       # 领跌板块
             'capital_flow': [],     # 资金流向
             'rotation_signal': '',  # 轮动信号
-            'analysis': ''          # 综合分析
+            'analysis': '',         # 综合分析
+            'data_source': 'realtime'  # 数据来源标识
         }
+
+        # 先尝试获取实时数据
+        data_fetched = False
 
         try:
             # 1. 获取板块行情数据
             self.logger.info("获取板块行情数据...")
 
-            # 使用akshare获取申万一级行业数据
+            # 使用东方财富的行业板块数据（带重试）
+            df_industry = self._fetch_concept_board_with_retry()
+
+            if df_industry is not None and len(df_industry) > 0:
+                # 按涨跌幅排序
+                df_industry = df_industry.sort_values('涨跌幅', ascending=False)
+
+                # 领涨板块 (前5)
+                for idx, row in df_industry.head(5).iterrows():
+                    result['top_gainers'].append({
+                        'name': row['板块名称'],
+                        'change_pct': float(row['涨跌幅']),
+                        'leader': row.get('领涨股票', 'N/A')
+                    })
+
+                # 领跌板块 (后5)
+                for idx, row in df_industry.tail(5).iterrows():
+                    result['top_losers'].append({
+                        'name': row['板块名称'],
+                        'change_pct': float(row['涨跌幅']),
+                        'leader': row.get('领涨股票', 'N/A')
+                    })
+
+                self.logger.info(f"✅ 获取到 {len(df_industry)} 个行业板块数据")
+                data_fetched = True
+
+        except Exception as e:
+            self.logger.warning(f"获取行业板块数据失败: {e}")
+
+        # 2. 获取板块资金流向
+        if data_fetched:  # 只有板块数据获取成功时才尝试资金流向
             try:
-                df_sector = ak.stock_board_industry_name_em()
-                df_sector_info = ak.stock_board_industry_cons_em(symbol="小金属")  # 示例,获取详细信息
-
-                # 获取今日板块涨跌幅
-                # 注意: 这里需要根据实际可用接口调整
-                sectors_data = []
-
-                # 使用东方财富的板块数据
-                try:
-                    # 获取概念板块
-                    df_concept = ak.stock_board_concept_name_em()
-                    if df_concept is not None and len(df_concept) > 0:
-                        # 按涨跌幅排序
-                        df_concept = df_concept.sort_values('涨跌幅', ascending=False)
-
-                        # 领涨板块 (前5)
-                        for idx, row in df_concept.head(5).iterrows():
-                            result['top_gainers'].append({
-                                'name': row['板块名称'],
-                                'change_pct': float(row['涨跌幅']),
-                                'leader': row.get('领涨股票', 'N/A')
-                            })
-
-                        # 领跌板块 (后5)
-                        for idx, row in df_concept.tail(5).iterrows():
-                            result['top_losers'].append({
-                                'name': row['板块名称'],
-                                'change_pct': float(row['涨跌幅']),
-                                'leader': row.get('领涨股票', 'N/A')
-                            })
-
-                        self.logger.info(f"✅ 获取到 {len(df_concept)} 个概念板块数据")
-
-                except Exception as e:
-                    self.logger.warning(f"获取概念板块数据失败: {e}")
-
-            except Exception as e:
-                self.logger.warning(f"获取板块数据失败: {e}")
-
-            # 2. 获取板块资金流向
-            try:
-                # 获取主力资金流向
-                df_flow = ak.stock_sector_fund_flow_rank(indicator="今日")
+                df_flow = self._fetch_capital_flow_with_retry()
                 if df_flow is not None and len(df_flow) > 0:
                     for idx, row in df_flow.head(5).iterrows():
                         result['capital_flow'].append({
@@ -107,16 +198,43 @@ class MarketDepthAnalyzer:
             except Exception as e:
                 self.logger.warning(f"获取资金流向失败: {e}")
 
-            # 3. 判断轮动信号
-            result['rotation_signal'] = self._analyze_rotation_signal(result)
+        # 3. 如果实时数据获取成功，保存到缓存
+        if data_fetched:
+            self._save_cache(cache_name, result)
+        else:
+            # 4. 实时数据获取失败，尝试使用缓存
+            self.logger.warning("⚠️ 实时数据获取失败，尝试使用缓存数据...")
+            cached_data = self._load_cache(cache_name, max_age_hours=72)  # 允许使用3天内的缓存
 
-            # 4. 生成综合分析
-            result['analysis'] = self._generate_rotation_analysis(result)
+            if cached_data:
+                result = cached_data
+                result['data_source'] = 'cache'
+                self.logger.info("✅ 已使用缓存数据")
+            else:
+                self.logger.error("❌ 无可用缓存，返回空数据")
+                result['rotation_signal'] = "数据获取失败（网络错误）"
+                result['analysis'] = "无法连接数据源，请检查网络连接或稍后重试"
+                return result
 
-        except Exception as e:
-            self.logger.error(f"板块轮动分析失败: {e}", exc_info=True)
+        # 5. 判断轮动信号
+        result['rotation_signal'] = self._analyze_rotation_signal(result)
+
+        # 6. 生成综合分析
+        result['analysis'] = self._generate_rotation_analysis(result)
 
         return result
+
+    @retry_on_error(max_retries=3, delay=2)
+    def _fetch_concept_board_with_retry(self):
+        """带重试的行业板块数据获取"""
+        self.logger.info("正在获取行业板块数据...")
+        return ak.stock_board_industry_name_em()
+
+    @retry_on_error(max_retries=3, delay=2)
+    def _fetch_capital_flow_with_retry(self):
+        """带重试的资金流向数据获取"""
+        self.logger.info("正在获取资金流向数据...")
+        return ak.stock_sector_fund_flow_rank(indicator="今日")
 
     def _analyze_rotation_signal(self, data: Dict) -> str:
         """分析轮动信号"""
@@ -124,19 +242,26 @@ class MarketDepthAnalyzer:
             if not data['top_gainers']:
                 return "数据不足"
 
-            # 检查领涨板块类型
-            tech_sectors = ['半导体', '新能源', '互联网', '人工智能', '芯片', '软件']
-            defensive_sectors = ['白酒', '银行', '保险', '地产', '公用事业']
+            # 检查领涨板块类型（适配行业板块命名）
+            tech_sectors = ['半导体', '电子', '计算机', '通信', '传媒', '新能源', '电力设备']
+            defensive_sectors = ['银行', '保险', '食品饮料', '公用事业', '房地产']
+            cycle_sectors = ['有色金属', '钢铁', '煤炭', '化工', '建材']
 
             top_gainer = data['top_gainers'][0]['name'] if data['top_gainers'] else ''
 
-            # 判断进攻/防守切换
+            # 判断进攻/防守/周期切换
             is_tech_leading = any(s in top_gainer for s in tech_sectors)
+            is_defensive_leading = any(s in top_gainer for s in defensive_sectors)
+            is_cycle_leading = any(s in top_gainer for s in cycle_sectors)
 
             if is_tech_leading:
-                return "✅ 防守→进攻切换,科技股启动"
+                return "✅ 进攻信号 - 科技/成长板块领涨"
+            elif is_defensive_leading:
+                return "⚠️ 防御信号 - 防御性板块领涨"
+            elif is_cycle_leading:
+                return "🔄 周期信号 - 周期性板块领涨"
             else:
-                return "⚠️ 市场风格轮动中,关注板块变化"
+                return "➡️ 中性信号 - 板块轮动不明显"
 
         except Exception as e:
             self.logger.warning(f"轮动信号分析失败: {e}")
@@ -453,9 +578,17 @@ class MarketDepthAnalyzer:
 
         sector_data = self.analyze_sector_rotation(date)
 
+        # 数据来源提示
+        if sector_data.get('data_source') == 'cache':
+            cache_hint = " *(使用缓存数据)*"
+            lines.append("> ⚠️ **提示**: 实时数据获取失败，当前使用缓存数据")
+            lines.append("")
+        else:
+            cache_hint = ""
+
         # 领涨板块
         if sector_data['top_gainers']:
-            lines.append("**今日领涨板块**:")
+            lines.append(f"**今日领涨板块**{cache_hint}:")
             lines.append("")
             for sector in sector_data['top_gainers'][:5]:
                 emoji = "🔥" if sector['change_pct'] > 3 else "📈"
