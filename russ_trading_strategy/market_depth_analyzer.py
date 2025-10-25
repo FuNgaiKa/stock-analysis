@@ -318,8 +318,10 @@ class MarketDepthAnalyzer:
         }
 
         try:
-            # 1. 获取涨跌停数据（从实时行情统计，更准确）
+            # 1. 获取涨跌停数据（优先用实时行情，失败则降级）
             self.logger.info("获取涨跌停数据...")
+            data_fetched = False
+
             try:
                 df_realtime = self._fetch_realtime_quotes_with_retry()
 
@@ -353,9 +355,22 @@ class MarketDepthAnalyzer:
                         result['advance_decline_ratio'] = result['advance'] / result['decline']
 
                     self.logger.info(f"✅ 上涨: {result['advance']}只, 下跌: {result['decline']}只")
+                    data_fetched = True
 
             except Exception as e:
-                self.logger.warning(f"获取涨跌停数据失败: {e}")
+                self.logger.warning(f"实时行情获取失败: {e}")
+
+            # 降级策略：如果实时行情失败，使用涨停池接口（至少有部分数据）
+            if not data_fetched:
+                self.logger.info("⚠️ 降级到涨停池接口...")
+                try:
+                    df_limit_up = ak.stock_zt_pool_em(date=datetime.now().strftime('%Y%m%d'))
+                    if df_limit_up is not None:
+                        result['limit_up'] = len(df_limit_up)
+                        self.logger.info(f"✅ 涨停: {result['limit_up']}只 (来源:涨停池)")
+                        # 注：跌停数据仍为0，因为没有对应接口
+                except Exception as e2:
+                    self.logger.warning(f"涨停池接口也失败: {e2}")
 
             # 3. 获取北向资金
             try:
