@@ -15,8 +15,8 @@ import os
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
-from stock.stock import AStockHeatAnalyzer
-from compound_interest.compound_calculator import CompoundCalculator
+from _deprecated.stock.stock import AStockHeatAnalyzer
+from _deprecated.compound_interest.compound_calculator import CompoundCalculator
 
 
 def demo_stock_analysis():
@@ -25,7 +25,7 @@ def demo_stock_analysis():
     try:
         # 直接显示数据源选择菜单
         print("\n请选择数据源:")
-        from stock.data_source_selector import DataSourceSelector
+        from _deprecated.stock.data_source_selector import DataSourceSelector
         selector = DataSourceSelector()
 
         # 显示菜单并选择

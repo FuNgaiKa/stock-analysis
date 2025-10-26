@@ -32,7 +32,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('position_analysis.log'),
+        logging.FileHandler('logs/position_analysis.log'),
         logging.StreamHandler()
     ]
 )
