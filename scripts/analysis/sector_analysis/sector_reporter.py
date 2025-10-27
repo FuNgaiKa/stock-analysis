@@ -34,8 +34,8 @@ import numpy as np
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from scripts.sector_analysis.sector_config import get_sector_config, list_all_sectors
-from scripts.sector_analysis.data_source_manager import DataSourceManager
+from scripts.analysis.sector_analysis.sector_config import get_sector_config, list_all_sectors
+from scripts.analysis.sector_analysis.data_source_manager import DataSourceManager
 from strategies.position.market_analyzers.cn_market_analyzer import CNMarketAnalyzer
 from strategies.position.analyzers.technical_analysis.divergence_analyzer import DivergenceAnalyzer
 from strategies.position.analyzers.market_specific.cn_stock_indicators import CNStockIndicators

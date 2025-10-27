@@ -34,8 +34,8 @@ from russ_trading.unified_config import (
     list_assets_by_analyzer,
     get_asset_config
 )
-from scripts.comprehensive_asset_analysis.asset_reporter import ComprehensiveAssetReporter
-from scripts.sector_analysis.sector_reporter import SectorReporter
+from scripts.analysis.comprehensive_asset_analysis.asset_reporter import ComprehensiveAssetReporter
+from scripts.analysis.sector_analysis.sector_reporter import SectorReporter
 from russ_trading.unified_email_notifier import UnifiedEmailNotifier
 
 # 配置日志
