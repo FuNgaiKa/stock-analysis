@@ -8,7 +8,7 @@
 import sys
 import time
 import logging
-from position_analysis.core.historical_position_analyzer import HistoricalPositionAnalyzer
+from strategies.position.core.historical_position_analyzer import HistoricalPositionAnalyzer
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -173,7 +173,7 @@ def test_business_logic():
         print(f"✅ 收益率计算完成: {len(future_returns)}条记录")
 
         print("\n步骤4: 概率统计分析")
-        from position_analysis.core.historical_position_analyzer import ProbabilityAnalyzer
+        from strategies.position.core.historical_position_analyzer import ProbabilityAnalyzer
         prob_analyzer = ProbabilityAnalyzer()
 
         stats_20d = prob_analyzer.calculate_probability(future_returns['return_20d'])

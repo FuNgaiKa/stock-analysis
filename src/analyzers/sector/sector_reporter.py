@@ -36,14 +36,14 @@ sys.path.insert(0, str(project_root))
 
 from scripts.sector_analysis.sector_config import get_sector_config, list_all_sectors
 from scripts.sector_analysis.data_source_manager import DataSourceManager
-from position_analysis.market_analyzers.cn_market_analyzer import CNMarketAnalyzer
-from position_analysis.analyzers.technical_analysis.divergence_analyzer import DivergenceAnalyzer
-from position_analysis.analyzers.market_specific.cn_stock_indicators import CNStockIndicators
-from position_analysis.analyzers.market_specific.hk_connect_analyzer import HKConnectAnalyzer
-from position_analysis.analyzers.technical_analysis.volume_analyzer import VolumeAnalyzer
-from position_analysis.analyzers.technical_analysis.support_resistance import SupportResistanceAnalyzer
-from position_analysis.analyzers.market_structure.market_breadth_analyzer import MarketBreadthAnalyzer
-from position_analysis.analyzers.valuation.index_valuation_analyzer import IndexValuationAnalyzer
+from strategies.position.market_analyzers.cn_market_analyzer import CNMarketAnalyzer
+from strategies.position.analyzers.technical_analysis.divergence_analyzer import DivergenceAnalyzer
+from strategies.position.analyzers.market_specific.cn_stock_indicators import CNStockIndicators
+from strategies.position.analyzers.market_specific.hk_connect_analyzer import HKConnectAnalyzer
+from strategies.position.analyzers.technical_analysis.volume_analyzer import VolumeAnalyzer
+from strategies.position.analyzers.technical_analysis.support_resistance import SupportResistanceAnalyzer
+from strategies.position.analyzers.market_structure.market_breadth_analyzer import MarketBreadthAnalyzer
+from strategies.position.analyzers.valuation.index_valuation_analyzer import IndexValuationAnalyzer
 
 logger = logging.getLogger(__name__)
 

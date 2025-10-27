@@ -11,7 +11,7 @@ from pathlib import Path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
-from position_analysis.reporting.report_generator import MarkdownReportGenerator
+from strategies.position.reporting.report_generator import MarkdownReportGenerator
 from datetime import datetime
 
 def test_markdown_report():

@@ -8,7 +8,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from data_sources.akshare_optimized import AkshareOptimized
+from src.data_sources.akshare_optimized import AkshareOptimized
 from stock.stock import MarketHeatAnalyzer
 
 def test_new_structure():

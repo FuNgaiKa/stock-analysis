@@ -17,7 +17,7 @@ from pathlib import Path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
-from russ_trading_strategy.market_depth_analyzer import MarketDepthAnalyzer
+from russ_trading.market_depth_analyzer import MarketDepthAnalyzer
 
 # 配置日志
 logging.basicConfig(

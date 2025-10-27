@@ -34,23 +34,23 @@ import numpy as np
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from position_analysis.market_analyzers.cn_market_analyzer import CNMarketAnalyzer, CN_INDICES
-from position_analysis.market_analyzers.hk_market_analyzer import HKMarketAnalyzer, HK_INDICES
-from position_analysis.market_analyzers.us_market_analyzer import USMarketAnalyzer, US_INDICES
-from position_analysis.analyzers.technical_analysis.divergence_analyzer import DivergenceAnalyzer
-from position_analysis.analyzers.market_specific.cn_stock_indicators import CNStockIndicators
-from position_analysis.analyzers.market_specific.hk_connect_analyzer import HKConnectAnalyzer
-from data_sources.us_stock_source import USStockDataSource
+from strategies.position.market_analyzers.cn_market_analyzer import CNMarketAnalyzer, CN_INDICES
+from strategies.position.market_analyzers.hk_market_analyzer import HKMarketAnalyzer, HK_INDICES
+from strategies.position.market_analyzers.us_market_analyzer import USMarketAnalyzer, US_INDICES
+from strategies.position.analyzers.technical_analysis.divergence_analyzer import DivergenceAnalyzer
+from strategies.position.analyzers.market_specific.cn_stock_indicators import CNStockIndicators
+from strategies.position.analyzers.market_specific.hk_connect_analyzer import HKConnectAnalyzer
+from src.data_sources.us_stock_source import USStockDataSource
 
 # 新增的分析器(维度8-11)
-from position_analysis.analyzers.technical_analysis.volume_analyzer import VolumeAnalyzer
-from position_analysis.analyzers.technical_analysis.support_resistance import SupportResistanceAnalyzer
-from position_analysis.analyzers.market_structure.market_breadth_analyzer import MarketBreadthAnalyzer
-from position_analysis.analyzers.market_indicators.vix_analyzer import VIXAnalyzer
-from position_analysis.analyzers.market_indicators.vhsi_analyzer import VHSIAnalyzer
-from position_analysis.analyzers.market_structure.sentiment_index import MarketSentimentIndex
-from position_analysis.analyzers.market_indicators.cn_volatility_index import CNVolatilityIndex
-from position_analysis.analyzers.market_indicators.hk_volatility_index import HKVolatilityIndex
+from strategies.position.analyzers.technical_analysis.volume_analyzer import VolumeAnalyzer
+from strategies.position.analyzers.technical_analysis.support_resistance import SupportResistanceAnalyzer
+from strategies.position.analyzers.market_structure.market_breadth_analyzer import MarketBreadthAnalyzer
+from strategies.position.analyzers.market_indicators.vix_analyzer import VIXAnalyzer
+from strategies.position.analyzers.market_indicators.vhsi_analyzer import VHSIAnalyzer
+from strategies.position.analyzers.market_structure.sentiment_index import MarketSentimentIndex
+from strategies.position.analyzers.market_indicators.cn_volatility_index import CNVolatilityIndex
+from strategies.position.analyzers.market_indicators.hk_volatility_index import HKVolatilityIndex
 
 logger = logging.getLogger(__name__)
 
@@ -526,7 +526,7 @@ class ComprehensiveAssetReporter:
                 return {'error': '数据获取失败'}
 
             # 实例化SupportResistanceAnalyzer
-            from position_analysis.analyzers.technical_analysis.support_resistance import SupportResistanceAnalyzer
+            from strategies.position.analyzers.technical_analysis.support_resistance import SupportResistanceAnalyzer
             sr_analyzer = SupportResistanceAnalyzer(symbol, df)
 
             # 综合分析 (捕获异常)
@@ -689,7 +689,7 @@ class ComprehensiveAssetReporter:
                 north_flow = self.hk_connect.comprehensive_analysis(direction='north')
 
                 # 融资融券分析
-                from position_analysis.analyzers.market_specific.margin_trading_analyzer import MarginTradingAnalyzer
+                from strategies.position.analyzers.market_specific.margin_trading_analyzer import MarginTradingAnalyzer
                 margin_analyzer = MarginTradingAnalyzer(lookback_days=252)
                 margin_result = margin_analyzer.comprehensive_analysis(market='sse')  # 使用上交所数据
 
@@ -754,7 +754,7 @@ class ComprehensiveAssetReporter:
                 return {'available': False, 'reason': '仅支持A股指数估值分析'}
 
             # 导入估值分析器
-            from position_analysis.analyzers.valuation.index_valuation_analyzer import IndexValuationAnalyzer
+            from strategies.position.analyzers.valuation.index_valuation_analyzer import IndexValuationAnalyzer
 
             # 代码映射(asset_reporter中的code -> akshare code)
             # 注意: 仅包含akshare的stock_index_pe_lg接口支持的指数
@@ -834,7 +834,7 @@ class ComprehensiveAssetReporter:
 
             # 1. 美债收益率分析
             try:
-                from position_analysis.analyzers.macro.treasury_yield_analyzer import TreasuryYieldAnalyzer
+                from strategies.position.analyzers.macro.treasury_yield_analyzer import TreasuryYieldAnalyzer
                 treasury_analyzer = TreasuryYieldAnalyzer(lookback_days=252)
                 treasury_result = treasury_analyzer.comprehensive_analysis()
 
@@ -856,7 +856,7 @@ class ComprehensiveAssetReporter:
 
             # 2. 美元指数分析
             try:
-                from position_analysis.analyzers.macro.dxy_analyzer import DXYAnalyzer
+                from strategies.position.analyzers.macro.dxy_analyzer import DXYAnalyzer
                 dxy_analyzer = DXYAnalyzer(lookback_days=252)
                 dxy_result = dxy_analyzer.comprehensive_analysis()
 

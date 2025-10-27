@@ -2,7 +2,7 @@
 斜率分析测试脚本
 分析纳指、标普、恒指的斜率状态，验证"美股过热、港股修复"假设
 """
-from position_analysis.analyzers.technical_analysis.slope_analyzer import SlopeAnalyzer, compare_slopes
+from strategies.position.analyzers.technical_analysis.slope_analyzer import SlopeAnalyzer, compare_slopes
 import pandas as pd
 from datetime import datetime
 

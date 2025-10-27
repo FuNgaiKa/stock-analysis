@@ -16,8 +16,8 @@ if sys.platform.startswith('win'):
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import akshare as ak
-from trading_strategies.signal_generators.technical_indicators import TechnicalIndicators
-from trading_strategies.signal_generators.resonance_signals import ResonanceSignalGenerator
+from strategies.trading.signal_generators.technical_indicators import TechnicalIndicators
+from strategies.trading.signal_generators.resonance_signals import ResonanceSignalGenerator
 
 
 def test_strategy():
