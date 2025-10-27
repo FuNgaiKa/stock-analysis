@@ -201,6 +201,9 @@ const analyzeAlpha = async () => {
 
   try {
     // TODO: 调用后端API
+    // 实现条件: 需要先开发后端Alpha101分析API接口
+    // 优先级: 低 - 当前使用模拟数据演示功能
+    // 后端路径建议: /api/alpha101/analyze
     // const response = await fetch(`/api/alpha101/analyze?symbol=${config.value.symbol}`)
     // result.value = await response.json()
 

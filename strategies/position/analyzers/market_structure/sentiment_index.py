@@ -291,6 +291,9 @@ class MarketSentimentIndex:
     def get_historical_sentiment(self, days: int = 30) -> pd.Series:
         """获取历史情绪指数（简化版）"""
         # TODO: 实现历史情绪序列
+        # 实现条件: 需要每日计算并存储情绪指数历史数据
+        # 优先级: 中 - 可用于情绪趋势分析和可视化
+        # 建议方案: 创建定时任务每日保存情绪指数到时间序列数据库
         pass
 
 

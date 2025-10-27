@@ -178,6 +178,54 @@ class EnhancedReportGenerator(BaseGenerator):
 
         return panic_data
 
+    def fetch_benchmark_returns(self, start_date: str, end_date: str) -> Optional[List[float]]:
+        """
+        获取沪深300基准收益率
+
+        Args:
+            start_date: 开始日期 (YYYY-MM-DD格式)
+            end_date: 结束日期 (YYYY-MM-DD格式)
+
+        Returns:
+            收益率列表，如果获取失败返回None
+        """
+        try:
+            import akshare as ak
+            import pandas as pd
+            from datetime import datetime
+
+            # 获取沪深300历史数据
+            df = ak.stock_zh_index_daily(symbol='sh000300')
+
+            if df is None or len(df) < 2:
+                logger.warning("沪深300数据不足")
+                return None
+
+            # 转换日期格式并筛选日期范围
+            df['date'] = pd.to_datetime(df['date'])
+            start_dt = pd.to_datetime(start_date)
+            end_dt = pd.to_datetime(end_date)
+
+            df_filtered = df[(df['date'] >= start_dt) & (df['date'] <= end_dt)].copy()
+
+            if len(df_filtered) < 2:
+                logger.warning(f"沪深300在指定日期范围内数据不足: {start_date} - {end_date}")
+                return None
+
+            # 计算日收益率
+            df_filtered = df_filtered.sort_values('date')
+            df_filtered['return'] = df_filtered['close'].pct_change()
+
+            # 提取收益率列表（去掉第一个NaN）
+            returns = df_filtered['return'].dropna().tolist()
+
+            logger.info(f"✅ 沪深300基准数据获取成功: {len(returns)}个交易日")
+            return returns
+
+        except Exception as e:
+            logger.warning(f"获取沪深300基准数据失败: {e}")
+            return None
+
     def generate_enhanced_report(
         self,
         date: str = None,
@@ -667,8 +715,13 @@ class EnhancedReportGenerator(BaseGenerator):
                     weight = p.get('current_value', 0) / total_value
                     position_weights.append(weight)
 
-            # 尝试获取基准数据（沪深300）- 如果有的话
-            benchmark_returns = None  # TODO: 可接入akshare获取沪深300数据
+            # 尝试获取基准数据（沪深300）
+            benchmark_returns = None
+            if 'start_date' in performance and 'end_date' in performance:
+                benchmark_returns = self.fetch_benchmark_returns(
+                    start_date=performance['start_date'],
+                    end_date=performance['end_date']
+                )
 
             # 生成机构级指标报告
             institutional_report = self.institutional_metrics_calc.format_institutional_metrics_report(

@@ -546,6 +546,8 @@ class HistoricalPositionAnalyzer:
 
                 logger.info(f"[多维度匹配] 资金状态: {flow_type} (5日累计{current_flow_5d:.1f}亿)")
                 # TODO: 获取历史每日的北向资金流向
+                # 实现条件: 需要存储历史每日的北向资金数据到数据库或文件
+                # 优先级: 中 - 可提升历史点位匹配精度
                 # 未实现: similar = similar[资金状态相似]
 
         # 5. 情绪过滤 (基于现有情绪指标)

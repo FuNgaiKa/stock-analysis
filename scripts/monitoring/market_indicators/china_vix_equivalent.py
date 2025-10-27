@@ -234,10 +234,58 @@ class ChinaVolatilityIndex:
         else:
             return "高波动/恐慌,禁止使用杠杆"
 
-    def compare_with_us_vix(self):
-        """对比美股VIX (如果有数据)"""
-        # TODO: 需要yfinance或其他数据源获取VIX
-        pass
+    def compare_with_us_vix(self) -> Optional[Dict]:
+        """
+        对比美股VIX与A股VIX
+
+        Returns:
+            对比结果字典，包含:
+            - us_vix: 美股VIX值
+            - cn_vix: A股VIX值
+            - spread: 差值
+            - comparison: 对比结论
+        """
+        try:
+            import yfinance as yf
+
+            # 获取美股VIX
+            vix_ticker = yf.Ticker('^VIX')
+            vix_hist = vix_ticker.history(period='5d')
+
+            if vix_hist.empty:
+                return {'error': '无法获取美股VIX数据'}
+
+            us_vix = float(vix_hist['Close'].iloc[-1])
+
+            # 获取A股VIX
+            df = self.get_market_data(days=60)
+            df_vol = self.calculate_composite_vix(df)
+            cn_vix = float(df_vol['composite_vix'].iloc[-1])
+
+            # 计算差值
+            spread = cn_vix - us_vix
+
+            # 对比分析
+            if spread > 5:
+                comparison = "A股波动率明显高于美股，市场情绪更加紧张"
+            elif spread > 0:
+                comparison = "A股波动率略高于美股，相对谨慎"
+            elif spread > -5:
+                comparison = "A股与美股波动率接近，市场情绪同步"
+            else:
+                comparison = "A股波动率明显低于美股，相对平稳"
+
+            return {
+                'us_vix': round(us_vix, 2),
+                'cn_vix': round(cn_vix, 2),
+                'spread': round(spread, 2),
+                'comparison': comparison,
+                'us_date': vix_hist.index[-1].strftime('%Y-%m-%d'),
+                'cn_date': df_vol.index[-1].strftime('%Y-%m-%d')
+            }
+
+        except Exception as e:
+            return {'error': f'VIX对比失败: {str(e)}'}
 
     def plot_volatility_history(self, days: int = 252):
         """绘制波动率历史图 (需要matplotlib)"""

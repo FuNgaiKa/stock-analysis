@@ -298,6 +298,9 @@ const analyzeSlope = async () => {
 
   try {
     // TODO: 调用后端API
+    // 实现条件: 需要先开发后端斜率分析API接口
+    // 优先级: 低 - 当前使用模拟数据演示功能
+    // 后端路径建议: /api/slope/analyze
     // const response = await fetch(`/api/slope/analyze?symbol=${config.value.symbol}`)
     // result.value = await response.json()
 
