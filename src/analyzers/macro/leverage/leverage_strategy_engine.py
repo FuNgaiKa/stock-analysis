@@ -21,12 +21,14 @@ sys.path.insert(0, str(project_root))
 
 from src.analyzers.position.core.market_state_detector import MarketStateDetector
 from src.analyzers.position.core.valuation_analyzer import ValuationAnalyzer
+from src.analyzers.position.core.enhanced_data_provider import EnhancedDataProvider
 from src.analyzers.position.analyzers.market_structure.sentiment_index import MarketSentimentIndex
 from src.analyzers.macro.leverage.kelly_calculator import (
     kelly_criterion,
     calculate_leverage_recommendations,
     simulate_growth_rate
 )
+import akshare as ak
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +50,7 @@ class LeverageStrategyEngine:
         self.market_detector = MarketStateDetector()
         self.valuation_analyzer = ValuationAnalyzer()
         self.sentiment_analyzer = MarketSentimentIndex()
+        self.data_provider = EnhancedDataProvider()
 
         logger.info("杠杆策略引擎初始化完成")
 
@@ -416,19 +419,15 @@ class LeverageStrategyEngine:
         }
 
         try:
-            # 1. 获取市场状态 (简化调用，实际需要收集所有指标)
-            # 这里先用模拟数据演示框架
-            logger.warning("当前使用模拟数据演示，实际使用时需要接入真实市场数据")
-
-            # 模拟市场状态数据
-            mock_market_state = self._get_mock_market_state()
+            # 1. 获取真实市场状态（自动降级到模拟数据）
+            real_market_state = self._fetch_real_market_state(index_code)
 
             # 2. 五维度评分
-            five_dimensions = self.calculate_five_dimensions_score(mock_market_state)
+            five_dimensions = self.calculate_five_dimensions_score(real_market_state)
             report['analysis_sections']['five_dimensions'] = five_dimensions
 
             # 3. Kelly杠杆计算
-            market_state = mock_market_state['state']
+            market_state = real_market_state['state']
             kelly_leverage = self.calculate_kelly_based_leverage(
                 five_dimensions,
                 market_state,
@@ -441,8 +440,8 @@ class LeverageStrategyEngine:
             # 4. 市场状态
             report['analysis_sections']['market_state'] = {
                 'state': market_state,
-                'state_description': mock_market_state['state_description'],
-                'confidence': mock_market_state['confidence']
+                'state_description': real_market_state['state_description'],
+                'confidence': real_market_state['confidence']
             }
 
             # 5. 综合建议
@@ -471,8 +470,63 @@ class LeverageStrategyEngine:
             logger.debug(traceback.format_exc())
             return report
 
+    def _fetch_real_market_state(self, index_code: str) -> Dict:
+        """
+        获取真实市场状态数据
+
+        Args:
+            index_code: 指数代码，如 'sh000001'
+
+        Returns:
+            市场状态字典，格式与 MarketStateDetector.detect_market_state() 输出一致
+        """
+        try:
+            logger.info(f"正在获取 {index_code} 的真实市场数据...")
+
+            # 1. 获取价格数据
+            df_price = ak.stock_zh_index_daily(symbol=index_code)
+            df_price['date'] = pd.to_datetime(df_price['date'])
+            df_price = df_price.set_index('date').sort_index()
+
+            # 2. 获取各维度指标（参考 run_phase3_state_detection.py）
+            ma_metrics = self.data_provider.get_moving_averages(index_code)
+            valuation_metrics = self.data_provider.get_valuation_metrics()
+            capital_flow_metrics = self.data_provider.get_north_capital_flow()
+            sentiment_metrics = self.data_provider.get_market_sentiment()
+            breadth_metrics = self.data_provider.get_market_breadth_metrics()
+            margin_metrics = self.data_provider.get_margin_trading_metrics()
+            main_fund_metrics = self.data_provider.get_main_fund_flow(index_code)
+            lhb_metrics = self.data_provider.get_dragon_tiger_list_metrics()
+            volatility_metrics = self.data_provider.get_volatility_metrics(index_code)
+            volume_metrics = self.data_provider.get_volume_metrics(index_code)
+            technical_metrics = self.data_provider.get_technical_indicators(index_code)
+
+            # 3. 调用市场状态检测器
+            result = self.market_detector.detect_market_state(
+                ma_metrics=ma_metrics,
+                price_data=df_price,
+                valuation_metrics=valuation_metrics,
+                capital_flow_metrics=capital_flow_metrics,
+                sentiment_metrics=sentiment_metrics,
+                breadth_metrics=breadth_metrics,
+                margin_metrics=margin_metrics,
+                main_fund_metrics=main_fund_metrics,
+                lhb_metrics=lhb_metrics,
+                volatility_metrics=volatility_metrics,
+                volume_metrics=volume_metrics,
+                technical_metrics=technical_metrics
+            )
+
+            logger.info(f"真实市场数据获取成功: {result.get('state', 'Unknown')}")
+            return result
+
+        except Exception as e:
+            logger.error(f"获取真实市场数据失败: {str(e)}")
+            logger.warning("降级使用模拟数据")
+            return self._get_mock_market_state()
+
     def _get_mock_market_state(self) -> Dict:
-        """获取模拟市场状态数据 (用于演示)"""
+        """获取模拟市场状态数据 (用于演示或降级)"""
         return {
             'state': '上行震荡',
             'state_description': '震荡向上，多头占优',
