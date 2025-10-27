@@ -30,6 +30,7 @@ docs/
 | 文档 | 说明 | 难度 |
 |------|------|------|
 | [杠杆与风险管理指南.md](guides/杠杆与风险管理指南.md) ⭐ | **核心投资理念**（必读） | ⭐⭐⭐⭐⭐ |
+| [杠杆策略系统使用指南.md](guides/杠杆策略系统使用指南.md) 🆕 | **杠杆策略实战系统**（配合指南使用） | ⭐⭐⭐⭐ |
 | [QUICK_START.md](guides/QUICK_START.md) | 快速开始指南 | ⭐ |
 | [USAGE.md](guides/USAGE.md) | 详细使用说明 | ⭐⭐ |
 | [QUICK_REFERENCE.md](guides/QUICK_REFERENCE.md) | 快速参考手册 | ⭐ |
