@@ -8,7 +8,7 @@
 
 ```
 docs/
-├── 📖 guides/                    # 学习指南和使用手册
+├── 📖 guides/                    # 学习指南和使用手册（含核心投资指南⭐）
 ├── 🎨 design/                    # 系统设计文档
 ├── 📊 reports/                   # 实施报告和进度文档
 ├── 🚀 deployment/                # 部署和配置指南
@@ -18,8 +18,7 @@ docs/
 ├── 🌐 api/                       # API文档
 ├── 💡 examples/                  # 示例文档
 ├── 🖥️  frontend/                 # 前端相关文档
-├── 📅 phase_reports/             # 阶段性报告
-└── 📄 杠杆与风险管理指南.md      # 核心投资指南（重点推荐⭐）
+└── 📅 phase_reports/             # 阶段性报告
 ```
 
 ---
@@ -30,6 +29,7 @@ docs/
 
 | 文档 | 说明 | 难度 |
 |------|------|------|
+| [杠杆与风险管理指南.md](guides/杠杆与风险管理指南.md) ⭐ | **核心投资理念**（必读） | ⭐⭐⭐⭐⭐ |
 | [QUICK_START.md](guides/QUICK_START.md) | 快速开始指南 | ⭐ |
 | [USAGE.md](guides/USAGE.md) | 详细使用说明 | ⭐⭐ |
 | [QUICK_REFERENCE.md](guides/QUICK_REFERENCE.md) | 快速参考手册 | ⭐ |
@@ -123,7 +123,7 @@ docs/
 
 ### 🔥 必读文档
 
-1. **[杠杆与风险管理指南.md](杠杆与风险管理指南.md)** ⭐⭐⭐⭐⭐
+1. **[杠杆与风险管理指南.md](guides/杠杆与风险管理指南.md)** ⭐⭐⭐⭐⭐
    - **核心投资理念**：复利、杠杆、风险管理的本质
    - **实战案例**：2015股灾、2020疫情、2024.9.24
    - **完整工具**：凯利公式、五维度评分、Python实现
@@ -143,26 +143,26 @@ docs/
 
 #### 新手路径
 ```
-1. QUICK_START.md          # 快速开始
-2. USAGE.md                # 详细使用
-3. 杠杆与风险管理指南.md   # 投资理念
-4. VALUATION_ANALYSIS_GUIDE.md  # 估值分析
+1. guides/QUICK_START.md          # 快速开始
+2. guides/USAGE.md                # 详细使用
+3. guides/杠杆与风险管理指南.md   # 投资理念（必读⭐）
+4. guides/VALUATION_ANALYSIS_GUIDE.md  # 估值分析
 ```
 
 #### 进阶路径
 ```
-1. 市场热度量化指标设计.md         # 算法原理
-2. 量化策略增强方案_顶级机构指标.md # 高级策略
-3. 历史点位对比分析功能设计.md     # 核心算法
-4. DMI_ADX_GUIDE.md               # 技术指标
+1. guides/市场热度量化指标设计.md         # 算法原理
+2. design/量化策略增强方案_顶级机构指标.md # 高级策略
+3. design/历史点位对比分析功能设计.md     # 核心算法
+4. guides/DMI_ADX_GUIDE.md               # 技术指标
 ```
 
 #### 开发者路径
 ```
-1. PROJECT_STRUCTURE.md           # 项目结构
-2. WEB_PLATFORM_DESIGN.md         # 平台架构
-3. 量化交易系统架构与技术选型.md  # 技术选型
-4. DEPLOYMENT_GUIDE.md            # 部署指南
+1. design/PROJECT_STRUCTURE.md           # 项目结构
+2. design/WEB_PLATFORM_DESIGN.md         # 平台架构
+3. design/量化交易系统架构与技术选型.md  # 技术选型
+4. deployment/DEPLOYMENT_GUIDE.md        # 部署指南
 ```
 
 ---
@@ -172,30 +172,30 @@ docs/
 ### 按功能查找
 
 **市场分析**
-- 市场热度量化指标设计.md
-- VALUATION_ANALYSIS_GUIDE.md
-- 历史点位对比分析功能设计.md
+- guides/市场热度量化指标设计.md
+- guides/VALUATION_ANALYSIS_GUIDE.md
+- design/历史点位对比分析功能设计.md
 
 **风险管理**
-- 杠杆与风险管理指南.md ⭐
-- 均线偏离度监控系统.md
-- INVESTMENT_STRATEGY.md
+- guides/杠杆与风险管理指南.md ⭐
+- guides/均线偏离度监控系统.md
+- design/INVESTMENT_STRATEGY.md
 
 **技术指标**
-- DMI_ADX_GUIDE.md
-- 趋势斜率分析_美港股对比.md
-- 量化策略增强方案_顶级机构指标.md
+- guides/DMI_ADX_GUIDE.md
+- design/趋势斜率分析_美港股对比.md
+- design/量化策略增强方案_顶级机构指标.md
 
 **系统部署**
-- DEPLOYMENT_GUIDE.md
-- DAILY_REPORT_SETUP.md
-- GitHub_Actions配置指南.md
-- 定时任务配置指南.md
+- deployment/DEPLOYMENT_GUIDE.md
+- deployment/DAILY_REPORT_SETUP.md
+- guides/GitHub_Actions配置指南.md
+- guides/定时任务配置指南.md
 
 **模块开发**
-- HK_STOCK_README.md
-- US_STOCK_README.md
-- PLATFORM_MODULES.md
+- modules/HK_STOCK_README.md
+- modules/US_STOCK_README.md
+- modules/PLATFORM_MODULES.md
 
 ---
 
