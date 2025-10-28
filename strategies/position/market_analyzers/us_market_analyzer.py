@@ -27,6 +27,11 @@ from ..analyzers.market_indicators.dxy_analyzer import DXYAnalyzer
 from ..analyzers.valuation.credit_spread_analyzer import CreditSpreadAnalyzer
 from ..analyzers.risk_detection.us_market_top_detector import USMarketTopDetector
 
+# Phase 3.3: 导入机构级核心分析器 (美股版本)
+from ..analyzers.valuation.us_valuation_analyzer import USValuationAnalyzer
+from ..analyzers.market_structure.us_market_breadth_analyzer import USMarketBreadthAnalyzer
+from ..analyzers.market_specific.us_margin_debt_analyzer import USMarginDebtAnalyzer
+
 logger = logging.getLogger(__name__)
 
 
@@ -71,7 +76,12 @@ class USMarketAnalyzer:
         self.credit_spread_analyzer = CreditSpreadAnalyzer()
         self.us_market_top_detector = USMarketTopDetector()
 
-        logger.info("美股市场分析器初始化完成(含SKEW/美债/美元指数/信用利差/见顶检测)")
+        # Phase 3.3: 机构级核心分析器 (美股版本)
+        self.valuation_analyzer = USValuationAnalyzer(lookback_years=10)
+        self.breadth_analyzer = USMarketBreadthAnalyzer(lookback_days=252)
+        self.margin_analyzer = USMarginDebtAnalyzer(lookback_months=24)
+
+        logger.info("美股市场分析器初始化完成(含SKEW/美债/美元指数/信用利差/见顶检测/估值/宽度/融资)")
 
     def get_index_data(
         self,

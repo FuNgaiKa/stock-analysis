@@ -430,6 +430,72 @@ class PositionAnalysisEngine:
                 result.get('prob_stats', {})
             )
 
+        # Phase 3.3: 机构级核心指标
+        phase3_data = None
+        for index_code, result in single_results.items():
+            if 'phase3_analysis' in result:
+                phase3_data = result['phase3_analysis']
+                break
+
+        if phase3_data:
+            report += "\n\n" + "=" * 80 + "\n"
+            report += "[机构级核心指标]\n"
+            report += "=" * 80 + "\n"
+
+            # 估值分析
+            if 'valuation' in phase3_data:
+                val_data = phase3_data['valuation']
+                report += f"\n【估值分析 - {val_data.get('index_name', 'N/A')}】\n"
+                report += f"日期: {val_data.get('date', 'N/A')}\n"
+                report += f"当前PE: {val_data.get('current_pe', 0):.2f}\n"
+
+                if val_data.get('current_pb'):
+                    report += f"当前PB: {val_data.get('current_pb', 0):.2f}\n"
+
+                pe_percentiles = val_data.get('pe_percentiles', {})
+                if pe_percentiles:
+                    report += "\nPE历史分位数:\n"
+                    for period, data in pe_percentiles.items():
+                        report += f"  {period}: {data['percentile']:.1f}% ({data['level']})\n"
+
+                val_level = val_data.get('valuation_level', {})
+                if val_level:
+                    report += f"\n估值判断: {val_level.get('emoji', '')} {val_level.get('level', '')} - {val_level.get('signal', '')}\n"
+                    report += f"说明: {val_level.get('description', '')}\n"
+
+            # 市场宽度分析
+            if 'market_breadth' in phase3_data:
+                breadth_data = phase3_data['market_breadth']
+                metrics = breadth_data.get('metrics', {})
+
+                if metrics:
+                    report += f"\n【市场宽度分析】\n"
+                    report += f"日期: {metrics.get('latest_date', 'N/A')}\n"
+                    report += f"20日新高: {metrics.get('high20', 0)}只 | 新低: {metrics.get('low20', 0)}只 | 比率: {metrics.get('ratio20', 0):.2f}\n"
+                    report += f"60日新高: {metrics.get('high60', 0)}只 | 新低: {metrics.get('low60', 0)}只 | 比率: {metrics.get('ratio60', 0):.2f}\n"
+                    report += f"宽度得分: {metrics.get('breadth_score', 0)}/100 | 趋势: {metrics.get('trend', 'N/A')}\n"
+
+                    strength = breadth_data.get('strength_analysis', {})
+                    if strength:
+                        report += f"市场强度: {strength.get('strength', 'N/A')} ({strength.get('strength_score', 0)}/100) - {strength.get('signal', 'N/A')}\n"
+
+            # 融资融券分析
+            if 'margin_trading' in phase3_data:
+                margin_data = phase3_data['margin_trading']
+                metrics = margin_data.get('metrics', {})
+
+                if metrics:
+                    report += f"\n【融资融券分析】\n"
+                    report += f"市场: {margin_data.get('market', 'N/A')} | 日期: {metrics.get('latest_date', 'N/A')}\n"
+                    report += f"融资余额: {metrics.get('latest_margin_balance', 0)/1e12:.2f} 万亿\n"
+                    report += f"杠杆率: {metrics.get('leverage_ratio', 0):.1f} 倍\n"
+                    report += f"单日变化: {metrics.get('margin_change_pct_1d', 0):+.2f}%\n"
+                    report += f"历史分位: {metrics.get('percentile_252d', 0):.1f}%\n"
+
+                    sentiment = margin_data.get('sentiment_analysis', {})
+                    if sentiment:
+                        report += f"市场情绪: {sentiment.get('sentiment', 'N/A')} ({sentiment.get('sentiment_score', 0)}/100) - {sentiment.get('signal', 'N/A')}\n"
+
         # 多指数分析
         report += self.text_reporter.generate_multi_index_analysis(
             multi_result.get('match_count', 0),
@@ -497,6 +563,82 @@ class PositionAnalysisEngine:
             )
             charts[f"{SUPPORTED_INDICES[index_code].name} - 涨跌概率"] = prob_chart
 
+        # Phase 3.3: 机构级核心指标
+        phase3_data = None
+        for index_code, result in single_results.items():
+            if 'phase3_analysis' in result:
+                phase3_data = result['phase3_analysis']
+                break
+
+        if phase3_data:
+            # 估值分析
+            if 'valuation' in phase3_data:
+                val_data = phase3_data['valuation']
+                val_html = f"<p><strong>{val_data.get('index_name', 'N/A')}</strong> ({val_data.get('date', 'N/A')})</p>"
+                val_html += "<table>"
+                val_html += "<tr><th>指标</th><th>当前值</th><th>5年分位数</th><th>估值水平</th></tr>"
+
+                pe = val_data.get('current_pe', 0)
+                pe_pct = val_data.get('pe_percentiles', {}).get('5年', {})
+                percentile = pe_pct.get('percentile', 0) if pe_pct else 0
+                level = pe_pct.get('level', 'N/A') if pe_pct else 'N/A'
+
+                val_html += f"<tr><td>PE</td><td>{pe:.2f}</td><td>{percentile:.1f}%</td><td>{level}</td></tr>"
+
+                if val_data.get('current_pb'):
+                    pb = val_data.get('current_pb', 0)
+                    val_html += f"<tr><td>PB</td><td>{pb:.2f}</td><td>-</td><td>-</td></tr>"
+
+                val_html += "</table>"
+
+                val_level = val_data.get('valuation_level', {})
+                if val_level:
+                    val_html += f"<p><strong>估值判断:</strong> {val_level.get('emoji', '')} {val_level.get('level', '')} - {val_level.get('signal', '')}</p>"
+                    val_html += f"<p>{val_level.get('description', '')}</p>"
+
+                sections['估值分析'] = val_html
+
+            # 市场宽度分析
+            if 'market_breadth' in phase3_data:
+                breadth_data = phase3_data['market_breadth']
+                metrics = breadth_data.get('metrics', {})
+
+                if metrics:
+                    breadth_html = f"<p>日期: {metrics.get('latest_date', 'N/A')}</p>"
+                    breadth_html += "<table>"
+                    breadth_html += "<tr><th>周期</th><th>新高</th><th>新低</th><th>比率</th></tr>"
+                    breadth_html += f"<tr><td>20日</td><td>{metrics.get('high20', 0)}</td><td>{metrics.get('low20', 0)}</td><td>{metrics.get('ratio20', 0):.2f}</td></tr>"
+                    breadth_html += f"<tr><td>60日</td><td>{metrics.get('high60', 0)}</td><td>{metrics.get('low60', 0)}</td><td>{metrics.get('ratio60', 0):.2f}</td></tr>"
+                    breadth_html += "</table>"
+                    breadth_html += f"<p><strong>宽度得分:</strong> {metrics.get('breadth_score', 0)}/100 | <strong>趋势:</strong> {metrics.get('trend', 'N/A')}</p>"
+
+                    strength = breadth_data.get('strength_analysis', {})
+                    if strength:
+                        breadth_html += f"<p><strong>市场强度:</strong> {strength.get('strength', 'N/A')} ({strength.get('strength_score', 0)}/100) - {strength.get('signal', 'N/A')}</p>"
+
+                    sections['市场宽度'] = breadth_html
+
+            # 融资融券分析
+            if 'margin_trading' in phase3_data:
+                margin_data = phase3_data['margin_trading']
+                metrics = margin_data.get('metrics', {})
+
+                if metrics:
+                    margin_html = f"<p>市场: {margin_data.get('market', 'N/A')} | 日期: {metrics.get('latest_date', 'N/A')}</p>"
+                    margin_html += "<table>"
+                    margin_html += "<tr><th>指标</th><th>金额/比率</th></tr>"
+                    margin_html += f"<tr><td>融资余额</td><td>{metrics.get('latest_margin_balance', 0)/1e12:.2f} 万亿</td></tr>"
+                    margin_html += f"<tr><td>杠杆率</td><td>{metrics.get('leverage_ratio', 0):.1f} 倍</td></tr>"
+                    margin_html += f"<tr><td>单日变化</td><td>{metrics.get('margin_change_pct_1d', 0):+.2f}%</td></tr>"
+                    margin_html += f"<tr><td>历史分位</td><td>{metrics.get('percentile_252d', 0):.1f}%</td></tr>"
+                    margin_html += "</table>"
+
+                    sentiment = margin_data.get('sentiment_analysis', {})
+                    if sentiment:
+                        margin_html += f"<p><strong>市场情绪:</strong> {sentiment.get('sentiment', 'N/A')} ({sentiment.get('sentiment_score', 0)}/100) - {sentiment.get('signal', 'N/A')}</p>"
+
+                    sections['融资融券'] = margin_html
+
         # 置信度仪表盘
         if conclusion.get('confidence'):
             confidence_chart = self.chart_gen.create_confidence_gauge(
@@ -554,6 +696,36 @@ class PositionAnalysisEngine:
                 result.get('year_distribution', {}),
                 result.get('prob_stats', {})
             )
+
+        # Phase 3.3: 机构级核心指标 (P0优先级)
+        # 注意：估值、市场宽度、融资融券是全市场级别的，不针对单个指数
+        # 取第一个有效结果的phase3_analysis
+        phase3_data = None
+        for index_code, result in single_results.items():
+            if 'phase3_analysis' in result:
+                phase3_data = result['phase3_analysis']
+                break
+
+        if phase3_data:
+            report += "\n\n## 🏛️ 机构级核心指标\n\n"
+
+            # 1. 估值分析
+            if 'valuation' in phase3_data:
+                report += self.markdown_reporter.generate_valuation_section(
+                    phase3_data['valuation']
+                )
+
+            # 2. 市场宽度分析
+            if 'market_breadth' in phase3_data:
+                report += self.markdown_reporter.generate_breadth_section(
+                    phase3_data['market_breadth']
+                )
+
+            # 3. 融资融券分析
+            if 'margin_trading' in phase3_data:
+                report += self.markdown_reporter.generate_margin_section(
+                    phase3_data['margin_trading']
+                )
 
         # 多指数分析
         report += self.markdown_reporter.generate_multi_index_analysis(

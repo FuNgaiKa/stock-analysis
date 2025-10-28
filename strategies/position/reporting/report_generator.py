@@ -708,6 +708,213 @@ class MarkdownReportGenerator:
         year_counts = years.value_counts().to_dict()
         return dict(sorted(year_counts.items()))
 
+    @staticmethod
+    def generate_valuation_section(valuation_data: Dict) -> str:
+        """
+        生成估值分析部分
+
+        Args:
+            valuation_data: 估值分析数据字典
+
+        Returns:
+            Markdown格式的估值分析部分
+        """
+        if not valuation_data or 'error' in valuation_data:
+            return "\n### 💰 估值分析\n\n暂无估值数据\n\n"
+
+        section = "\n### 💰 估值分析 (PE/PB分位数)\n\n"
+
+        # 基本信息
+        section += f"**{valuation_data.get('index_name', 'N/A')}** | 日期: {valuation_data.get('date', 'N/A')}\n\n"
+
+        # 当前估值
+        current_pe = valuation_data.get('current_pe', 0)
+        current_pb = valuation_data.get('current_pb', 0)
+
+        section += "| 指标 | 当前值 |\n"
+        section += "|------|--------|\n"
+        section += f"| **当前PE** | {current_pe:.2f} |\n"
+        if current_pb:
+            section += f"| **当前PB** | {current_pb:.2f} |\n"
+        section += "\n"
+
+        # PE历史分位数
+        pe_percentiles = valuation_data.get('pe_percentiles', {})
+        if pe_percentiles:
+            section += "#### 📊 PE历史分位数\n\n"
+            section += "| 周期 | 分位数 | 估值水平 | 历史均值 | 历史中位数 |\n"
+            section += "|------|--------|----------|----------|------------|\n"
+
+            for period, data in pe_percentiles.items():
+                percentile = data['percentile']
+                level = data['level']
+                mean = data['mean']
+                median = data['median']
+                section += f"| {period} | {percentile:.1f}% | {level} | {mean:.2f} | {median:.2f} |\n"
+            section += "\n"
+
+        # 估值水平综合判断
+        val_level = valuation_data.get('valuation_level', {})
+        if val_level:
+            emoji = val_level.get('emoji', '')
+            level = val_level.get('level', '')
+            signal = val_level.get('signal', '')
+            description = val_level.get('description', '')
+
+            section += f"#### {emoji} 估值水平综合判断\n\n"
+            section += f"- **估值水平**: {level}\n"
+            section += f"- **操作信号**: {signal}\n"
+            section += f"- **说明**: {description}\n\n"
+
+        return section
+
+    @staticmethod
+    def generate_breadth_section(breadth_data: Dict) -> str:
+        """
+        生成市场宽度分析部分
+
+        Args:
+            breadth_data: 市场宽度数据字典
+
+        Returns:
+            Markdown格式的市场宽度分析部分
+        """
+        if not breadth_data or 'error' in breadth_data:
+            return "\n### 📊 市场宽度分析\n\n暂无市场宽度数据\n\n"
+
+        section = "\n### 📊 市场宽度分析 (新高新低指标)\n\n"
+
+        metrics = breadth_data.get('metrics', {})
+        strength = breadth_data.get('strength_analysis', {})
+
+        if not metrics:
+            return section + "暂无数据\n\n"
+
+        # 基本指标
+        section += f"**日期**: {metrics.get('latest_date', 'N/A')} | **指数**: {metrics.get('index_close', 0):.2f}\n\n"
+
+        section += "#### 📈 新高新低统计\n\n"
+        section += "| 周期 | 新高个股数 | 新低个股数 | 新高新低比率 |\n"
+        section += "|------|------------|------------|-------------|\n"
+
+        high20 = metrics.get('high20', 0)
+        low20 = metrics.get('low20', 0)
+        ratio20 = metrics.get('ratio20', 0)
+        high60 = metrics.get('high60', 0)
+        low60 = metrics.get('low60', 0)
+        ratio60 = metrics.get('ratio60', 0)
+        high120 = metrics.get('high120', 0)
+        low120 = metrics.get('low120', 0)
+        ratio120 = metrics.get('ratio120', 0)
+
+        section += f"| 20日 | {high20}只 | {low20}只 | {ratio20:.2f} |\n"
+        section += f"| 60日 | {high60}只 | {low60}只 | {ratio60:.2f} |\n"
+        section += f"| 120日 | {high120}只 | {low120}只 | {ratio120:.2f} |\n"
+        section += f"| **平均** | - | - | **{metrics.get('avg_ratio', 0):.2f}** |\n\n"
+
+        # 市场宽度评分
+        breadth_score = metrics.get('breadth_score', 50)
+        trend = metrics.get('trend', '中性')
+
+        section += "#### 💯 市场宽度评分\n\n"
+        section += f"- **宽度得分**: {breadth_score}/100\n"
+        section += f"- **市场趋势**: {trend}\n\n"
+
+        # 市场强度分析
+        if strength:
+            section += "#### 💪 市场内部强度\n\n"
+            section += f"- **强度**: {strength.get('strength', 'N/A')}\n"
+            section += f"- **评分**: {strength.get('strength_score', 0)}/100\n"
+            section += f"- **信号**: {strength.get('signal', 'N/A')}\n\n"
+
+            reasoning = strength.get('reasoning', [])
+            if reasoning:
+                section += "**分析理由**:\n"
+                for reason in reasoning:
+                    section += f"- {reason}\n"
+                section += "\n"
+
+        return section
+
+    @staticmethod
+    def generate_margin_section(margin_data: Dict) -> str:
+        """
+        生成融资融券分析部分
+
+        Args:
+            margin_data: 融资融券数据字典
+
+        Returns:
+            Markdown格式的融资融券分析部分
+        """
+        if not margin_data or 'error' in margin_data:
+            return "\n### 💳 融资融券分析\n\n暂无融资融券数据\n\n"
+
+        section = "\n### 💳 融资融券分析 (散户杠杆情绪)\n\n"
+
+        market = margin_data.get('market', 'N/A')
+        metrics = margin_data.get('metrics', {})
+        sentiment = margin_data.get('sentiment_analysis', {})
+
+        if not metrics:
+            return section + "暂无数据\n\n"
+
+        # 基本信息
+        section += f"**市场**: {market} | **日期**: {metrics.get('latest_date', 'N/A')}\n\n"
+
+        # 融资融券余额
+        section += "#### 💰 融资融券余额\n\n"
+
+        margin_balance = metrics.get('latest_margin_balance', 0)
+        short_balance = metrics.get('latest_short_balance', 0)
+        total_balance = metrics.get('latest_total_balance', 0)
+        leverage = metrics.get('leverage_ratio', 0)
+
+        section += "| 指标 | 金额 |\n"
+        section += "|------|------|\n"
+        section += f"| **融资余额** | {margin_balance/1e12:.2f} 万亿 |\n"
+        section += f"| **融券余额** | {short_balance/1e12:.2f} 万亿 |\n"
+        section += f"| **总余额** | {total_balance/1e12:.2f} 万亿 |\n"
+        section += f"| **杠杆率** | {leverage:.1f} 倍 |\n\n"
+
+        # 变化趋势
+        section += "#### 📈 变化趋势\n\n"
+
+        change_1d = metrics.get('margin_change_pct_1d', 0)
+        change_5d = metrics.get('margin_change_pct_5d', 0)
+        change_20d = metrics.get('margin_change_pct_20d', 0)
+        percentile = metrics.get('percentile_252d', 50)
+        trend = metrics.get('trend', '震荡')
+
+        section += "| 周期 | 变化率 |\n"
+        section += "|------|--------|\n"
+        section += f"| **单日** | {change_1d:+.2f}% |\n"
+        section += f"| **5日** | {change_5d:+.2f}% |\n"
+        section += f"| **20日** | {change_20d:+.2f}% |\n"
+        section += f"| **历史分位** | {percentile:.1f}% |\n"
+        section += f"| **趋势** | {trend} |\n\n"
+
+        # 市场情绪
+        if sentiment:
+            section += "#### 😊 市场情绪判断\n\n"
+
+            sentiment_level = sentiment.get('sentiment', 'N/A')
+            sentiment_score = sentiment.get('sentiment_score', 50)
+            signal = sentiment.get('signal', 'N/A')
+
+            section += f"- **情绪**: {sentiment_level}\n"
+            section += f"- **评分**: {sentiment_score}/100\n"
+            section += f"- **信号**: {signal}\n\n"
+
+            reasoning = sentiment.get('reasoning', [])
+            if reasoning:
+                section += "**判断理由**:\n"
+                for reason in reasoning:
+                    section += f"- {reason}\n"
+                section += "\n"
+
+        return section
+
 
 if __name__ == '__main__':
     # 测试文本报告

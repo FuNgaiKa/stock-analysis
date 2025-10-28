@@ -20,6 +20,11 @@ from dataclasses import dataclass
 from ..analyzers.market_specific.turnover_analyzer import TurnoverAnalyzer
 from ..analyzers.market_specific.ah_premium_analyzer import AHPremiumAnalyzer
 
+# Phase 3.3: 导入机构级核心分析器
+from ..analyzers.valuation.index_valuation_analyzer import IndexValuationAnalyzer
+from ..analyzers.market_structure.market_breadth_analyzer import MarketBreadthAnalyzer
+from ..analyzers.market_specific.margin_trading_analyzer import MarginTradingAnalyzer
+
 logger = logging.getLogger(__name__)
 
 
@@ -65,7 +70,12 @@ class CNMarketAnalyzer:
         self.turnover_analyzer = TurnoverAnalyzer()
         self.ah_premium_analyzer = AHPremiumAnalyzer()
 
-        logger.info("A股市场分析器初始化完成(含换手率/AH溢价)")
+        # Phase 3.3: 初始化机构级核心分析器
+        self.valuation_analyzer = IndexValuationAnalyzer(lookback_days=2520)  # 10年数据
+        self.breadth_analyzer = MarketBreadthAnalyzer(lookback_days=60)  # 60天数据
+        self.margin_analyzer = MarginTradingAnalyzer(lookback_days=252)  # 1年数据
+
+        logger.info("A股市场分析器初始化完成(含换手率/AH溢价/估值/市场宽度/融资融券)")
 
     def get_index_data(self, index_code: str, period: str = "5y") -> pd.DataFrame:
         """获取A股指数历史数据"""
@@ -508,7 +518,43 @@ class CNMarketAnalyzer:
             except Exception as e:
                 logger.warning(f"AH溢价分析失败: {str(e)}")
 
-            logger.info(f"{CN_INDICES[index_code].name} 分析完成(含深度分析)")
+            # Phase 3.3: 机构级核心分析 - P0优先级指标
+
+            # 3. 估值分析 (PE/PB分位数)
+            try:
+                # 将指数代码转换为6位格式 (IndexValuationAnalyzer要求的格式)
+                code_6digit = CN_INDICES[index_code].symbol
+                valuation_result = self.valuation_analyzer.calculate_valuation_percentile(
+                    index_code=code_6digit,
+                    periods=[252, 756, 1260, 2520]  # 1年/3年/5年/10年
+                )
+                if 'error' not in valuation_result:
+                    result['phase3_analysis']['valuation'] = valuation_result
+                    logger.info("估值分析完成")
+            except Exception as e:
+                logger.warning(f"估值分析失败: {str(e)}")
+
+            # 4. 市场宽度分析 (新高新低指标)
+            try:
+                breadth_result = self.breadth_analyzer.comprehensive_analysis()
+                if 'error' not in breadth_result:
+                    result['phase3_analysis']['market_breadth'] = breadth_result
+                    logger.info("市场宽度分析完成")
+            except Exception as e:
+                logger.warning(f"市场宽度分析失败: {str(e)}")
+
+            # 5. 融资融券分析 (散户杠杆情绪)
+            try:
+                # 上交所数据 (沪市指数用sse,深市指数用szse)
+                market_type = 'sse' if code_6digit.startswith('000') else 'szse'
+                margin_result = self.margin_analyzer.comprehensive_analysis(market=market_type)
+                if 'error' not in margin_result:
+                    result['phase3_analysis']['margin_trading'] = margin_result
+                    logger.info("融资融券分析完成")
+            except Exception as e:
+                logger.warning(f"融资融券分析失败: {str(e)}")
+
+            logger.info(f"{CN_INDICES[index_code].name} 分析完成(含深度分析+机构级核心指标)")
 
         except Exception as e:
             logger.error(f"分析{index_code}失败: {str(e)}")

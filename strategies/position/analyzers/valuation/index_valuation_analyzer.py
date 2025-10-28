@@ -150,13 +150,13 @@ class IndexValuationAnalyzer:
 
         Args:
             index_code: 指数代码
-            periods: 要计算的周期列表(天数),默认[252, 756, 1260]
+            periods: 要计算的周期列表(天数),默认[252, 756, 1260, 2520]
 
         Returns:
             分位数分析字典
         """
         if periods is None:
-            periods = [252, 756, 1260]  # 1年/3年/5年
+            periods = [252, 756, 1260, 2520]  # 1年/3年/5年/10年
 
         df = self.get_index_pe_pb_data(index_code)
 
