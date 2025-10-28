@@ -113,6 +113,89 @@ open http://localhost:3000
 
 强大的命令行工具集，适合量化研究和自动化监控。
 
+---
+
+## 🎯 **核心系统对比** - 快速理解项目架构
+
+本项目包含两个核心系统，**功能互补，各有侧重**：
+
+### 📊 系统对比表
+
+| 维度 | 🏛️ **strategies/position**<br/>历史点位对比分析 | 💼 **russ_trading**<br/>个人持仓管理系统 |
+|------|------|------|
+| **核心功能** | 基于历史数据的点位相似度分析 | 基于实际持仓的动态管理 + 三大核心指标 |
+| **分析对象** | 市场指数（上证/沪深300/创业板/科创50等） | 个人实际持仓（25个资产） |
+| **主要用途** | 判断当前点位的历史胜率 | 日常持仓调整、资产配置、月度规划 |
+| **输出报告** | `reports/position_analysis_*.md` | 持仓调整建议、25资产分析、月度计划 |
+| **核心指标** | 历史概率统计、12维度市场诊断 | 估值/市场宽度/融资融券 + VaR/CVaR风险 |
+| **使用场景** | 判断市场整体环境，择时参考 | 管理个人持仓，具体操作建议 |
+| **报告频率** | 不定期（需要时手动运行） | 每日自动生成 |
+| **入口文件** | `strategies/position/main.py` | `russ_trading/daily_position_report_generator.py` |
+
+### 🔄 两个系统如何配合使用
+
+#### 典型工作流程：
+
+```mermaid
+graph LR
+    A[每日收盘后] --> B[strategies/position<br/>市场环境诊断]
+    B --> C{市场状态?}
+    C -->|牛市| D[russ_trading<br/>持仓调整建议]
+    C -->|熊市| D
+    C -->|震荡| D
+    D --> E[执行具体操作]
+```
+
+**1️⃣ 早盘前 - 查看市场环境**
+```bash
+# 运行 strategies/position 系统，判断大盘状态
+python strategies/position/main.py
+# 输出：当前沪深300处于历史高位，20日上涨概率45%，建议降低仓位
+```
+
+**2️⃣ 收盘后 - 调整持仓**
+```bash
+# 运行 russ_trading 系统，获取具体操作建议
+python russ_trading/daily_position_report_generator.py
+# 输出：建议减仓恒生科技8%，增持创业板5%，具体执行清单...
+```
+
+**3️⃣ 周末 - 深度复盘**
+```bash
+# strategies/position: 查看各指数潜在空间
+python strategies/position/main.py --index sz399006
+
+# russ_trading: 生成月度投资计划
+python russ_trading/monthly_plan_generator.py
+```
+
+### 💡 核心区别总结
+
+| **strategies/position** | **russ_trading** |
+|---|---|
+| ✅ 告诉你"市场怎么样" | ✅ 告诉你"应该怎么做" |
+| 📊 宏观层面（整体市场） | 💰 微观层面（个人持仓） |
+| 🔍 历史数据统计分析 | 🎯 实时持仓动态管理 |
+| 🌍 看森林（大盘趋势） | 🌲 看树木（具体标的） |
+
+**举例说明**：
+- **strategies/position** 告诉你："创业板当前点位历史上出现过100次，后续20日上涨概率65%"
+- **russ_trading** 告诉你："基于当前市场环境，建议你将创业板ETF仓位从20%提升至30%，明天开盘分两批加仓"
+
+### 🚀 快速开始
+
+```bash
+# 系统1: 分析市场环境
+cd strategies/position
+python main.py
+
+# 系统2: 管理个人持仓
+cd russ_trading
+python daily_position_report_generator.py
+```
+
+---
+
 ## 💼 **Russ个人持仓策略系统 v2.0** (机构级量化分析)
 
 专为个人投资者打造的**机构级持仓管理系统**，对标高盛/摩根士丹利投研体系，提供从持仓诊断到操作建议的全流程量化支持。
