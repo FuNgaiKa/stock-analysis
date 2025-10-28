@@ -44,6 +44,16 @@ from russ_trading.performance_tracker import PerformanceTracker
 from russ_trading.potential_analyzer import PotentialAnalyzer
 from russ_trading.market_depth_analyzer import MarketDepthAnalyzer
 
+# 导入机构级核心指标分析器 (Phase 3.3)
+try:
+    from strategies.position.analyzers.valuation.index_valuation_analyzer import IndexValuationAnalyzer
+    from strategies.position.analyzers.market_structure.market_breadth_analyzer import MarketBreadthAnalyzer
+    from strategies.position.analyzers.market_specific.margin_trading_analyzer import MarginTradingAnalyzer
+    HAS_CORE_ANALYZERS = True
+except ImportError:
+    HAS_CORE_ANALYZERS = False
+    logging.warning("机构级核心分析器未找到（估值/宽度/融资）")
+
 # 尝试导入增强模块
 try:
     from russ_trading.risk_manager import RiskManager
@@ -110,6 +120,17 @@ class DailyPositionReportGenerator:
             self.position_manager = None
             self.data_manager = None
             self.technical_analyzer = None
+
+        # 初始化机构级核心分析器 (Phase 3.3)
+        if HAS_CORE_ANALYZERS:
+            self.valuation_analyzer = IndexValuationAnalyzer(lookback_days=2520)  # 10年估值历史
+            self.breadth_analyzer = MarketBreadthAnalyzer(lookback_days=60)  # 60日市场宽度
+            self.margin_analyzer = MarginTradingAnalyzer(lookback_days=252)  # 1年融资数据
+            logger.info("机构级核心分析器初始化完成（估值/宽度/融资）")
+        else:
+            self.valuation_analyzer = None
+            self.breadth_analyzer = None
+            self.margin_analyzer = None
 
     def _set_risk_thresholds(self):
         """根据风险偏好设置阈值"""
@@ -1277,6 +1298,60 @@ class DailyPositionReportGenerator:
 
         return '\n'.join(lines)
 
+    def analyze_core_indicators(self, market_data: Dict = None) -> Dict:
+        """
+        分析三个机构级核心指标
+
+        Args:
+            market_data: 市场数据字典
+
+        Returns:
+            核心指标分析结果
+        """
+        result = {
+            'valuation': None,
+            'breadth': None,
+            'margin': None
+        }
+
+        if not HAS_CORE_ANALYZERS:
+            logger.warning("机构级核心分析器不可用")
+            return result
+
+        try:
+            # 1. 估值分析 (沪深300作为市场代表)
+            if self.valuation_analyzer:
+                logger.info("执行估值分析...")
+                result['valuation'] = self.valuation_analyzer.calculate_valuation_percentile(
+                    index_code='000300',  # 沪深300
+                    periods=[252, 756, 1260, 2520]  # 1年/3年/5年/10年
+                )
+        except Exception as e:
+            logger.error(f"估值分析失败: {str(e)}")
+            result['valuation'] = {'error': str(e)}
+
+        try:
+            # 2. 市场宽度分析
+            if self.breadth_analyzer:
+                logger.info("执行市场宽度分析...")
+                result['breadth'] = self.breadth_analyzer.analyze_market_breadth(
+                    periods=[20, 60, 120]  # 20日/60日/120日
+                )
+        except Exception as e:
+            logger.error(f"市场宽度分析失败: {str(e)}")
+            result['breadth'] = {'error': str(e)}
+
+        try:
+            # 3. 融资融券分析
+            if self.margin_analyzer:
+                logger.info("执行融资融券分析...")
+                result['margin'] = self.margin_analyzer.analyze_margin_trading()
+        except Exception as e:
+            logger.error(f"融资融券分析失败: {str(e)}")
+            result['margin'] = {'error': str(e)}
+
+        return result
+
     def generate_report(
         self,
         date: str = None,
@@ -1530,6 +1605,171 @@ class DailyPositionReportGenerator:
                 lines.append("未能计算收益数据(持仓市值为0)")
                 lines.append("")
 
+            lines.append("---")
+            lines.append("")
+
+        # ========== 第三点五部分: 机构级核心指标分析 (Phase 3.3) ==========
+        if HAS_CORE_ANALYZERS:
+            lines.append("## 🏛️ 机构级核心指标分析")
+            lines.append("")
+            lines.append("**说明**: 这三个指标是机构投资者避免高位被套的核心工具")
+            lines.append("")
+
+            # 调用分析方法
+            core_indicators = self.analyze_core_indicators(market_data)
+
+            # 1. 估值分析
+            if core_indicators['valuation'] and 'error' not in core_indicators['valuation']:
+                val_data = core_indicators['valuation']
+                lines.append("### 📊 估值分析 (PE/PB历史分位数)")
+                lines.append("")
+                lines.append("**目的**: 判断当前市场估值水平，避免高位买入")
+                lines.append("")
+
+                if val_data.get('percentiles'):
+                    lines.append("| 周期 | PE分位数 | PB分位数 | 估值水平 |")
+                    lines.append("|------|---------|---------|---------|")
+
+                    period_names = {'252': '1年', '756': '3年', '1260': '5年', '2520': '10年'}
+                    for period_days, period_name in period_names.items():
+                        if period_days in val_data['percentiles']:
+                            pct_data = val_data['percentiles'][period_days]
+                            pe_pct = pct_data.get('pe_percentile', 0) * 100
+                            pb_pct = pct_data.get('pb_percentile', 0) * 100
+                            level = pct_data.get('level', '未知')
+
+                            # 根据估值水平添加emoji
+                            level_emoji = {
+                                '极低估': '🟢🟢',
+                                '低估': '🟢',
+                                '合理': '🟡',
+                                '高估': '🔴',
+                                '极高估': '🔴🔴'
+                            }.get(level, '⚪')
+
+                            lines.append(
+                                f"| {period_name} | {pe_pct:.1f}% | {pb_pct:.1f}% | {level_emoji} {level} |"
+                            )
+
+                    lines.append("")
+                    lines.append("**交易建议**:")
+                    lines.append("")
+                    current_level = val_data.get('current_level', '合理')
+                    if '低估' in current_level:
+                        lines.append("- ✅ 当前估值处于历史低位，是较好的建仓时机")
+                        lines.append("- 📈 建议: 可积极配置，逢低加仓")
+                    elif '高估' in current_level:
+                        lines.append("- ⚠️ 当前估值处于历史高位，需要谨慎")
+                        lines.append("- 📉 建议: 控制仓位，逢高减仓")
+                    else:
+                        lines.append("- 🟡 当前估值处于合理区间")
+                        lines.append("- ➡️ 建议: 正常配置，根据市场变化调整")
+                    lines.append("")
+                else:
+                    lines.append("暂无估值数据")
+                    lines.append("")
+
+            # 2. 市场宽度分析
+            if core_indicators['breadth'] and 'error' not in core_indicators['breadth']:
+                breadth_data = core_indicators['breadth']
+                lines.append("### 📈 市场宽度分析 (新高新低指标)")
+                lines.append("")
+                lines.append("**目的**: 识别虚假上涨（指数涨但个股跌），避免追高被套")
+                lines.append("")
+
+                if breadth_data.get('periods'):
+                    lines.append("| 周期 | 创新高数 | 创新低数 | 宽度得分 | 市场强度 |")
+                    lines.append("|------|---------|---------|---------|---------|")
+
+                    period_names = {'20': '20日', '60': '60日', '120': '120日'}
+                    for period_key, period_name in period_names.items():
+                        if period_key in breadth_data['periods']:
+                            period_data = breadth_data['periods'][period_key]
+                            new_high = period_data.get('new_high_count', 0)
+                            new_low = period_data.get('new_low_count', 0)
+                            score = period_data.get('breadth_score', 50)
+                            strength = period_data.get('market_strength', '中性')
+
+                            # 根据强度添加emoji
+                            strength_emoji = {
+                                '强势': '🟢',
+                                '健康': '🟢',
+                                '中性': '🟡',
+                                '弱势': '🔴',
+                                '极弱': '🔴🔴'
+                            }.get(strength, '⚪')
+
+                            lines.append(
+                                f"| {period_name} | {new_high} | {new_low} | {score:.0f}/100 | {strength_emoji} {strength} |"
+                            )
+
+                    lines.append("")
+                    lines.append("**交易建议**:")
+                    lines.append("")
+                    overall_strength = breadth_data.get('overall_strength', '中性')
+                    if '强势' in overall_strength or '健康' in overall_strength:
+                        lines.append("- ✅ 市场内部强度健康，上涨有广度支撑")
+                        lines.append("- 📈 建议: 可以积极参与，把握上涨机会")
+                    elif '弱势' in overall_strength or '极弱' in overall_strength:
+                        lines.append("- ⚠️ 市场内部分化严重，存在虚假上涨风险")
+                        lines.append("- 📉 建议: 谨慎追高，优先防守")
+                    else:
+                        lines.append("- 🟡 市场内部强度中性")
+                        lines.append("- ➡️ 建议: 保持观望，等待信号明确")
+                    lines.append("")
+                else:
+                    lines.append("暂无市场宽度数据")
+                    lines.append("")
+
+            # 3. 融资融券分析
+            if core_indicators['margin'] and 'error' not in core_indicators['margin']:
+                margin_data = core_indicators['margin']
+                lines.append("### 💰 融资融券分析 (市场情绪)")
+                lines.append("")
+                lines.append("**目的**: 监控散户杠杆情绪，作为反向指标（情绪极端时反向操作）")
+                lines.append("")
+
+                if margin_data.get('current'):
+                    current = margin_data['current']
+                    lines.append("**当前数据**:")
+                    lines.append("")
+                    lines.append(f"- **融资余额**: ¥{current.get('margin_balance', 0)/1e8:.0f}亿")
+                    lines.append(f"- **融资买入额**: ¥{current.get('margin_buy', 0)/1e8:.1f}亿")
+                    lines.append(f"- **杠杆率**: {current.get('leverage_ratio', 0):.2f}")
+                    lines.append("")
+
+                sentiment_score = margin_data.get('sentiment_score', 50)
+                sentiment_level = margin_data.get('sentiment_level', '中性')
+
+                lines.append("**市场情绪判断**:")
+                lines.append("")
+                lines.append(f"- **情绪得分**: {sentiment_score:.0f}/100")
+                lines.append(f"- **情绪水平**: {sentiment_level}")
+                lines.append("")
+
+                if sentiment_score >= 80:
+                    lines.append("- ⚠️ 散户情绪极度乐观，可能接近顶部")
+                    lines.append("- 📉 建议: 反向操作，逢高减仓")
+                elif sentiment_score <= 20:
+                    lines.append("- ✅ 散户情绪极度悲观，可能接近底部")
+                    lines.append("- 📈 建议: 反向操作，逢低加仓")
+                elif 60 <= sentiment_score < 80:
+                    lines.append("- 🟡 散户情绪偏乐观，需要警惕")
+                    lines.append("- ⚠️ 建议: 控制仓位，注意风险")
+                elif 20 < sentiment_score <= 40:
+                    lines.append("- 🟢 散户情绪偏悲观，是较好时机")
+                    lines.append("- 💡 建议: 可以适度加仓")
+                else:
+                    lines.append("- ➡️ 散户情绪中性")
+                    lines.append("- 📊 建议: 保持现有仓位")
+                lines.append("")
+
+            lines.append("**核心指标总结**:")
+            lines.append("")
+            lines.append("- 📊 **估值**: 判断买入时点，避免高位接盘")
+            lines.append("- 📈 **宽度**: 识别虚假上涨，确保上涨有广度")
+            lines.append("- 💰 **情绪**: 反向指标，极端情绪时反向操作")
+            lines.append("")
             lines.append("---")
             lines.append("")
 

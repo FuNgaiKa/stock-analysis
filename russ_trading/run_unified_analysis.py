@@ -38,6 +38,16 @@ from scripts.analysis.comprehensive_asset_analysis.asset_reporter import Compreh
 from scripts.analysis.sector_analysis.sector_reporter import SectorReporter
 from russ_trading.unified_email_notifier import UnifiedEmailNotifier
 
+# 导入机构级核心指标分析器 (Phase 3.3)
+try:
+    from strategies.position.analyzers.valuation.index_valuation_analyzer import IndexValuationAnalyzer
+    from strategies.position.analyzers.market_structure.market_breadth_analyzer import MarketBreadthAnalyzer
+    from strategies.position.analyzers.market_specific.margin_trading_analyzer import MarginTradingAnalyzer
+    HAS_CORE_ANALYZERS = True
+except ImportError:
+    HAS_CORE_ANALYZERS = False
+    logging.warning("机构级核心分析器未找到（估值/宽度/融资）")
+
 # 配置日志
 logging.basicConfig(
     level=logging.INFO,
@@ -53,6 +63,17 @@ class UnifiedAnalysisRunner:
         """初始化分析器"""
         self.comprehensive_reporter = None
         self.sector_reporter = None
+
+        # 初始化机构级核心分析器 (Phase 3.3)
+        if HAS_CORE_ANALYZERS:
+            self.valuation_analyzer = IndexValuationAnalyzer(lookback_days=2520)  # 10年估值历史
+            self.breadth_analyzer = MarketBreadthAnalyzer(lookback_days=60)  # 60日市场宽度
+            self.margin_analyzer = MarginTradingAnalyzer(lookback_days=252)  # 1年融资数据
+            logger.info("机构级核心分析器初始化完成（估值/宽度/融资）")
+        else:
+            self.valuation_analyzer = None
+            self.breadth_analyzer = None
+            self.margin_analyzer = None
 
     def analyze_assets(self, asset_keys: list = None) -> dict:
         """
@@ -178,6 +199,114 @@ class UnifiedAnalysisRunner:
             lines.append("")
             lines.append("=" * 80)
             lines.append("")
+
+        # ========== 机构级核心指标 (Phase 3.3) ==========
+        if HAS_CORE_ANALYZERS and self.valuation_analyzer:
+            if format_type == 'markdown':
+                lines.append("## 🏛️ 机构级核心指标")
+                lines.append("")
+                lines.append("**说明**: 基于沪深300指数，这三个指标是机构投资者避免高位被套的核心工具")
+                lines.append("")
+            else:
+                lines.append("-" * 80)
+                lines.append("机构级核心指标 (沪深300)")
+                lines.append("-" * 80)
+                lines.append("")
+
+            try:
+                # 1. 估值分析
+                val_data = self.valuation_analyzer.calculate_valuation_percentile(
+                    index_code='000300',  # 沪深300
+                    periods=[1260, 2520]  # 5年/10年
+                )
+
+                if val_data and 'error' not in val_data and val_data.get('percentiles'):
+                    if format_type == 'markdown':
+                        lines.append("### 📊 估值分析 (PE/PB历史分位数)")
+                        lines.append("")
+                        lines.append("| 周期 | PE分位数 | PB分位数 | 估值水平 |")
+                        lines.append("|------|---------|---------|---------|")
+                    else:
+                        lines.append("估值分析:")
+
+                    period_names = {'1260': '5年', '2520': '10年'}
+                    for period_days, period_name in period_names.items():
+                        if period_days in val_data['percentiles']:
+                            pct_data = val_data['percentiles'][period_days]
+                            pe_pct = pct_data.get('pe_percentile', 0) * 100
+                            pb_pct = pct_data.get('pb_percentile', 0) * 100
+                            level = pct_data.get('level', '未知')
+
+                            if format_type == 'markdown':
+                                level_emoji = {'极低估': '🟢🟢', '低估': '🟢', '合理': '🟡', '高估': '🔴', '极高估': '🔴🔴'}.get(level, '⚪')
+                                lines.append(f"| {period_name} | {pe_pct:.1f}% | {pb_pct:.1f}% | {level_emoji} {level} |")
+                            else:
+                                lines.append(f"  {period_name}: PE分位{pe_pct:.1f}%, PB分位{pb_pct:.1f}% - {level}")
+
+                    lines.append("")
+
+                # 2. 市场宽度分析
+                breadth_data = self.breadth_analyzer.analyze_market_breadth(periods=[20, 60])
+                if breadth_data and 'error' not in breadth_data and breadth_data.get('periods'):
+                    if format_type == 'markdown':
+                        lines.append("### 📈 市场宽度 (新高新低)")
+                        lines.append("")
+                        lines.append("| 周期 | 创新高 | 创新低 | 宽度得分 | 市场强度 |")
+                        lines.append("|------|--------|--------|----------|----------|")
+                    else:
+                        lines.append("市场宽度:")
+
+                    period_names = {'20': '20日', '60': '60日'}
+                    for period_key, period_name in period_names.items():
+                        if period_key in breadth_data['periods']:
+                            period_data = breadth_data['periods'][period_key]
+                            new_high = period_data.get('new_high_count', 0)
+                            new_low = period_data.get('new_low_count', 0)
+                            score = period_data.get('breadth_score', 50)
+                            strength = period_data.get('market_strength', '中性')
+
+                            if format_type == 'markdown':
+                                strength_emoji = {'强势': '🟢', '健康': '🟢', '中性': '🟡', '弱势': '🔴', '极弱': '🔴🔴'}.get(strength, '⚪')
+                                lines.append(f"| {period_name} | {new_high} | {new_low} | {score:.0f}/100 | {strength_emoji} {strength} |")
+                            else:
+                                lines.append(f"  {period_name}: 新高{new_high}, 新低{new_low}, 得分{score:.0f} - {strength}")
+
+                    lines.append("")
+
+                # 3. 融资融券分析
+                margin_data = self.margin_analyzer.analyze_margin_trading()
+                if margin_data and 'error' not in margin_data and margin_data.get('current'):
+                    current = margin_data['current']
+                    sentiment_score = margin_data.get('sentiment_score', 50)
+                    sentiment_level = margin_data.get('sentiment_level', '中性')
+
+                    if format_type == 'markdown':
+                        lines.append("### 💰 融资融券 (市场情绪)")
+                        lines.append("")
+                        lines.append(f"- **融资余额**: ¥{current.get('margin_balance', 0)/1e8:.0f}亿")
+                        lines.append(f"- **情绪得分**: {sentiment_score:.0f}/100")
+                        lines.append(f"- **情绪水平**: {sentiment_level}")
+                    else:
+                        lines.append("融资融券:")
+                        lines.append(f"  融资余额: {current.get('margin_balance', 0)/1e8:.0f}亿")
+                        lines.append(f"  情绪得分: {sentiment_score:.0f}/100 ({sentiment_level})")
+
+                    lines.append("")
+
+                if format_type == 'markdown':
+                    lines.append("---")
+                    lines.append("")
+                else:
+                    lines.append("-" * 80)
+                    lines.append("")
+
+            except Exception as e:
+                logger.error(f"机构级核心指标分析失败: {str(e)}")
+                if format_type == 'markdown':
+                    lines.append(f"⚠️ 机构级核心指标分析失败: {str(e)}")
+                    lines.append("")
+                    lines.append("---")
+                    lines.append("")
 
         # 生成汇总表格
         if format_type == 'markdown':

@@ -11,6 +11,18 @@
 from typing import Dict, List, Optional
 from datetime import datetime
 import calendar
+import logging
+
+# 导入机构级核心指标分析器 (Phase 3.3)
+try:
+    from strategies.position.analyzers.valuation.index_valuation_analyzer import IndexValuationAnalyzer
+    from strategies.position.analyzers.market_structure.market_breadth_analyzer import MarketBreadthAnalyzer
+    from strategies.position.analyzers.market_specific.margin_trading_analyzer import MarginTradingAnalyzer
+    HAS_CORE_ANALYZERS = True
+except ImportError:
+    HAS_CORE_ANALYZERS = False
+    if __name__ != '__main__':
+        logging.warning("机构级核心分析器未找到（估值/宽度/融资）")
 
 
 class MonthlyPlanGenerator:
@@ -34,6 +46,16 @@ class MonthlyPlanGenerator:
         self.max_position = strategy_config.get('max_position', 0.90)
         self.target_annual_return = strategy_config.get('target_annual_return', 0.15)
         self.risk_preference = strategy_config.get('risk_preference', 'moderate')
+
+        # 初始化机构级核心分析器 (Phase 3.3)
+        if HAS_CORE_ANALYZERS:
+            self.valuation_analyzer = IndexValuationAnalyzer(lookback_days=2520)  # 10年估值历史
+            self.breadth_analyzer = MarketBreadthAnalyzer(lookback_days=60)  # 60日市场宽度
+            self.margin_analyzer = MarginTradingAnalyzer(lookback_days=252)  # 1年融资数据
+        else:
+            self.valuation_analyzer = None
+            self.breadth_analyzer = None
+            self.margin_analyzer = None
 
     def generate_monthly_plan(
         self,
@@ -488,6 +510,52 @@ class MonthlyPlanGenerator:
             for insight in assessment['key_insights']:
                 lines.append(f"- {insight}")
             lines.append("")
+
+        # 机构级核心指标参考 (Phase 3.3)
+        if HAS_CORE_ANALYZERS and self.valuation_analyzer:
+            lines.append("### 🏛️ 机构级核心指标参考")
+            lines.append("")
+            lines.append("**说明**: 基于沪深300，这三个指标帮助判断市场位置")
+            lines.append("")
+
+            try:
+                # 1. 估值分析
+                val_data = self.valuation_analyzer.calculate_valuation_percentile(
+                    index_code='000300',  # 沪深300
+                    periods=[2520]  # 10年
+                )
+                if val_data and 'error' not in val_data and val_data.get('percentiles'):
+                    pct_data = val_data['percentiles'].get('2520', {})
+                    if pct_data:
+                        pe_pct = pct_data.get('pe_percentile', 0) * 100
+                        pb_pct = pct_data.get('pb_percentile', 0) * 100
+                        level = pct_data.get('level', '未知')
+                        level_emoji = {'极低估': '🟢🟢', '低估': '🟢', '合理': '🟡', '高估': '🔴', '极高估': '🔴🔴'}.get(level, '⚪')
+                        lines.append(f"- **估值水平(10年)**: {level_emoji} {level} (PE分位{pe_pct:.1f}%, PB分位{pb_pct:.1f}%)")
+
+                # 2. 市场宽度
+                breadth_data = self.breadth_analyzer.analyze_market_breadth(periods=[60])
+                if breadth_data and 'error' not in breadth_data and breadth_data.get('periods'):
+                    period_data = breadth_data['periods'].get('60', {})
+                    if period_data:
+                        score = period_data.get('breadth_score', 50)
+                        strength = period_data.get('market_strength', '中性')
+                        strength_emoji = {'强势': '🟢', '健康': '🟢', '中性': '🟡', '弱势': '🔴', '极弱': '🔴🔴'}.get(strength, '⚪')
+                        lines.append(f"- **市场宽度(60日)**: {strength_emoji} {strength} (得分{score:.0f}/100)")
+
+                # 3. 融资融券
+                margin_data = self.margin_analyzer.analyze_margin_trading()
+                if margin_data and 'error' not in margin_data and margin_data.get('current'):
+                    sentiment_score = margin_data.get('sentiment_score', 50)
+                    sentiment_level = margin_data.get('sentiment_level', '中性')
+                    sentiment_emoji = '⚠️' if sentiment_score >= 80 or sentiment_score <= 20 else '🟡'
+                    lines.append(f"- **市场情绪**: {sentiment_emoji} {sentiment_level} (融资情绪{sentiment_score:.0f}/100)")
+
+                lines.append("")
+
+            except Exception as e:
+                lines.append(f"⚠️ 机构级核心指标获取失败: {str(e)}")
+                lines.append("")
 
         # 2. 仓位策略
         position = plan['position_strategy']
