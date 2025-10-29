@@ -28,6 +28,13 @@ try:
 except ImportError:
     RiskManager = None
 
+# 导入配置加载器
+try:
+    from russ_trading.config.investment_config import get_investment_config
+    HAS_CONFIG = True
+except ImportError:
+    HAS_CONFIG = False
+
 
 class PerformanceTracker:
     """投资收益追踪器"""
@@ -38,19 +45,43 @@ class PerformanceTracker:
 
         Args:
             targets_config: 目标配置字典,包含:
-                - stage_targets: 阶段性目标列表 (默认[50万,60万,70万,100万])
-                - base_date: 基准日期 (默认'2025-01-01')
+                - stage_targets: 阶段性目标列表
+                - base_date: 基准日期
                 - initial_capital: 初始资金
-                - target_annual_return: 目标年化收益率 (默认15%)
+                - target_annual_return: 目标年化收益率
                 - risk_free_rate: 无风险利率 (默认3%)
+
+        如果不提供 targets_config，将从 config/investment_goals.yaml 读取
         """
         if targets_config is None:
             targets_config = {}
 
-        self.stage_targets = targets_config.get('stage_targets', [500000, 600000, 700000, 1000000])
-        self.base_date = targets_config.get('base_date', '2025-01-01')
-        self.initial_capital = targets_config.get('initial_capital', 500000)
-        self.target_annual_return = targets_config.get('target_annual_return', 0.15)
+        # 尝试从配置文件加载
+        if HAS_CONFIG:
+            try:
+                config = get_investment_config()
+                self.stage_targets = targets_config.get('stage_targets', config.stage_targets)
+                self.base_date = targets_config.get('base_date', config.base_date)
+                self.initial_capital = targets_config.get('initial_capital', config.initial_capital)
+                self.target_annual_return = targets_config.get('target_annual_return', config.target_annual_return)
+                self.final_target = config.final_target
+                self.config = config  # 保存配置对象用于格式化
+            except Exception as e:
+                # 配置加载失败，使用默认值
+                self.stage_targets = targets_config.get('stage_targets', [500000, 750000, 1000000])
+                self.base_date = targets_config.get('base_date', '2025-01-01')
+                self.initial_capital = targets_config.get('initial_capital', 500000)
+                self.target_annual_return = targets_config.get('target_annual_return', 0.60)
+                self.final_target = 1000000
+                self.config = None
+        else:
+            # 无配置模块，使用传入的值或默认值
+            self.stage_targets = targets_config.get('stage_targets', [500000, 750000, 1000000])
+            self.base_date = targets_config.get('base_date', '2025-01-01')
+            self.initial_capital = targets_config.get('initial_capital', 500000)
+            self.target_annual_return = targets_config.get('target_annual_return', 0.60)
+            self.final_target = targets_config.get('final_target', 1000000)
+            self.config = None
 
         # 增强功能配置
         risk_free_rate = targets_config.get('risk_free_rate', 0.03)
@@ -158,21 +189,34 @@ class PerformanceTracker:
         current_stage_progress = 0
 
         for i, target in enumerate(self.stage_targets):
+            # 使用配置格式化目标金额（脱敏显示）
+            if self.config:
+                target_text = self.config.format_target_description(target, i)
+            else:
+                target_text = f"{target/10000:.0f}万"
+
             if current_capital >= target:
                 completed_stages.append({
                     'stage': i + 1,
                     'target': target,
-                    'target_text': f"{target/10000:.0f}万",
+                    'target_text': target_text,
                     'completed': True
                 })
             else:
                 if next_stage is None:
+                    remaining = target - current_capital
+                    # 使用配置格式化剩余金额
+                    if self.config:
+                        remaining_text = self.config.format_amount(remaining)
+                    else:
+                        remaining_text = f"{remaining/10000:.1f}万"
+
                     next_stage = {
                         'stage': i + 1,
                         'target': target,
-                        'target_text': f"{target/10000:.0f}万",
-                        'remaining': target - current_capital,
-                        'remaining_text': f"{(target - current_capital)/10000:.1f}万"
+                        'target_text': target_text,
+                        'remaining': remaining,
+                        'remaining_text': remaining_text
                     }
                     # 计算当前阶段进度
                     if i == 0:
@@ -203,12 +247,21 @@ class PerformanceTracker:
         annual_return: float
     ) -> Dict:
         """计算各项成就达成情况"""
+        # 使用配置中的最终目标，而不是硬编码
+        final_target = self.final_target
+
+        # 获取目标名称（脱敏显示）
+        if self.config:
+            final_target_text = self.config.format_target_description(final_target, len(self.stage_targets) - 1)
+        else:
+            final_target_text = f"{final_target/10000:.0f}万"
+
         achievements = {
-            'target_100w': {
-                'name': '资金达到100万',
-                'achieved': current_capital >= 1000000,
-                'progress': current_capital / 1000000,
-                'progress_pct': f"{(current_capital / 1000000) * 100:.1f}%"
+            'target_final': {
+                'name': f'资金达到{final_target_text}',
+                'achieved': current_capital >= final_target,
+                'progress': current_capital / final_target,
+                'progress_pct': f"{(current_capital / final_target) * 100:.1f}%"
             },
             'beat_hs300': {
                 'name': '跑赢沪深300',
@@ -218,17 +271,20 @@ class PerformanceTracker:
             },
             'double_capital': {
                 'name': '资金翻倍(100%涨幅)',
-                'achieved': total_return >= 1.0,
-                'progress': (1 + total_return) / 2.0,
-                'progress_pct': f"{((1 + total_return) / 2.0) * 100:.1f}%"
+                'achieved': total_return >= self.target_annual_return if self.target_annual_return > 0.5 else total_return >= 1.0,
+                'progress': (1 + total_return) / (1 + self.target_annual_return) if self.target_annual_return > 0.5 else (1 + total_return) / 2.0,
+                'progress_pct': f"{((1 + total_return) / (1 + self.target_annual_return) if self.target_annual_return > 0.5 else (1 + total_return) / 2.0) * 100:.1f}%"
             },
-            'annual_15pct': {
+            'annual_target': {
                 'name': f'年化收益达到{self.target_annual_return*100:.0f}%',
                 'achieved': annual_return >= self.target_annual_return,
                 'current_annual': annual_return * 100,
                 'current_annual_pct': f"{annual_return * 100:.2f}%"
             }
         }
+
+        # 保持向后兼容（旧代码可能用 target_100w）
+        achievements['target_100w'] = achievements['target_final']
 
         return achievements
 
@@ -625,11 +681,15 @@ class PerformanceTracker:
         lines.append(f"**基准日期**: {self.base_date} (已运行{result['days_since_base']}天/{result['years_since_base']}年)")
         lines.append("")
 
-        # 收益概况
+        # 收益概况（使用配置格式化金额）
         lines.append("### 收益概况")
         lines.append("")
-        lines.append(f"- **初始资金**: ¥{result['initial_capital']:,.0f}")
-        lines.append(f"- **当前资金**: ¥{result['current_capital']:,.0f}")
+        if self.config:
+            lines.append(f"- **初始资金**: {self.config.format_amount(result['initial_capital'])}")
+            lines.append(f"- **当前资金**: {self.config.format_amount(result['current_capital'])}")
+        else:
+            lines.append(f"- **初始资金**: ¥{result['initial_capital']:,.0f}")
+            lines.append(f"- **当前资金**: ¥{result['current_capital']:,.0f}")
         lines.append(f"- **总收益率**: {result['total_return_pct']}")
         lines.append(f"- **年化收益率**: {result['annual_return_pct']}")
         lines.append(f"- **目标年化**: {result['target_annual_return_pct']}")
@@ -655,12 +715,19 @@ class PerformanceTracker:
         # 目标说明
         lines.append("### 🎯 收益目标体系")
         lines.append("")
-        lines.append("**长期目标**: 年化15%,穿越牛熊")
+        lines.append(f"**长期目标**: 年化{self.target_annual_return*100:.0f}%,穿越牛熊")
         lines.append("")
         lines.append("**短期目标**(到2026年底,按优先级排序):")
-        lines.append("1. 🥇 资金达到100万 (最优先)")
+
+        # 使用配置获取最终目标名称
+        if self.config:
+            final_target_name = self.config.format_target_description(self.final_target, len(self.stage_targets) - 1)
+        else:
+            final_target_name = f"{self.final_target/10000:.0f}万"
+
+        lines.append(f"1. 🥇 资金达到{final_target_name} (最优先)")
         lines.append("2. 🥈 跑赢沪深300 (次优先)")
-        lines.append("3. 🥉 资金翻倍(100%涨幅) (第三优先)")
+        lines.append(f"3. 🥉 资金涨幅达到{self.target_annual_return*100:.0f}% (第三优先)")
         lines.append("")
         lines.append("---")
         lines.append("")
@@ -671,14 +738,18 @@ class PerformanceTracker:
 
         achievements = result['achievements']
 
-        # 目标1: 100万 (最优先)
+        # 目标1: 最终目标 (最优先) - 使用 target_100w 保持兼容
         target_100w = achievements['target_100w']
         status_emoji = "✅" if target_100w['achieved'] else "🔄"
-        lines.append(f"#### {status_emoji} 🥇 优先级1: 资金达到100万")
+        lines.append(f"#### {status_emoji} 🥇 优先级1: {target_100w['name']}")
         lines.append(f"- 当前进度: {target_100w['progress_pct']}")
         if not target_100w['achieved']:
-            remaining = 1000000 - result['current_capital']
-            lines.append(f"- 还需: ¥{remaining:,.0f} ({remaining/10000:.1f}万)")
+            remaining = self.final_target - result['current_capital']
+            if self.config:
+                remaining_text = self.config.format_amount(remaining)
+            else:
+                remaining_text = f"¥{remaining:,.0f} ({remaining/10000:.1f}万)"
+            lines.append(f"- 还需: {remaining_text}")
             lines.append(f"- **优先级**: 最高 - 这是首要目标")
         lines.append("")
 
@@ -690,18 +761,26 @@ class PerformanceTracker:
             lines.append(f"- 超额收益: {beat_hs300['excess_return_pct']}")
         else:
             lines.append(f"- 落后幅度: {beat_hs300['excess_return_pct']}")
-        lines.append(f"- **优先级**: 次高 - 在达成100万基础上追求超额收益")
+        lines.append(f"- **优先级**: 次高 - 在达成{final_target_name}基础上追求超额收益")
         lines.append("")
 
         # 目标3: 翻倍 (第三优先)
         double = achievements['double_capital']
         status_emoji = "✅" if double['achieved'] else "🔄"
-        lines.append(f"#### {status_emoji} 🥉 优先级3: 资金翻倍(100%涨幅)")
+        lines.append(f"#### {status_emoji} 🥉 优先级3: {double['name']}")
         lines.append(f"- 当前进度: {double['progress_pct']}")
-        lines.append(f"- 翻倍目标: ¥{result['double_target']:,.0f}")
+        if self.config:
+            double_target_text = self.config.format_amount(result['double_target'])
+        else:
+            double_target_text = f"¥{result['double_target']:,.0f}"
+        lines.append(f"- 翻倍目标: {double_target_text}")
         if not double['achieved']:
             remaining = result['double_target'] - result['current_capital']
-            lines.append(f"- 还需: ¥{remaining:,.0f} ({remaining/10000:.1f}万)")
+            if self.config:
+                remaining_text = self.config.format_amount(remaining)
+            else:
+                remaining_text = f"¥{remaining:,.0f} ({remaining/10000:.1f}万)"
+            lines.append(f"- 还需: {remaining_text}")
         lines.append(f"- **优先级**: 第三 - 在前两个目标基础上的进阶目标")
         lines.append("")
 

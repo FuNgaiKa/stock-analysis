@@ -65,6 +65,14 @@ except ImportError:
     HAS_ENHANCED_MODULES = False
     logging.warning("增强模块未找到，将使用基础功能")
 
+# 导入配置加载器
+try:
+    from russ_trading.config.investment_config import get_investment_config
+    HAS_CONFIG = True
+except ImportError:
+    HAS_CONFIG = False
+    logging.warning("投资目标配置模块未找到")
+
 # 配置日志
 logging.basicConfig(
     level=logging.INFO,
@@ -108,6 +116,17 @@ class DailyPositionReportGenerator:
         self.performance_tracker = PerformanceTracker()
         self.potential_analyzer = PotentialAnalyzer()
         self.market_depth_analyzer = MarketDepthAnalyzer()
+
+        # 加载投资目标配置（用于脱敏显示）
+        if HAS_CONFIG:
+            try:
+                self.investment_config = get_investment_config()
+                logger.info("投资目标配置加载成功")
+            except Exception as e:
+                logger.warning(f"投资目标配置加载失败: {e}，使用默认值")
+                self.investment_config = None
+        else:
+            self.investment_config = None
 
         # 初始化增强模块
         if HAS_ENHANCED_MODULES:
@@ -1277,7 +1296,16 @@ class DailyPositionReportGenerator:
         lines.append("")
         lines.append("- **2025年**: 52万 × 1.60 = **83万** ✅")
         lines.append("- **2026年**: 83万 × 1.30 = **108万** ✅")
-        lines.append("- **最终**: **超过100万目标** 🎯")
+        # 使用配置获取目标描述
+        if self.investment_config:
+            final_target_text = self.investment_config.format_target_description(
+                self.investment_config.final_target,
+                len(self.investment_config.stage_targets) - 1
+            )
+        else:
+            final_target_text = "最终目标"
+
+        lines.append("- **最终**: **{} 达成** 🎯".format(final_target_text))
         lines.append("")
         lines.append("**方案C+优势**:")
         lines.append("")
@@ -1990,9 +2018,18 @@ class DailyPositionReportGenerator:
         # ========== 新增: 激进持仓建议 ==========
         if positions:
             lines.append("## 🚀 激进持仓建议(2026年底翻倍目标)")
+            # 使用配置获取目标描述
+            if self.investment_config:
+                final_target_text = self.investment_config.format_target_description(
+                    self.investment_config.final_target,
+                    len(self.investment_config.stage_targets) - 1
+                )
+            else:
+                final_target_text = "翻倍"
+
             lines.append("")
             lines.append("> **适用人群**: 承受20-30%回撤的激进选手  ")
-            lines.append("> **目标**: 2026年底资金翻倍至100万  ")
+            lines.append("> **目标**: 2026年底资金达到{}  ".format(final_target_text))
             lines.append("> **策略**: 集中火力成长股,年化50-60%  ")
             lines.append("")
 
@@ -2036,9 +2073,18 @@ class DailyPositionReportGenerator:
         lines.append("5. **纪律执行**: 先制定方案→执行→迭代,不情绪化操作 ✅")
         lines.append("")
 
+        # 使用配置获取目标描述
+        if self.investment_config:
+            final_target_text = self.investment_config.format_target_description(
+                self.investment_config.final_target,
+                len(self.investment_config.stage_targets) - 1
+            )
+        else:
+            final_target_text = "最终目标"
+
         lines.append("### 三大目标")
         lines.append("")
-        lines.append("1. 资金达到100万")
+        lines.append(f"1. 资金达到{final_target_text}")
         lines.append("2. 跑赢沪深300(从2025.1.1起)")
         lines.append("3. 涨幅100%(翻倍)")
         lines.append("")

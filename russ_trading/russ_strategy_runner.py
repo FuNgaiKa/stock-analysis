@@ -55,6 +55,13 @@ except ImportError as e:
     print(f"警告: 部分增强模块导入失败: {e}")
     HAS_ENHANCED_MODULES = False
 
+# 导入配置加载器
+try:
+    from russ_trading.config.investment_config import get_investment_config
+    HAS_CONFIG = True
+except ImportError:
+    HAS_CONFIG = False
+
 
 class RussStrategyRunner:
     """Russ个人交易策略运行器"""
@@ -92,28 +99,61 @@ class RussStrategyRunner:
             self.visualizer = None
 
     def _load_default_config(self) -> Dict:
-        """加载默认配置"""
+        """加载默认配置（从 config/investment_goals.yaml 读取）"""
+        # 尝试从配置文件加载
+        if HAS_CONFIG:
+            try:
+                config = get_investment_config()
+                return {
+                    'strategy': {
+                        'min_position': 0.50,
+                        'max_position': 0.90,
+                        'max_single_position': 0.20,
+                        'black_swan_reserve': 0.10,
+                        'min_assets': 3,
+                        'max_assets': 5,
+                        'target_annual_return': config.target_annual_return,
+                        'risk_preference': 'moderate'
+                    },
+                    'targets': {
+                        'stage_targets': config.stage_targets,
+                        'base_date': config.base_date,
+                        'initial_capital': config.initial_capital,
+                        'target_annual_return': config.target_annual_return,
+                        'final_target': config.final_target
+                    },
+                    'benchmarks': {
+                        'hs300_base': config.hs300_base,
+                        'cybz_base': config.cybz_base,
+                        'kechuang50_base': config.kechuang50_base
+                    }
+                }
+            except Exception as e:
+                print(f"警告: 配置加载失败({e}),使用默认值")
+
+        # 配置加载失败或不可用，使用默认值
         return {
             'strategy': {
-                'min_position': 0.50,  # 最小仓位50%
-                'max_position': 0.90,  # 最大仓位90%
-                'max_single_position': 0.20,  # 单一标的最大20%
-                'black_swan_reserve': 0.10,  # 黑天鹅预留10%
-                'min_assets': 3,  # 最少3只
-                'max_assets': 5,  # 最多5只
-                'target_annual_return': 0.15,  # 年化15%
-                'risk_preference': 'moderate'  # 风险偏好
+                'min_position': 0.50,
+                'max_position': 0.90,
+                'max_single_position': 0.20,
+                'black_swan_reserve': 0.10,
+                'min_assets': 3,
+                'max_assets': 5,
+                'target_annual_return': 0.60,
+                'risk_preference': 'moderate'
             },
             'targets': {
-                'stage_targets': [500000, 600000, 700000, 1000000],  # 阶段目标
-                'base_date': '2025-01-01',  # 基准日期
-                'initial_capital': 500000,  # 初始资金50万
-                'target_annual_return': 0.15  # 年化15%
+                'stage_targets': [500000, 750000, 1000000],
+                'base_date': '2025-01-01',
+                'initial_capital': 500000,
+                'target_annual_return': 0.60,
+                'final_target': 1000000
             },
             'benchmarks': {
-                'hs300_base': 3145.0,  # 沪深300基准点位
-                'cybz_base': 2060.0,  # 创业板基准点位
-                'kechuang50_base': 955.0  # 科创50基准点位
+                'hs300_base': 3145.0,
+                'cybz_base': 2060.0,
+                'kechuang50_base': 955.0
             }
         }
 
@@ -215,7 +255,21 @@ class RussStrategyRunner:
 
         lines.append("### 三大目标")
         lines.append("")
-        lines.append("1. 资金达到100万")
+
+        # 使用配置获取最终目标描述
+        if HAS_CONFIG:
+            try:
+                config = get_investment_config()
+                final_target_text = config.format_target_description(
+                    config.final_target,
+                    len(config.stage_targets) - 1
+                )
+            except:
+                final_target_text = "最终目标"
+        else:
+            final_target_text = "最终目标"
+
+        lines.append(f"1. 资金达到{final_target_text}")
         lines.append("2. 跑赢沪深300(从2025.1.1起)")
         lines.append("3. 涨幅100%(翻倍)")
         lines.append("")

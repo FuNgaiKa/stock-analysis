@@ -108,5 +108,7 @@ logs/
 # 敏感配置文件
 config/email_config.yaml
 !config/email_config.example.yaml
+config/investment_goals.yaml
+!config/investment_goals.yaml.example
 .env
 !.env.example
