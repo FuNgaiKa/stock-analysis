@@ -1,0 +1,43 @@
+# 邮件配置模板
+# 使用说明:
+# 1. 复制此文件为 email_config.yaml
+# 2. 填写你的邮箱信息
+# 3. 将 email_config.yaml 添加到 .gitignore (避免泄露密码)
+
+# SMTP 服务器配置
+smtp:
+  server: smtp.qq.com          # QQ邮箱: smtp.qq.com, 163邮箱: smtp.163.com, Gmail: smtp.gmail.com
+  port: 465                    # SSL端口,通常为 465
+
+# 发件人信息
+sender:
+  email: your_email@qq.com     # 你的邮箱地址
+  password: your_app_password  # 邮箱授权码(不是登录密码!)
+  name: 股票监控系统             # 发件人显示名称
+
+# 收件人列表(可以是多个)
+recipients:
+  - your_email@qq.com          # 接收预警邮件的邮箱
+
+# 可选配置
+send_no_alert_email: false     # 是否在无预警时也发送邮件 (true/false)
+
+# ===== 常用邮箱 SMTP 配置参考 =====
+#
+# QQ邮箱:
+#   server: smtp.qq.com
+#   port: 465
+#   获取授权码: 邮箱设置 -> 账户 -> POP3/IMAP/SMTP/Exchange/CardDAV/CalDAV服务 -> 生成授权码
+#
+# 163邮箱:
+#   server: smtp.163.com
+#   port: 465
+#   获取授权码: 邮箱设置 -> POP3/SMTP/IMAP -> 开启服务并获取授权码
+#
+# Gmail:
+#   server: smtp.gmail.com
+#   port: 465
+#   需要开启"允许不够安全的应用访问"或使用应用专用密码
+#
+# 企业邮箱:
+#   请咨询你的邮箱服务商获取 SMTP 配置

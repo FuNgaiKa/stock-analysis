@@ -91,7 +91,7 @@ class UnifiedEmailNotifier:
         html_content = self._format_html_content(report)
 
         # 从配置文件获取收件人列表
-        recipients = self.config.get('recipients', ['1264947688@qq.com'])
+        recipients = self.config.get('recipients', ['your_email@example.com'])
 
         # 发送邮件 - 给每个收件人单独发送一封,每次都建立新连接
         success_count = 0
