@@ -81,11 +81,32 @@ config.ini
 .env
 secrets.py
 
-# Data files
-data/
+# Data files - 敏感持仓数据
+data/positions_*.json
+!data/positions_example.json
+data/cache/
+data/*.csv
+data/*.xlsx
+
+# Reports - 包含实际金额的报告
+reports/daily/
+reports/archive/
+reports/temp/
+
+# 但允许示例报告
+!reports/README.md
+!reports/example/
+
+# Output and results
 output/
 results/
 
 # Logs
 logs/
 *.html
+
+# 敏感配置文件
+config/email_config.yaml
+!config/email_config.example.yaml
+.env
+!.env.example

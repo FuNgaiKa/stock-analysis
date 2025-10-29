@@ -1,0 +1,66 @@
+[
+  {
+    "_comment": "这是示例持仓文件，总市值约50万元，仅供参考",
+    "asset_name": "恒生科技ETF",
+    "asset_code": "513180",
+    "asset_key": "513180",
+    "position_ratio": 0.28,
+    "current_value": 140000
+  },
+  {
+    "asset_name": "证券ETF",
+    "asset_code": "512880",
+    "asset_key": "512880",
+    "position_ratio": 0.23,
+    "current_value": 115000
+  },
+  {
+    "asset_name": "白酒ETF",
+    "asset_code": "512690",
+    "asset_key": "512690",
+    "position_ratio": 0.22,
+    "current_value": 110000
+  },
+  {
+    "asset_name": "化工ETF",
+    "asset_code": "159870",
+    "asset_key": "159870",
+    "position_ratio": 0.07,
+    "current_value": 35000
+  },
+  {
+    "asset_name": "煤炭ETF",
+    "asset_code": "515220",
+    "asset_key": "515220",
+    "position_ratio": 0.04,
+    "current_value": 20000
+  },
+  {
+    "asset_name": "阿里巴巴",
+    "asset_code": "BABA",
+    "asset_key": "BABA",
+    "position_ratio": 0.03,
+    "current_value": 15000
+  },
+  {
+    "asset_name": "三花智控",
+    "asset_code": "002050",
+    "asset_key": "002050",
+    "position_ratio": 0.02,
+    "current_value": 10000
+  },
+  {
+    "asset_name": "科创50ETF",
+    "asset_code": "588000",
+    "asset_key": "588000",
+    "position_ratio": 0.02,
+    "current_value": 10000
+  },
+  {
+    "asset_name": "创业板ETF",
+    "asset_code": "159915",
+    "asset_key": "159915",
+    "position_ratio": 0.02,
+    "current_value": 10000
+  }
+]
