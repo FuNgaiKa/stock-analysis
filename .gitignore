@@ -89,7 +89,7 @@ data/*.csv
 data/*.xlsx
 
 # Reports - 包含实际金额的报告
-reports/daily/
+# reports/daily/  # 允许提交每日报告
 reports/archive/
 reports/temp/
 
