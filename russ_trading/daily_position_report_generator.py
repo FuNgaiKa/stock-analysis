@@ -195,7 +195,7 @@ class DailyPositionReportGenerator:
                 'min_cash_reserve': 0.10,
                 'stop_loss': 0.25,
                 'warning_loss': 0.20,
-                'target_annual_return': 0.60,  # 年化60%目标
+                'target_annual_return': 0.15,  # 年化15%目标
                 'min_assets': 2,  # 最少2只
                 'max_assets': 3   # 最多3只
             }
@@ -1062,7 +1062,7 @@ class DailyPositionReportGenerator:
         result['strategy_comparison'].append("")
         result['strategy_comparison'].append("| 参数 | 保守版(当前) | 激进版(翻倍) | 说明 |")
         result['strategy_comparison'].append("|------|------------|------------|------|")
-        result['strategy_comparison'].append("| **年化目标** | 15% | **60%** | 2年翻倍需求 |")
+        result['strategy_comparison'].append("| **年化目标** | 15% | **45-50%** | 达成资金目标需求 |")
         result['strategy_comparison'].append("| **单ETF上限** | 30% | **40%** | 集中优势品种 |")
         result['strategy_comparison'].append("| **单个股上限** | 20% | **30%** | 更激进配置 |")
         result['strategy_comparison'].append("| **现金储备** | ≥10% | **5%** | 牛市全力进攻 |")
@@ -1317,7 +1317,7 @@ class DailyPositionReportGenerator:
         lines.append("")
         lines.append("**风险提示**:")
         lines.append("")
-        lines.append("- ⚠️ 年化60%属于极高预期,需牛市配合+严格执行")
+        lines.append("- ⚠️ 年化45-50%属于极高预期,需大牛市配合+严格执行")
         lines.append("- ⚠️ 预期最大回撤-25%至-30%(2015股灾级别)")
         lines.append("- ⚠️ 单次回撤触及-30%立即减仓至65%")
         lines.append("- ⚠️ 需忍受季度级别-15%波动")
@@ -2030,7 +2030,7 @@ class DailyPositionReportGenerator:
             lines.append("")
             lines.append("> **适用人群**: 承受20-30%回撤的激进选手  ")
             lines.append("> **目标**: 2026年底资金达到{}  ".format(final_target_text))
-            lines.append("> **策略**: 集中火力成长股,年化50-60%  ")
+            lines.append("> **策略**: 集中火力成长股,年化45-50%  ")
             lines.append("")
 
             ultra_suggestions = self._generate_ultra_aggressive_suggestions(positions, market_data, total_value)

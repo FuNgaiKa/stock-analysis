@@ -96,7 +96,7 @@ class InvestmentGoalsConfig:
     @property
     def target_annual_return(self) -> float:
         """目标年化收益率"""
-        return float(self.get('target_annual_return', 0.60))
+        return float(self.get('target_annual_return', 0.15))
 
     @property
     def target_total_return(self) -> float:

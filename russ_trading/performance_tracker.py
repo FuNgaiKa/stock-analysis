@@ -71,7 +71,7 @@ class PerformanceTracker:
                 self.stage_targets = targets_config.get('stage_targets', [500000, 750000, 1000000])
                 self.base_date = targets_config.get('base_date', '2025-01-01')
                 self.initial_capital = targets_config.get('initial_capital', 500000)
-                self.target_annual_return = targets_config.get('target_annual_return', 0.60)
+                self.target_annual_return = targets_config.get('target_annual_return', 0.15)
                 self.final_target = 1000000
                 self.config = None
         else:
@@ -79,7 +79,7 @@ class PerformanceTracker:
             self.stage_targets = targets_config.get('stage_targets', [500000, 750000, 1000000])
             self.base_date = targets_config.get('base_date', '2025-01-01')
             self.initial_capital = targets_config.get('initial_capital', 500000)
-            self.target_annual_return = targets_config.get('target_annual_return', 0.60)
+            self.target_annual_return = targets_config.get('target_annual_return', 0.15)
             self.final_target = targets_config.get('final_target', 1000000)
             self.config = None
 
