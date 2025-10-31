@@ -5,7 +5,7 @@
 Comprehensive Asset Reporter
 
 分析对象: 四大科技指数 + 沪深300 + 黄金 + 比特币
-分析维度(11大维度):
+分析维度(14大维度):
   1. 历史点位分析
   2. 技术面分析(MACD/RSI/KDJ/布林带/ATR/DMI/ADX/均线/背离)
   3. 资金面分析(北向/南向资金)
@@ -17,6 +17,9 @@ Comprehensive Asset Reporter
   9. 支撑压力位(轴心点/斐波那契/历史高低点)
   10. 市场宽度(新高新低统计,仅A股)
   11. 恐慌指数(VIX/VHSI)
+  12. 相对强度分析(Alpha/Beta) - 机构级
+  13. 筹码分布(主力成本/集中度) - 机构级
+  14. 量价背离(综合背离判断) - 机构级
 
 作者: Claude Code
 日期: 2025-10-15
@@ -51,6 +54,11 @@ from strategies.position.analyzers.market_indicators.vhsi_analyzer import VHSIAn
 from strategies.position.analyzers.market_structure.sentiment_index import MarketSentimentIndex
 from strategies.position.analyzers.market_indicators.cn_volatility_index import CNVolatilityIndex
 from strategies.position.analyzers.market_indicators.hk_volatility_index import HKVolatilityIndex
+
+# Phase 1 机构级分析器
+from strategies.position.analyzers.performance.relative_strength_analyzer import RelativeStrengthAnalyzer
+from strategies.position.analyzers.market_structure.chip_distribution_analyzer import ChipDistributionAnalyzer
+from strategies.position.analyzers.technical_analysis.enhanced_divergence_analyzer import EnhancedDivergenceAnalyzer
 
 logger = logging.getLogger(__name__)
 
@@ -146,6 +154,11 @@ class ComprehensiveAssetReporter:
         self.hk_volatility_analyzer = HKVolatilityIndex()  # 港股自定义波动率指数
         self.sentiment_analyzer = MarketSentimentIndex()  # 综合情绪指数(所有资产)
 
+        # Phase 1 机构级分析器
+        self.relative_strength_analyzer = RelativeStrengthAnalyzer()  # Alpha/Beta分析
+        self.chip_analyzer = ChipDistributionAnalyzer()  # 筹码分布
+        self.enhanced_divergence_analyzer = EnhancedDivergenceAnalyzer()  # 增强背离分析
+
         logger.info("综合资产分析系统初始化完成")
 
     def analyze_single_asset(self, asset_key: str) -> Dict:
@@ -235,6 +248,24 @@ class ComprehensiveAssetReporter:
             # 12. 宏观环境分析(美股、黄金、比特币)
             if config['market'] in ['US', 'crypto', 'commodity']:
                 result['macro_environment'] = self._analyze_macro_environment(config['market'])
+
+            # ========== Phase 1 机构级分析 ==========
+            # 13. 相对强度/Alpha分析(需要基准数据)
+            if config['type'] in ['index', 'crypto', 'commodity']:
+                result['relative_strength'] = self._analyze_relative_strength(
+                    config['market'], config['code'], config['type']
+                )
+
+            # 14. 筹码分布分析(仅股票和指数)
+            if config['type'] == 'index':
+                result['chip_distribution'] = self._analyze_chip_distribution(
+                    config['market'], config['code'], config['type']
+                )
+
+            # 15. 增强量价背离分析(所有资产)
+            result['enhanced_divergence'] = self._analyze_enhanced_divergence(
+                config['market'], config['code'], config['type']
+            )
 
             logger.info(f"{config['name']} 分析完成")
 
@@ -1578,7 +1609,7 @@ class ComprehensiveAssetReporter:
         lines.append("")
         lines.append(f"**分析对象**: 四大科技指数 + 沪深300 + 黄金 + 比特币")
         lines.append(f"**分析时间**: {report['timestamp'].strftime('%Y-%m-%d %H:%M:%S')}")
-        lines.append(f"**分析维度**: 11大维度全面覆盖")
+        lines.append(f"**分析维度**: 14大维度全面覆盖 (含机构级Alpha/筹码/背离分析)")
         lines.append("")
         lines.append("---")
         lines.append("")
@@ -1903,6 +1934,97 @@ class ComprehensiveAssetReporter:
 
                     lines.append("")
 
+                # ========== Phase 1 机构级分析 ==========
+                # 8. 相对强度/Alpha分析
+                rel_strength = data.get('relative_strength', {})
+                if rel_strength and 'error' not in rel_strength:
+                    lines.append("#### 🎯 相对强度分析 (Alpha/Beta)")
+                    lines.append("")
+                    lines.append(f"**基准**: {rel_strength.get('benchmark_name', '未知')}")
+                    lines.append("")
+                    lines.append(f"- **Alpha**: {rel_strength.get('alpha', 0):+.2f}% (超额收益)")
+                    lines.append(f"- **Beta**: {rel_strength.get('beta', 0):.2f} (系统性风险)")
+                    lines.append(f"- **相对强度**: {rel_strength.get('relative_strength', 0):.1f}")
+
+                    if rel_strength.get('outperformance'):
+                        lines.append(f"- **表现**: ✅ 跑赢基准")
+                    else:
+                        lines.append(f"- **表现**: ⚠️ 跑输基准")
+
+                    trend_emoji = {'strengthening': '📈', 'weakening': '📉', 'stable': '➡️'}.get(rel_strength.get('trend'), '➡️')
+                    lines.append(f"- **趋势**: {rel_strength.get('trend', 'stable')} {trend_emoji}")
+
+                    if rel_strength.get('summary'):
+                        lines.append("")
+                        lines.append(f"**摘要**: {rel_strength['summary']}")
+
+                    lines.append("")
+
+                # 9. 筹码分布分析
+                chip_dist = data.get('chip_distribution', {})
+                if chip_dist and 'error' not in chip_dist:
+                    lines.append("#### 💰 筹码分布")
+                    lines.append("")
+                    lines.append(f"- **主力成本**: ¥{chip_dist.get('main_cost', 0):.2f}")
+
+                    cost_range = chip_dist.get('cost_range', (0, 0))
+                    lines.append(f"- **成本区间**: ¥{cost_range[0]:.2f} - ¥{cost_range[1]:.2f}")
+
+                    lines.append(f"- **当前价格**: ¥{chip_dist.get('current_price', 0):.2f}")
+
+                    position_vs_cost = chip_dist.get('position_vs_cost', 0)
+                    pos_emoji = "⬆️" if position_vs_cost > 5 else ("➡️" if position_vs_cost > -5 else "⬇️")
+                    lines.append(f"- **相对成本**: {position_vs_cost:+.2f}% {pos_emoji}")
+
+                    lines.append(f"- **筹码集中度**: {chip_dist.get('concentration', 0):.1f}/100")
+                    lines.append(f"- **盈利筹码**: {chip_dist.get('profit_ratio', 0):.1f}%")
+                    lines.append(f"- **控盘程度**: {chip_dist.get('control_level', '未知')}")
+
+                    signal_emoji = {'accumulate': '✅', 'distribute': '⚠️', 'stable': '➡️'}.get(chip_dist.get('signal'), '➡️')
+                    signal_text = {'accumulate': '主力吸筹', 'distribute': '主力派发', 'stable': '筹码稳定'}.get(chip_dist.get('signal'), '未知')
+                    lines.append(f"- **主力行为**: {signal_text} {signal_emoji}")
+
+                    if chip_dist.get('summary'):
+                        lines.append("")
+                        lines.append(f"**摘要**: {chip_dist['summary']}")
+
+                    lines.append("")
+
+                # 10. 增强量价背离分析
+                enh_div = data.get('enhanced_divergence', {})
+                if enh_div and 'error' not in enh_div:
+                    lines.append("#### ⚖️ 量价背离")
+                    lines.append("")
+
+                    div_type = enh_div.get('divergence_type', 'none')
+                    div_type_text = {'top': '顶背离⚠️', 'bottom': '底背离✅', 'none': '无背离➡️'}.get(div_type, '未知')
+                    lines.append(f"- **类型**: {div_type_text}")
+
+                    strength = enh_div.get('strength', 0)
+                    lines.append(f"- **强度**: {strength}/100")
+
+                    risk_emoji = {'high': '🔴', 'medium': '🟡', 'low': '🟢'}.get(enh_div.get('risk_level'), '🟢')
+                    lines.append(f"- **风险等级**: {enh_div.get('risk_level', 'low')} {risk_emoji}")
+
+                    lines.append(f"- **置信度**: {enh_div.get('confidence', 0):.0%}")
+
+                    if enh_div.get('recommendation'):
+                        lines.append("")
+                        lines.append(f"**建议**: {enh_div['recommendation']}")
+
+                    if enh_div.get('summary'):
+                        lines.append(f"**摘要**: {enh_div['summary']}")
+
+                    # 显示信号详情
+                    signals = enh_div.get('signals', [])
+                    if signals:
+                        lines.append("")
+                        lines.append("**信号详情**:")
+                        for sig in signals[:3]:  # 最多显示3个信号
+                            lines.append(f"  - {sig.get('type', '')}: {sig.get('description', '')}")
+
+                    lines.append("")
+
                 lines.append("---")
                 lines.append("")
 
@@ -1910,10 +2032,127 @@ class ComprehensiveAssetReporter:
         lines.append("")
         lines.append(f"**生成时间**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         lines.append(f"**生成系统**: Claude Code 量化分析系统")
-        lines.append(f"**分析维度**: 11大维度 (历史点位、技术面、资金面、估值、情绪、风险、综合判断、成交量、支撑压力位、市场宽度、恐慌指数)")
+        lines.append(f"**分析维度**: 14大维度 (历史点位、技术面、资金面、估值、情绪、风险、综合判断、成交量、支撑压力位、市场宽度、恐慌指数、相对强度Alpha/Beta、筹码分布、量价背离)")
         lines.append("")
 
         return '\n'.join(lines)
+
+    # ========== Phase 1 机构级分析方法 ==========
+
+    def _analyze_relative_strength(self, market: str, code: str, asset_type: str) -> Dict:
+        """
+        相对强度/Alpha分析
+
+        计算资产相对于基准的Alpha和Beta
+        """
+        try:
+            # 获取资产数据
+            if market == 'CN':
+                df = self.cn_analyzer.get_index_data(code, period='1y')
+                benchmark_df = self.cn_analyzer.get_index_data('HS300', period='1y')  # 沪深300作为基准
+                benchmark_name = '沪深300'
+            elif market == 'HK':
+                df = self.hk_analyzer.get_index_data(code, period='1y')
+                benchmark_df = self.cn_analyzer.get_index_data('HS300', period='1y')  # 使用沪深300
+                benchmark_name = '沪深300'
+            elif market == 'US':
+                df = self.us_source.get_us_index_daily(code, period='1y')
+                benchmark_df = self.us_source.get_us_index_daily('SPY', period='1y')  # 标普500
+                benchmark_name = 'S&P 500'
+            elif asset_type == 'commodity':
+                df = self.us_source.get_us_index_daily(code, period='1y')
+                benchmark_df = self.us_source.get_us_index_daily('SPY', period='1y')
+                benchmark_name = 'S&P 500'
+            elif asset_type == 'crypto':
+                df = self.us_source.get_us_index_daily(code, period='1y')
+                benchmark_df = self.us_source.get_us_index_daily('SPY', period='1y')
+                benchmark_name = 'S&P 500'
+            else:
+                return {'error': '不支持的市场'}
+
+            if df.empty or benchmark_df.empty:
+                return {'error': '数据获取失败'}
+
+            # 调用相对强度分析器
+            result = self.relative_strength_analyzer.analyze(df, benchmark_df)
+
+            if 'error' in result:
+                return result
+
+            # 添加基准名称
+            result['benchmark_name'] = benchmark_name
+
+            return result
+
+        except Exception as e:
+            logger.error(f"相对强度分析失败: {str(e)}")
+            return {'error': str(e)}
+
+    def _analyze_chip_distribution(self, market: str, code: str, asset_type: str) -> Dict:
+        """
+        筹码分布分析
+
+        分析主力成本、筹码集中度、控盘程度
+        """
+        try:
+            # 获取资产数据（需要成交量）
+            if market == 'CN':
+                df = self.cn_analyzer.get_index_data(code, period='120d')
+            elif market == 'HK':
+                df = self.hk_analyzer.get_index_data(code, period='120d')
+            elif market == 'US':
+                df = self.us_source.get_us_index_daily(code, period='120d')
+            else:
+                return {'error': '不支持的市场'}
+
+            if df.empty:
+                return {'error': '数据获取失败'}
+
+            # 检查是否有volume列
+            if 'volume' not in df.columns:
+                return {'error': '缺少成交量数据'}
+
+            # 调用筹码分布分析器
+            result = self.chip_analyzer.analyze(df)
+
+            return result
+
+        except Exception as e:
+            logger.error(f"筹码分布分析失败: {str(e)}")
+            return {'error': str(e)}
+
+    def _analyze_enhanced_divergence(self, market: str, code: str, asset_type: str) -> Dict:
+        """
+        增强量价背离分析
+
+        综合量价关系、MACD背离、RSI背离等多维度判断
+        """
+        try:
+            # 获取资产数据
+            if market == 'CN':
+                df = self.cn_analyzer.get_index_data(code, period='120d')
+            elif market == 'HK':
+                df = self.hk_analyzer.get_index_data(code, period='120d')
+            elif market == 'US':
+                df = self.us_source.get_us_index_daily(code, period='120d')
+            elif asset_type == 'commodity':
+                df = self.us_source.get_us_index_daily(code, period='120d')
+            elif asset_type == 'crypto':
+                df = self.us_source.get_us_index_daily(code, period='120d')
+            else:
+                return {'error': '不支持的市场'}
+
+            if df.empty:
+                return {'error': '数据获取失败'}
+
+            # 调用增强背离分析器
+            result = self.enhanced_divergence_analyzer.analyze(df)
+
+            return result
+
+        except Exception as e:
+            logger.error(f"增强背离分析失败: {str(e)}")
+            return {'error': str(e)}
 
 
 if __name__ == '__main__':
