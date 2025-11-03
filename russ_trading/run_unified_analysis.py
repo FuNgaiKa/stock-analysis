@@ -169,7 +169,7 @@ class UnifiedAnalysisRunner:
 
         # 报告头部
         if format_type == 'markdown':
-            lines.append("# 📊 市场标的洞察报告")
+            lines.append("# 📊 市场洞察报告")
             lines.append("")
             lines.append(f"**生成时间**: {results['date']}")
             lines.append("")
@@ -177,7 +177,7 @@ class UnifiedAnalysisRunner:
             lines.append("")
         else:
             lines.append("=" * 80)
-            lines.append("市场标的洞察报告".center(80))
+            lines.append("市场洞察报告".center(80))
             lines.append(f"生成时间: {results['date']}".center(80))
             lines.append("=" * 80)
             lines.append("")

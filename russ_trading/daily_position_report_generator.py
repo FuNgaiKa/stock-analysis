@@ -1405,7 +1405,7 @@ class DailyPositionReportGenerator:
         lines = []
 
         # ========== 标题 ==========
-        lines.append("# 📊 Russ个人持仓调整策略报告(机构级增强版)")
+        lines.append("# 📊 Russ个人持仓调整策略报告")
         lines.append("")
         lines.append(f"**生成时间**: {date}  ")
         lines.append("**报告类型**: 个性化持仓调整方案 + 机构级风险管理  ")
@@ -2117,12 +2117,12 @@ class DailyPositionReportGenerator:
         if date is None:
             date = datetime.now().strftime('%Y-%m-%d')
 
-        # 保存路径: reports/daily/YYYY-MM/持仓调整建议_YYYYMMDD_增强版.md
+        # 保存路径: reports/daily/YYYY-MM/持仓调整建议_YYYYMMDD.md
         year_month = date[:7]  # YYYY-MM
         reports_dir = project_root / 'reports' / 'daily' / year_month
         reports_dir.mkdir(parents=True, exist_ok=True)
 
-        filename = f"持仓调整建议_{date.replace('-', '')}_增强版.md"
+        filename = f"持仓调整建议_{date.replace('-', '')}.md"
         filepath = reports_dir / filename
 
         with open(filepath, 'w', encoding='utf-8') as f:
