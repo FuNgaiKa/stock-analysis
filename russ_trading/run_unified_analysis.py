@@ -37,6 +37,7 @@ from russ_trading.unified_config import (
 from scripts.analysis.comprehensive_asset_analysis.asset_reporter import ComprehensiveAssetReporter
 from scripts.analysis.sector_analysis.sector_reporter import SectorReporter
 from russ_trading.unified_email_notifier import UnifiedEmailNotifier
+from russ_trading.core.investment_advisor import InvestmentAdvisor
 
 # 导入机构级核心指标分析器 (Phase 3.3)
 try:
@@ -63,6 +64,7 @@ class UnifiedAnalysisRunner:
         """初始化分析器"""
         self.comprehensive_reporter = None
         self.sector_reporter = None
+        self.investment_advisor = InvestmentAdvisor()
 
         # 初始化机构级核心分析器 (Phase 3.3)
         if HAS_CORE_ANALYZERS:
@@ -359,6 +361,10 @@ class UnifiedAnalysisRunner:
                 else:
                     lines.append(self.sector_reporter.format_text_report(single_sector_report))
 
+        # 添加投资建议
+        investment_advice = self._generate_investment_advice_section(results, format_type)
+        lines.append(investment_advice)
+
         # 失败的资产
         if fail_count > 0:
             if format_type == 'markdown':
@@ -474,6 +480,208 @@ class UnifiedAnalysisRunner:
                 f"{change_pct:+.2f}% {change_emoji} | {direction_with_emoji} | {position} | "
                 f"{prob_display} | {risk_with_emoji} | {hold_suggestion} |"
             )
+
+        return '\n'.join(lines)
+
+    def _generate_investment_advice_section(self, results: dict, format_type: str) -> str:
+        """
+        生成投资建议栏
+
+        Args:
+            results: 分析结果
+            format_type: 报告格式
+
+        Returns:
+            投资建议文本
+        """
+        lines = []
+
+        if format_type == 'markdown':
+            lines.append("## 🎯 【建议】")
+            lines.append("")
+            lines.append("根据你的交易系统生成的25个资产分析报告，我来为你筛选当前建议参与的标的：")
+            lines.append("")
+        else:
+            lines.append("=" * 80)
+            lines.append("投资建议")
+            lines.append("=" * 80)
+
+        try:
+            # 为每个资产生成建议
+            assets_advice = []
+            for asset_key, data in results['assets'].items():
+                if 'error' in data:
+                    continue
+
+                # 准备资产数据
+                asset_data = {
+                    'key': asset_key,
+                    'name': data.get('asset_name', data.get('sector_name', asset_key)),
+                    'technical_analysis': self._extract_technical_data(data),
+                    'position_analysis': self._extract_position_data(data),
+                    'volume_analysis': self._extract_volume_data(data),
+                    'historical_analysis': data.get('historical_analysis', {}),
+                    'overall_judgment': data.get('comprehensive_judgment', {})
+                }
+
+                advice = self.investment_advisor.generate_asset_advice(asset_data)
+                assets_advice.append(advice)
+
+            # 生成投资组合建议
+            portfolio_advice = self.investment_advisor.generate_portfolio_advice(assets_advice)
+
+            if format_type == 'markdown':
+                lines.append(self._format_markdown_advice(assets_advice, portfolio_advice))
+            else:
+                lines.append(self._format_text_advice(assets_advice, portfolio_advice))
+
+        except Exception as e:
+            logger.error(f"生成投资建议失败: {e}")
+            if format_type == 'markdown':
+                lines.append("⚠️ 投资建议生成失败，请查看详细分析结果")
+            else:
+                lines.append("投资建议生成失败")
+
+        return '\n'.join(lines)
+
+    def _extract_technical_data(self, data: dict) -> dict:
+        """提取技术分析数据"""
+        hist = data.get('historical_analysis', {})
+        return {
+            'current_price': hist.get('current_price', 0),
+            'change_pct': hist.get('current_change_pct', 0)
+        }
+
+    def _extract_position_data(self, data: dict) -> dict:
+        """提取位置分析数据"""
+        judgment = data.get('comprehensive_judgment', {})
+        position_map = {
+            '高估': '80-90%', '偏高': '70-80%', '合理': '50-70%',
+            '偏低': '30-50%', '低估': '20-30%', '极低': '10-20%'
+        }
+        position = judgment.get('recommended_position', '50-70%')
+
+        return {
+            'position_level': position,
+            'position_pct': 60,  # 默认值
+            'ma20_position_pct': 50  # 默认值
+        }
+
+    def _extract_volume_data(self, data: dict) -> dict:
+        """提取成交量数据"""
+        return {
+            'volume_ratio_20d': 1.0  # 默认值
+        }
+
+    def _format_markdown_advice(self, assets_advice: list, portfolio_advice: dict) -> str:
+        """格式化Markdown投资建议"""
+        lines = []
+
+        # 强烈建议参与
+        strong_recommendations = [a for a in assets_advice if a['score'] >= 80]
+        if strong_recommendations:
+            lines.append("## 🎯 强烈建议参与（⭐⭐⭐）")
+            lines.append("")
+
+            for i, advice in enumerate(strong_recommendations, 1):
+                lines.append(f"### {i}. {advice['asset_name']}")
+                lines.append(f"- **当前状态**: {advice['current_state']}")
+                lines.append(f"- **技术位置**: {advice['technical_position']}")
+                lines.append(f"- **近期表现**: {advice['recent_performance']}")
+                lines.append(f"- **评分**: {advice['rating']}")
+                lines.append(f"- **建议**: {advice['action']}，{advice['target_price']}" if advice['target_price'] else f"- **建议**: {advice['action']}")
+                lines.append("")
+
+        # 谨慎参与
+        moderate_recommendations = [a for a in assets_advice if 65 <= a['score'] < 80]
+        if moderate_recommendations:
+            lines.append("## 🟡 谨慎参与（⭐⭐）")
+            lines.append("")
+
+            for i, advice in enumerate(moderate_recommendations, 1):
+                lines.append(f"### {i + len(strong_recommendations)}. {advice['asset_name']}")
+                lines.append(f"- **当前状态**: {advice['current_state']}")
+                lines.append(f"- **技术位置**: {advice['technical_position']}")
+                lines.append(f"- **近期表现**: {advice['recent_performance']}")
+                lines.append(f"- **评分**: {advice['rating']}")
+                lines.append(f"- **建议**: {advice['position_suggestion']}")
+                lines.append("")
+
+        # 暂不建议参与
+        avoid_recommendations = [a for a in assets_advice if a['score'] < 65]
+        if avoid_recommendations:
+            lines.append("## ❌ 暂不建议参与")
+            lines.append("")
+            lines.append("以下标的技术面偏弱，建议等待更好时机：")
+            lines.append("")
+            avoid_names = [a['asset_name'] for a in avoid_recommendations[:10]]
+            lines.append(f"- {', '.join(avoid_names)}")
+            if len(avoid_recommendations) > 10:
+                lines.append(f"- 等{len(avoid_recommendations) - 10}个标的")
+            lines.append("")
+
+        # 具体操作建议
+        lines.append("## 💡 具体操作建议")
+        lines.append("")
+
+        lines.append("### 优先级排序：")
+        for i, advice in enumerate(portfolio_advice['priority_ranking'][:5], 1):
+            lines.append(f"{i}. {advice['asset_name']} - {advice['advice_text']}")
+        lines.append("")
+
+        # 仓位配置建议
+        if portfolio_advice['allocation_suggestions']:
+            lines.append("### 仓位配置建议：")
+            lines.append("")
+
+            aggressive = portfolio_advice['allocation_suggestions']['aggressive']
+            if aggressive:
+                lines.append("- **激进策略**: " + " + ".join([f"{k} {v}" for k, v in aggressive.items()]))
+
+            conservative = portfolio_advice['allocation_suggestions']['conservative']
+            if conservative:
+                lines.append("- **稳健策略**: " + " + ".join([f"{k} {v}" for k, v in conservative.items()]))
+            lines.append("")
+
+        # 关键时点
+        if portfolio_advice['key_events']:
+            lines.append("### 关键时点：")
+            lines.append("")
+            for event in portfolio_advice['key_events']:
+                lines.append(f"- {event}")
+            lines.append("")
+
+        # 总结
+        lines.append(f"**总结**: {portfolio_advice['summary']}")
+        lines.append("")
+
+        return '\n'.join(lines)
+
+    def _format_text_advice(self, assets_advice: list, portfolio_advice: dict) -> str:
+        """格式化文本投资建议"""
+        lines = []
+
+        lines.append("根据交易系统分析，筛选出以下投资建议：")
+        lines.append("")
+
+        # 强烈推荐
+        strong_recommendations = [a for a in assets_advice if a['score'] >= 80]
+        if strong_recommendations:
+            lines.append("强烈推荐参与:")
+            for advice in strong_recommendations:
+                lines.append(f"  - {advice['asset_name']}: {advice['action']} ({advice['score']:.1f}分)")
+            lines.append("")
+
+        # 谨慎推荐
+        moderate_recommendations = [a for a in assets_advice if 65 <= a['score'] < 80]
+        if moderate_recommendations:
+            lines.append("可谨慎参与:")
+            for advice in moderate_recommendations:
+                lines.append(f"  - {advice['asset_name']}: {advice['position_suggestion']} ({advice['score']:.1f}分)")
+            lines.append("")
+
+        # 风险提示
+        lines.append(f"风险提示: {portfolio_advice.get('risk_warning', '投资有风险，需谨慎')}")
 
         return '\n'.join(lines)
 
