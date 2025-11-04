@@ -461,54 +461,71 @@ class MonthlyPlanGenerator:
 
         Args:
             plan: generate_monthly_plan()返回的计划
-            format_type: 格式类型 ('markdown' 或 'text')
+            format_type: 格式类型 ('markdown', 'markdown_new' 或 'text')
 
         Returns:
             格式化后的计划文本
         """
-        if format_type == 'markdown':
+        if format_type == 'markdown_new':
+            return self._format_markdown_plan_new(plan)
+        elif format_type == 'markdown':
             return self._format_markdown_plan(plan)
         else:
             return self._format_text_plan(plan)
 
     def _format_markdown_plan(self, plan: Dict) -> str:
-        """生成Markdown格式的月度计划"""
+        """生成Markdown格式的月度计划 - 采用新的简洁风格"""
         lines = []
 
-        # 标题
-        lines.append(f"# 📅 {plan['plan_month_text']}投资计划")
+        # 标题 - 采用新格式
+        lines.append(f"# 📅 投资计划 - {plan['plan_month']}")
         lines.append("")
-        lines.append(f"**生成时间**: {plan['generation_date']}")
-        lines.append(f"**计划周期**: {plan['plan_period']['start']} 至 {plan['plan_period']['end']}")
+        lines.append(f"**生成时间**: {plan['generation_date']} 当前仓位: {plan['position_strategy']['current_position_pct']} | 目标仓位: {plan['position_strategy']['target_position_range']['min_pct']}-{plan['position_strategy']['target_position_range']['max_pct']}")
         lines.append("")
         lines.append("---")
         lines.append("")
 
-        # 1. 市场评估
+        # 1. 市场判断 - 简化版
         assessment = plan['market_assessment']
-        lines.append("## 📊 市场评估")
+        lines.append("## 一、市场判断")
         lines.append("")
-        lines.append(f"**市场情绪**: {assessment['market_sentiment']}")
-        lines.append(f"**趋势判断**: {assessment['trend']}")
-        lines.append(f"**综合判断**: {assessment['综合判断']}")
+        lines.append("### 趋势分析")
+        lines.append(f"- **宏观环境**: {assessment['market_sentiment']}市场，{assessment['trend']}")
+        lines.append(f"- **综合判断**: {assessment['综合判断']}")
+        lines.append(f"- **关键节点**: 本月关注政策面、资金面变化")
         lines.append("")
 
-        # 各指数概况
+        # 本月核心任务
+        position = plan['position_strategy']
+        current_pos = position['current_position']
+        target_min = position['target_position_range']['min']
+        target_max = position['target_position_range']['max']
+
+        lines.append("### 本月核心任务")
+        if current_pos > target_max:
+            need_reduce = current_pos - target_max
+            lines.append(f"1. **降低仓位**: {position['current_position_pct']} → {position['target_position_range']['max_pct']} (减仓{need_reduce*100:.0f}%)")
+            lines.append(f"2. **增加现金**: 补充至安全线以上")
+            lines.append("3. **优化结构**: 降低超仓品种风险")
+            lines.append("4. **严控纪律**: 严格执行止损")
+        elif current_pos < target_min:
+            need_add = target_min - current_pos
+            lines.append(f"1. **提升仓位**: {position['current_position_pct']} → {position['target_position_range']['min_pct']} (加仓{need_add*100:.0f}%)")
+            lines.append("2. **把握机会**: 市场机会逢低布局")
+            lines.append("3. **分批建仓**: 避免一次性重仓")
+            lines.append("4. **做好风控**: 设置合理止损")
+        else:
+            lines.append("1. **维持仓位**: 当前仓位在合理区间")
+            lines.append("2. **优化结构**: 微调持仓配置")
+            lines.append("3. **保持纪律**: 严格执行操作计划")
+            lines.append("4. **定期复盘**: 每周检查持仓表现")
+        lines.append("")
+
+        # 核心指数情况 - 简化版
         if assessment['indices_summary']:
-            lines.append("### 各指数表现")
-            lines.append("")
-            lines.append("| 指数 | 当前点位 | 涨跌幅 | 判断 |")
-            lines.append("|------|---------|--------|------|")
-            for key, data in assessment['indices_summary'].items():
-                lines.append(f"| {data['name']} | {data['current']:.0f} | {data['change_pct']} | {data['judgment']} |")
-            lines.append("")
-
-        # 博主观点
-        if assessment['key_insights']:
-            lines.append("### 📝 关键观点(博主/机构)")
-            lines.append("")
-            for insight in assessment['key_insights']:
-                lines.append(f"- {insight}")
+            lines.append("### 核心指数表现")
+            for key, data in list(assessment['indices_summary'].items())[:3]:  # 只显示前3个
+                lines.append(f"- **{data['name']}**: {data['current']:.0f} ({data['change_pct']}) - {data['judgment']}")
             lines.append("")
 
         # 机构级核心指标参考 (Phase 3.3)
@@ -557,15 +574,41 @@ class MonthlyPlanGenerator:
                 lines.append(f"⚠️ 机构级核心指标获取失败: {str(e)}")
                 lines.append("")
 
-        # 2. 仓位策略
-        position = plan['position_strategy']
-        lines.append("## 🎯 仓位策略")
+        lines.append("## 二、本月核心策略（T0/T1/T2分级）")
         lines.append("")
-        lines.append(f"- **当前仓位**: {position['current_position_pct']}")
-        lines.append(f"- **目标区间**: {position['target_position_range']['min_pct']}-{position['target_position_range']['max_pct']}")
-        lines.append(f"- **调整建议**: {position['adjustment']}")
-        lines.append(f"- **策略依据**: {position['rationale']}")
-        lines.append("")
+
+        # 按优先级分组行动项
+        high_priority = [a for a in plan['action_items'] if a.get('priority') == 'high']
+        medium_priority = [a for a in plan['action_items'] if a.get('priority') == 'medium']
+        low_priority = [a for a in plan['action_items'] if a.get('priority') == 'low']
+
+        if high_priority:
+            lines.append("### 🔴 T0 优先级（立即执行）")
+            lines.append("")
+            for i, action in enumerate(high_priority, 1):
+                lines.append(f"**{i}. {action['action']}**")
+                if 'rationale' in action:
+                    lines.append(f"- **理由**: {action['rationale']}")
+                lines.append(f"- **截止时间**: {action['deadline']}")
+            lines.append("")
+
+        if medium_priority:
+            lines.append("### 🟡 T1 次优先级（观察择机）")
+            lines.append("")
+            for i, action in enumerate(medium_priority, 1):
+                lines.append(f"**{i}. {action['action']}**")
+                if 'rationale' in action:
+                    lines.append(f"- **条件**: {action['rationale']}")
+                lines.append(f"- **时机**: {action['deadline']}")
+            lines.append("")
+
+        if low_priority:
+            lines.append("### 🟢 T2 低优先级（等待信号）")
+            lines.append("")
+            for i, action in enumerate(low_priority, 1):
+                lines.append(f"**{i}. {action['action']}**")
+                lines.append(f"- **时间**: {action['deadline']}")
+            lines.append("")
 
         # 3. 资产配置
         allocation = plan['asset_allocation']
@@ -671,6 +714,124 @@ class MonthlyPlanGenerator:
         lines.append("---")
         lines.append("")
         lines.append("**免责声明**: 本计划基于历史数据和技术分析,仅供参考,不构成投资建议。投资有风险,入市需谨慎。")
+        lines.append("")
+
+        return "\n".join(lines)
+
+    def _format_markdown_plan_new(self, plan: Dict) -> str:
+        """生成新的简洁格式月度计划"""
+        lines = []
+
+        # 标题 - 采用新格式
+        lines.append(f"# 📅 投资计划 - {plan['plan_month']}")
+        lines.append("")
+        lines.append(f"**生成时间**: {plan['generation_date']} 当前仓位: {plan['position_strategy']['current_position_pct']} | 目标仓位: {plan['position_strategy']['target_position_range']['min_pct']}-{plan['position_strategy']['target_position_range']['max_pct']}")
+        lines.append("")
+        lines.append("---")
+        lines.append("")
+
+        # 1. 市场判断
+        assessment = plan['market_assessment']
+        lines.append("## 一、市场判断")
+        lines.append("")
+        lines.append("### 趋势分析")
+        lines.append(f"- **宏观环境**: {assessment['market_sentiment']}市场，{assessment['trend']}")
+        lines.append(f"- **综合判断**: {assessment['综合判断']}")
+        lines.append(f"- **关键节点**: 本月关注政策面、资金面变化")
+        lines.append("")
+
+        # 核心指数情况
+        if assessment['indices_summary']:
+            lines.append("### 核心指数表现")
+            for key, data in list(assessment['indices_summary'].items())[:3]:
+                lines.append(f"- **{data['name']}**: {data['current']:.0f} ({data['change_pct']}) - {data['judgment']}")
+            lines.append("")
+
+        # 2. 本月核心策略
+        lines.append("## 二、本月核心策略（T0/T1/T2分级）")
+        lines.append("")
+
+        # 按优先级分��行动项
+        high_priority = [a for a in plan['action_items'] if a.get('priority') == 'high']
+        medium_priority = [a for a in plan['action_items'] if a.get('priority') == 'medium']
+        low_priority = [a for a in plan['action_items'] if a.get('priority') == 'low']
+
+        if high_priority:
+            lines.append("### 🔴 T0 优先级（立即执行）")
+            lines.append("")
+            for i, action in enumerate(high_priority, 1):
+                lines.append(f"**{i}. {action['action']}**")
+                if 'rationale' in action:
+                    lines.append(f"- **理由**: {action['rationale']}")
+                lines.append(f"- **截止时间**: {action['deadline']}")
+            lines.append("")
+
+        if medium_priority:
+            lines.append("### 🟡 T1 次优先级（观察择机）")
+            lines.append("")
+            for i, action in enumerate(medium_priority, 1):
+                lines.append(f"**{i}. {action['action']}**")
+                if 'rationale' in action:
+                    lines.append(f"- **条件**: {action['rationale']}")
+                lines.append(f"- **时机**: {action['deadline']}")
+            lines.append("")
+
+        if low_priority:
+            lines.append("### 🟢 T2 低优先级（等待信号）")
+            lines.append("")
+            for i, action in enumerate(low_priority, 1):
+                lines.append(f"**{i}. {action['action']}**")
+                lines.append(f"- **时间**: {action['deadline']}")
+            lines.append("")
+
+        # 3. 本月重点观察
+        lines.append("## 三、本月重点观察")
+        lines.append("")
+        lines.append("### 🔍 核心关注点")
+        lines.append("- **仓位管理**: 确保仓位在目标区间内")
+        lines.append("- **市场机会**: 关注政策催化和板块轮动")
+        lines.append("- **风险控制**: 严格执行止损纪律")
+        lines.append("- **现金储备**: 保持充足流动性")
+        lines.append("")
+
+        # 风险���机会
+        if plan['risk_warnings'] or plan['opportunities']:
+            lines.append("### 📊 风险与机会")
+            if plan['opportunities']:
+                for opp in plan['opportunities'][:2]:
+                    lines.append(f"- **机会**: {opp}")
+            if plan['risk_warnings']:
+                for risk in plan['risk_warnings'][:2]:
+                    lines.append(f"- **风险**: {risk}")
+            lines.append("")
+
+        # 4. 预期效果
+        position = plan['position_strategy']
+        lines.append("## 四、预期效果")
+        lines.append("")
+        lines.append("### 仓位变化")
+        lines.append(f"```\n当前仓位: {position['current_position_pct']} → 目标: {position['target_position_range']['min_pct']}-{position['target_position_range']['max_pct']}\n```")
+        lines.append("")
+        lines.append("### 风险改善")
+        lines.append("✅ **仓位优化**: 仓位控制在合理区间")
+        lines.append("✅ **纪律执行**: 严格止损，控制风险")
+        lines.append("✅ **灵活性**: 充足现金应对变化")
+        lines.append("")
+
+        # 5. 投资心法
+        lines.append("## 五、本月投资心法")
+        lines.append("")
+        lines.append("**核心原则**:")
+        lines.append("- 弱水三千，我只取一瓢 - 专注确定性机会")
+        lines.append("- 现金是看涨期权 - 下跌时反而兴奋")
+        lines.append("- 保本第一 - 严格控制回撤")
+        lines.append("- 纪律为王 - 计划制定就要严格执行")
+        lines.append("")
+
+        # 免责声明
+        lines.append("---")
+        lines.append("")
+        lines.append("**免责声明**: 本计划仅供个人��考，不构成投资建议")
         lines.append("")
 
         return "\n".join(lines)
