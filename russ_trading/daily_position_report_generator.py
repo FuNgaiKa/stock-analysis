@@ -1423,6 +1423,10 @@ class DailyPositionReportGenerator:
         lines.append("---")
         lines.append("")
 
+        # ========== 核心仓位目标(最优先,基于市场技术面分析) ==========
+        # 注意: 这里先生成核心仓位目标框架,market_state会在后面市场数据分析后更新
+        core_position_lines = []  # 先占位,稍后填充
+
         # ========== 第一部分: 市场数据 ==========
         lines.append(f"## 🔥 今日市场表现({date})")
         lines.append("")
@@ -1507,6 +1511,64 @@ class DailyPositionReportGenerator:
         # ========== 新增: 市场状态识别 ==========
         if market_data and market_data.get('indices'):
             market_state = self.identify_market_state(market_data)
+
+            # ========== 立即生成核心仓位目标(准备插入到最前面) ==========
+            if market_state.get('state') != '未知':
+                min_pos, max_pos = market_state['recommended_position']
+                current_pos = sum(p.get('position_ratio', 0) for p in positions) if positions else 0
+
+                core_position_lines.append("## 🎯 核心仓位目标")
+                core_position_lines.append("")
+                core_position_lines.append("```")
+                core_position_lines.append("┌─────────────────────────────────────────────────────────┐")
+                core_position_lines.append(f"│  📊 牛市仓位区间: 50%-90% (5成-9成)                       │")
+                core_position_lines.append(f"│                                                          │")
+                core_position_lines.append(f"│  🔍 市场状态: {market_state['state']} {market_state['emoji']}".ljust(82) + "│")
+                core_position_lines.append(f"│  💡 市场判断: {market_state['suggestion']}".ljust(82) + "│")
+                core_position_lines.append(f"│  📈 置信度: {market_state['confidence']}%".ljust(82) + "│")
+                core_position_lines.append(f"│                                                          │")
+                core_position_lines.append(f"│  🎯 建议仓位: {min_pos*100:.0f}%-{max_pos*100:.0f}%".ljust(82) + "│")
+                core_position_lines.append(f"│  💰 现金储备建议: {(1-max_pos)*100:.0f}%-{(1-min_pos)*100:.0f}%".ljust(82) + "│")
+                core_position_lines.append(f"│                                                          │")
+
+                # 显示当前状态
+                if current_pos > 0:
+                    pos_diff = current_pos - max_pos
+                    if pos_diff > 0.05:  # 超配5%以上
+                        status_text = f"当前状态: {current_pos*100:.1f}% 🚨 超配{pos_diff*100:.1f}%"
+                        action_text = "⚠️  紧急操作: 需减仓至{:.0f}%以下".format(max_pos*100)
+                    elif pos_diff > 0:  # 轻微超配
+                        status_text = f"当前状态: {current_pos*100:.1f}% ⚠️  轻微超配{pos_diff*100:.1f}%"
+                        action_text = "💡 建议: 择机减仓至建议区间"
+                    elif current_pos < min_pos - 0.05:  # 低配5%以上
+                        pos_shortage = min_pos - current_pos
+                        status_text = f"当前状态: {current_pos*100:.1f}% 📉 低配{pos_shortage*100:.1f}%"
+                        action_text = "📈 建议: 可择机加仓至{:.0f}%以上".format(min_pos*100)
+                    elif current_pos < min_pos:  # 轻微低配
+                        pos_shortage = min_pos - current_pos
+                        status_text = f"当前状态: {current_pos*100:.1f}% ⚖️  轻微低配{pos_shortage*100:.1f}%"
+                        action_text = "💡 建议: 可适度加仓"
+                    else:  # 在合理区间
+                        status_text = f"当前状态: {current_pos*100:.1f}% ✅ 在合理区间"
+                        action_text = "✅ 操作: 保持当前仓位"
+
+                    core_position_lines.append(f"│  {status_text}".ljust(82) + "│")
+                    core_position_lines.append(f"│  {action_text}".ljust(82) + "│")
+
+                core_position_lines.append("└─────────────────────────────────────────────────────────┘")
+                core_position_lines.append("```")
+                core_position_lines.append("")
+                core_position_lines.append("**动态仓位策略** (根据市场状态调整):")
+                core_position_lines.append("")
+                core_position_lines.append("- 🚀 **牛市上升期**: 70%-90% (积极进攻,把握上涨机会)")
+                core_position_lines.append("- 📈 **牛市震荡期**: 60%-80% (维持较高仓位,逢低加仓)")
+                core_position_lines.append("- 🟡 **震荡市**: 50%-70% (控制仓位,高抛低吸)")
+                core_position_lines.append("- ⚠️  **熊市反弹期**: 40%-60% (谨慎参与,保留现金)")
+                core_position_lines.append("- 📉 **熊市下跌期**: 30%-50% (严控仓位,等待机会)")
+                core_position_lines.append("")
+                core_position_lines.append("---")
+                core_position_lines.append("")
+
             if market_state.get('state') != '未知':
                 lines.append("### 🌍 市场环境判断(增强版)")
                 lines.append("")
@@ -1577,6 +1639,10 @@ class DailyPositionReportGenerator:
 
         lines.append("---")
         lines.append("")
+
+        # ========== 插入核心仓位目标到这里(市场分析之后) ==========
+        if core_position_lines:
+            lines.extend(core_position_lines)
 
         # ========== 新增: 深度盘面分析 ==========
         try:

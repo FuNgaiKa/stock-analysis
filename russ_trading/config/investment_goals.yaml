@@ -1,0 +1,79 @@
+# 投资目标配置文件
+# Investment Goals Configuration
+
+# 基础资金信息
+initial_capital: 500000        # 初始资金 (50万)
+current_capital: null          # 当前资金 (程序自动从positions文件计算)
+final_target: 1000000          # 最终目标 (100万)
+
+# 阶段性目标
+stage_targets:
+  - 500000   # 第一阶段: 初始资金
+  - 750000   # 第二阶段: 中期目标 (75万)
+  - 1000000  # 第三阶段: 最终目标 (100万)
+
+stage_names:
+  - "初始阶段"
+  - "中期目标"
+  - "最终目标"
+
+# 收益目标
+target_annual_return: 0.60     # 目标年化收益率 (60%)
+target_total_return: 1.0       # 目标总收益率 (翻倍=1.0=100%)
+
+# 基准数据 (用于计算相对收益)
+base_date: "2025-01-01"        # 开始日期
+hs300_base: 3145.0             # 沪深300基准点位 (2025-01-01)
+cybz_base: 2060.0              # 创业板指基准点位
+kechuang50_base: 955.0         # 科创50基准点位
+
+# 仓位管理配置
+position_management:
+  # 牛市策略: 5-9成仓位，根据风险程度动态调整
+  target_total_position: 0.90  # 目标总仓位 (9成)
+  min_position: 0.50           # 最低仓位 (5成) - 牛市下限
+  max_position: 0.90           # 最高仓位 (9成) - 牛市上限
+  min_cash_reserve: 0.10       # 最低现金储备 (1成)
+
+  # 仓位动态调整规则 (根据市场环境和风险程度)
+  # - 牛市确认期: 7-9成 (70%-90%)
+  # - 牛市震荡期: 5-7成 (50%-70%)
+  # - 风险上升期: 降至5成 (50%)
+
+  # 单一标的仓位限制
+  max_single_etf: 0.40         # 单一ETF最大仓位 (4成)
+  max_single_stock: 0.30       # 单一个股最大仓位 (3成)
+
+  # 持仓数量
+  target_holdings: 3           # 目标持仓数量 (2-3只)
+  min_holdings: 2              # 最少持仓数量
+  max_holdings: 5              # 最多持仓数量
+
+# 风险控制
+risk_management:
+  stop_loss: -0.20             # 单次止损线 (-20%)
+  max_drawdown: -0.30          # 最大回撤线 (-30%)
+  risk_preference: "ultra_aggressive"  # 风险偏好: conservative/balanced/aggressive/ultra_aggressive
+
+# 报告显示配置
+display:
+  show_absolute_amounts: false  # 是否显示具体金额
+  show_target_amounts: false    # 是否显示目标金额
+
+# 投资风格
+investment_style:
+  holding_period: "half_year"   # 持仓周期: short_term/half_year/long_term
+  strategy: "底仓+波段"          # 投资策略
+  focus_sectors:                # 重点关注板块
+    - "科技成长"
+    - "港股互联网"
+    - "新能源"
+    - "医药创新"
+
+# 备注
+notes: |
+  - 适用场景: 9成仓证券+恒科+双创+化工,少量阿里+三花+白酒
+  - 投资风格: 长线底仓+波段加减仓
+  - 年化目标: 60%
+  - 持仓周期: 半年左右
+  - 风险承受: 可承受20-30%回撤
