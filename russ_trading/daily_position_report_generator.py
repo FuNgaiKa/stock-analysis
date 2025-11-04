@@ -534,10 +534,11 @@ class DailyPositionReportGenerator:
             持仓列表
         """
         if positions_file is None:
-            # 查找最新的持仓文件
+            # 查找最新的持仓文件(优先使用日期格式的文件)
             data_dir = project_root / 'data'
             if data_dir.exists():
-                position_files = sorted(data_dir.glob('positions_*.json'), reverse=True)
+                # 只查找日期格式的文件 positions_YYYYMMDD.json
+                position_files = sorted(data_dir.glob('positions_????????.json'), reverse=True)
                 if position_files:
                     positions_file = str(position_files[0])
                     logger.info(f"使用持仓文件: {positions_file}")
