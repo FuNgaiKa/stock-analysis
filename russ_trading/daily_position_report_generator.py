@@ -1641,9 +1641,54 @@ class DailyPositionReportGenerator:
         lines.append("---")
         lines.append("")
 
-        # ========== 插入核心仓位目标到这里(市场分析之后) ==========
+        # ========== 插入核心仓位目标和操作建议到这里(市场分析之后) ==========
         if core_position_lines:
             lines.extend(core_position_lines)
+
+        # ========== 立即生成并插入操作建议 ==========
+        if positions:
+            # 计算总市值
+            total_value = sum(p.get('current_value', 0) for p in positions)
+
+            # 生成操作建议
+            action_items = self._generate_enhanced_action_items(positions, market_data, total_value)
+
+            lines.append("## 📋 立即执行操作清单")
+            lines.append("")
+
+            # 第一优先级(最紧急)
+            if action_items['priority_1']:
+                lines.append("### ⚡ 第一优先级(今晚设置,明天执行)")
+                lines.append("")
+                for item in action_items['priority_1']:
+                    lines.append(item)
+                lines.append("")
+
+            # 第三优先级(未来1-2周)
+            if action_items['priority_3']:
+                lines.append("### 📅 第三优先级(未来1-2周观察)")
+                lines.append("")
+                for item in action_items['priority_3']:
+                    lines.append(item)
+                lines.append("")
+
+            # 执行清单
+            if action_items['checklist']:
+                lines.append("### 📝 操作执行清单(今晚设置)")
+                lines.append("")
+                for item in action_items['checklist']:
+                    lines.append(item)
+                lines.append("")
+
+            # 预期效果
+            if action_items['expected_results']:
+                lines.append("### 🎯 预期效果")
+                lines.append("")
+                lines.append(action_items['expected_results'])
+                lines.append("")
+
+            lines.append("---")
+            lines.append("")
 
         # ========== 新增: 深度盘面分析 ==========
         try:
@@ -2036,53 +2081,7 @@ class DailyPositionReportGenerator:
             lines.append("---")
             lines.append("")
 
-        # ========== 第六部分: 操作建议(增强版) ==========
-        lines.append("## 📋 立即执行操作清单")
-        lines.append("")
-
-        if positions:
-            # 生成增强版操作建议
-            action_items = self._generate_enhanced_action_items(positions, market_data, total_value)
-
-            # 第一优先级(最紧急)
-            if action_items['priority_1']:
-                lines.append("### ⚡ 第一优先级(今晚设置,明天执行)")
-                lines.append("")
-                for item in action_items['priority_1']:
-                    lines.append(item)
-                lines.append("")
-
-            # 第三优先级(未来1-2周)
-            if action_items['priority_3']:
-                lines.append("### 📅 第三优先级(未来1-2周观察)")
-                lines.append("")
-                for item in action_items['priority_3']:
-                    lines.append(item)
-                lines.append("")
-
-            # 执行清单(checkbox格式)
-            lines.append("### 📝 操作执行清单(今晚设置)")
-            lines.append("")
-            for checkbox in action_items['checklist']:
-                lines.append(checkbox)
-            lines.append("")
-
-            # 预期效果
-            if action_items['expected_results']:
-                lines.append("### 💰 预期效果")
-                lines.append("")
-                lines.append(action_items['expected_results'])
-                lines.append("")
-        else:
-            lines.append("### ⚠️ 数据不足")
-            lines.append("")
-            lines.append("无持仓数据，无法生成操作建议。")
-            lines.append("")
-
-        lines.append("---")
-        lines.append("")
-
-        # ========== 新增: 激进持仓建议 ==========
+        # ========== 第六部分: 激进持仓建议 ==========
         if positions:
             lines.append("## 🚀 激进持仓建议(2026年底翻倍目标)")
             # 使用配置获取目标描述
