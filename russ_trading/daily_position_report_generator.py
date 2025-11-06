@@ -699,6 +699,105 @@ class DailyPositionReportGenerator:
             }
         }
 
+    def generate_position_recommendations(self, positions: List[Dict], market_data: Dict, market_state: Dict) -> Dict:
+        """
+        生成建议持仓范围（结合当前持仓和市场状况）
+
+        Args:
+            positions: 当前持仓列表
+            market_data: 市场数据
+            market_state: 市场状态分析结果
+
+        Returns:
+            持仓建议字典
+        """
+        # 计算当前总仓位
+        current_position = sum(pos.get('position_ratio', 0) for pos in positions)
+        current_cash = 1.0 - current_position
+
+        # 获取市场建议仓位范围
+        recommended_min, recommended_max = market_state.get('recommended_position', (0.60, 0.80))
+
+        # 分析各标的
+        position_details = []
+        for pos in positions:
+            asset_name = pos.get('asset_name', '')
+            current_ratio = pos.get('position_ratio', 0)
+            current_value = pos.get('current_value', 0)
+
+            # 根据资产类型给出建议范围
+            if any(x in asset_name for x in ['创业板', '科创50', '恒生科技']):
+                # 科技成长类：市场好时可以重仓
+                if market_state.get('phase') in ['bull_rally', 'bull_consolidation']:
+                    suggested_range = (0.15, 0.30)
+                    priority = '核心进攻'
+                else:
+                    suggested_range = (0.05, 0.15)
+                    priority = '降低仓位'
+            elif any(x in asset_name for x in ['证券ETF']):
+                # 证券：牛市放大器
+                if market_state.get('phase') in ['bull_rally']:
+                    suggested_range = (0.15, 0.25)
+                    priority = '波段加仓'
+                else:
+                    suggested_range = (0.05, 0.15)
+                    priority = '谨慎持有'
+            elif any(x in asset_name for x in ['白酒', '消费']):
+                # 消费防守类
+                suggested_range = (0.10, 0.20)
+                priority = '稳健配置'
+            elif any(x in asset_name for x in ['化工', '煤炭', '钢铁']):
+                # 周期类
+                suggested_range = (0.05, 0.15)
+                priority = '周期波段'
+            else:
+                # 其他
+                suggested_range = (0.03, 0.10)
+                priority = '灵活配置'
+
+            # 判断是否需要调整
+            if current_ratio < suggested_range[0]:
+                action = f"建议加仓至{suggested_range[0]*100:.0f}%-{suggested_range[1]*100:.0f}%"
+                adjustment = '加仓'
+            elif current_ratio > suggested_range[1]:
+                action = f"建议减仓至{suggested_range[0]*100:.0f}%-{suggested_range[1]*100:.0f}%"
+                adjustment = '减仓'
+            else:
+                action = "当前仓位合理"
+                adjustment = '维持'
+
+            position_details.append({
+                'asset_name': asset_name,
+                'current_ratio': current_ratio,
+                'current_value': current_value,
+                'suggested_range': suggested_range,
+                'priority': priority,
+                'action': action,
+                'adjustment': adjustment
+            })
+
+        # 总仓位建议
+        if current_position < recommended_min:
+            overall_action = f"当前总仓位{current_position*100:.0f}%偏低，建议加仓至{recommended_min*100:.0f}%-{recommended_max*100:.0f}%"
+            overall_adjustment = '整体加仓'
+        elif current_position > recommended_max:
+            overall_action = f"当前总仓位{current_position*100:.0f}%偏高，建议减仓至{recommended_min*100:.0f}%-{recommended_max*100:.0f}%"
+            overall_adjustment = '整体减仓'
+        else:
+            overall_action = f"当前总仓位{current_position*100:.0f}%合理，建议保持在{recommended_min*100:.0f}%-{recommended_max*100:.0f}%"
+            overall_adjustment = '维持当前'
+
+        return {
+            'current_position': current_position,
+            'current_cash': current_cash,
+            'recommended_range': (recommended_min, recommended_max),
+            'overall_action': overall_action,
+            'overall_adjustment': overall_adjustment,
+            'position_details': position_details,
+            'market_phase': market_state.get('phase', 'unknown'),
+            'market_suggestion': market_state.get('suggestion', ''),
+        }
+
     def calculate_var_cvar(self, positions: List[Dict], total_value: float) -> Dict:
         """
         计算VaR和CVaR (简化版)

@@ -575,6 +575,44 @@ class EnhancedReportGenerator(BaseGenerator):
                 lines.append(f"- **建议仓位**: {market_state['recommended_position'][0]*100:.0f}%-{market_state['recommended_position'][1]*100:.0f}%")
                 lines.append("")
 
+            # ========== 建议持仓范围 (NEW!) ==========
+            position_recommendations = self.generate_position_recommendations(positions, market_data, market_state)
+
+            lines.append("### 🎯 建议持仓范围（结合当前市场）")
+            lines.append("")
+            lines.append(f"**总仓位建议**: {position_recommendations['overall_action']}")
+            lines.append(f"- 当前总仓位: **{position_recommendations['current_position']*100:.0f}%**")
+            lines.append(f"- 现金储备: **{position_recommendations['current_cash']*100:.0f}%**")
+            lines.append(f"- 市场建议范围: **{position_recommendations['recommended_range'][0]*100:.0f}%-{position_recommendations['recommended_range'][1]*100:.0f}%**")
+            lines.append(f"- 调整方向: **{position_recommendations['overall_adjustment']}**")
+            lines.append("")
+
+            lines.append("#### 📊 分标的持仓建议")
+            lines.append("")
+            lines.append("| 标的名称 | 当前仓位 | 建议范围 | 优先级 | 操作建议 |")
+            lines.append("|---------|---------|---------|--------|---------|")
+
+            for detail in position_recommendations['position_details']:
+                asset_name = detail['asset_name']
+                current = f"{detail['current_ratio']*100:.1f}%"
+                suggested = f"{detail['suggested_range'][0]*100:.0f}%-{detail['suggested_range'][1]*100:.0f}%"
+                priority = detail['priority']
+                action = detail['action']
+
+                # 根据调整方向添加emoji
+                if detail['adjustment'] == '加仓':
+                    emoji = '📈'
+                elif detail['adjustment'] == '减仓':
+                    emoji = '📉'
+                else:
+                    emoji = '✅'
+
+                lines.append(f"| {asset_name} | {current} | {suggested} | {priority} | {emoji} {action} |")
+
+            lines.append("")
+            lines.append(f"**市场建议**: {position_recommendations['market_suggestion']}")
+            lines.append("")
+
             # ========== 恐慌指数监控 (NEW!) ==========
             logger.info("获取恐慌指数数据...")
             panic_data = self.fetch_panic_indices(market_data)
