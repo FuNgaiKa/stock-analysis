@@ -690,11 +690,50 @@ class EnhancedReportGenerator(BaseGenerator):
             var_result = self.calculate_var_cvar(positions, total_value)
             lines.append("### 💰 极端风险评估 (VaR/CVaR)")
             lines.append("")
+            lines.append("**💡 一句话作用**: 告诉你**最坏情况下会亏多少钱**,帮你提前做好心理准备和风险控制。")
+            lines.append("")
             lines.append("**风险价值分析** (95%置信度):")
             lines.append("")
             lines.append(f"- **单日VaR**: -{var_result['var_daily_pct']*100:.2f}% (¥{var_result['var_daily_value']:,.0f})")
             lines.append(f"- **单日CVaR**: -{var_result['cvar_daily_pct']*100:.2f}% (¥{var_result['cvar_daily_value']:,.0f})")
             lines.append(f"- **组合波动率**: {var_result['estimated_volatility']*100:.1f}% (年化)")
+            lines.append("")
+
+            # 添加详细解释
+            lines.append("#### 📖 详细解释")
+            lines.append("")
+            lines.append(f"**单日VaR: -{var_result['var_daily_pct']*100:.2f}% (¥{var_result['var_daily_value']:,.0f})**")
+            lines.append(f"- **含义**: 正常情况下(95%概率),单日最大亏损不会超过¥{var_result['var_daily_value']:,.0f}")
+            lines.append(f"- **理解**: 100天里有95天,亏损<¥{var_result['var_daily_value']:,.0f}; 只有5天会超过这个数")
+            lines.append("- **作用**: 帮你设置止损线")
+            lines.append("")
+            lines.append(f"**单日CVaR: -{var_result['cvar_daily_pct']*100:.2f}% (¥{var_result['cvar_daily_value']:,.0f})**")
+            lines.append(f"- **含义**: 极端情况下(最坏5%的日子),平均亏损¥{var_result['cvar_daily_value']:,.0f}")
+            lines.append(f"- **理解**: 如果真的遇到极端下跌,你可能亏¥{var_result['cvar_daily_value']/10000:.1f}万左右")
+            lines.append("- **作用**: 准备应急现金,防止被迫割肉")
+            lines.append("")
+            lines.append(f"**组合波动率: {var_result['estimated_volatility']*100:.1f}% (年化)**")
+            lines.append(f"- **含义**: 你的组合一年涨跌幅波动约±{var_result['estimated_volatility']*100:.1f}%")
+            lines.append("- **理解**: 震荡很大,不适合心脏不好的人😄")
+            lines.append("- **对比**: 余额宝波动率~0%, 沪深300约20%, 你的组合{:.1f}%属于{}波动".format(
+                var_result['estimated_volatility']*100,
+                "高" if var_result['estimated_volatility'] > 0.25 else "中等"
+            ))
+            lines.append("- **作用**: 评估你能否承受这个波动")
+            lines.append("")
+
+            # 实际意义
+            current_cash_pct = position_recommendations.get('current_cash', 0.16) * 100
+            current_position_pct = position_recommendations.get('current_position', 0.84) * 100
+            lines.append("#### 🎯 对你的实际意义")
+            lines.append("")
+            lines.append(f"**当前仓位{current_position_pct:.0f}%:**")
+            lines.append(f"- 单日最大可能亏损: ¥{var_result['var_daily_value']:,.0f} (相当于总资产的{var_result['var_daily_pct']*100:.1f}%)")
+            lines.append(f"- 极端情况平均亏损: ¥{var_result['cvar_daily_value']:,.0f} (相当于总资产的{var_result['cvar_daily_pct']*100:.1f}%)")
+            recommended_emergency = max(15000, var_result['cvar_daily_value'] * 1.1)
+            current_cash = total_value * current_cash_pct / 100
+            cash_status = "充足✅" if current_cash >= recommended_emergency else "不足⚠️"
+            lines.append(f"- **建议现金储备**: 至少保留¥{recommended_emergency:,.0f}应急(你现在{current_cash_pct:.0f}%=¥{current_cash/10000:.1f}万,{cash_status})")
             lines.append("")
 
         # 新增: 压力测试
