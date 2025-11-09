@@ -1,12 +1,61 @@
-# 🌟 金融工具平台 - 全市场量化分析系统
+# 📊 股票量化分析系统
 
-一个功能完善的**现代化Web平台** + **Python量化工具集**，支持**美股、港股、A股**三大市场，提供历史点位分析、VIX恐慌指数、行业轮动、策略回测、市场火热度分析等多维度量化分析功能。
+> **个人交易策略与市场分析工具集** - 支持美股、港股、A股三大市场
 
-## 🎨 **Web平台** (最新 v3.2)
+---
 
-现代化的Vue 3前端 + FastAPI后端，提供直观的可视化界面，支持三大市场实时分析。
+## ⚡ 快速开始
 
-### 🌐 快速访问
+### 🎯 **主力工具: russ_trading** (推荐，每天用)
+
+个人交易策略系统 v4.0 - 机构级量化分析工具
+
+```bash
+# 生成今日持仓调整建议
+python -m russ_trading.generators.daily_position_report_generator --auto-update
+
+# 生成市场标的洞察并发送邮件
+python -m russ_trading.runners.run_unified_analysis --email
+```
+
+📚 **完整文档**: [russ_trading/README.md](russ_trading/README.md) | [快速开始](russ_trading/docs/QUICK_START.md)
+
+---
+
+## 📂 项目结构
+
+```
+stock-analysis/
+├── russ_trading/          # 🎯 主力工具（每天用）
+│   ├── generators/        # 报告生成器
+│   ├── analyzers/         # 分析器
+│   ├── managers/          # 管理器
+│   ├── trackers/          # 追踪器
+│   └── docs/              # 完整文档
+│
+├── scripts/               # 辅助脚本和工具
+├── src/                   # 通用分析器（偶尔用）
+├── strategies/            # 策略模块（偶尔用）
+│
+├── data/                  # 数据文件
+├── reports/               # 生成的报告
+├── config/                # 配置文件
+└── docs/                  # 项目文档
+```
+
+---
+
+## 🗄️ 历史项目
+
+### 🎨 **Web平台** (已归档,不维护)
+
+> **状态**: 已迁移至 `russ_trading/` 作为主力CLI工具
+> **node_modules**: 已删除(节省283MB)
+> **恢复方法**: 详见 [web/README.md](web/README.md)
+
+现代化的Vue 3前端 + FastAPI后端，提供直观的可视化界面，支持美股/港股/A股三大市场实时分析。
+
+**快速访问** (需先恢复依赖):
 - **前端地址**: http://localhost:3000
 - **API文档**: http://localhost:8000/docs
 
@@ -97,218 +146,80 @@ cd frontend && npm run dev
 open http://localhost:3000
 ```
 
-### 🎯 Web平台特色
+**技术栈**: Vue 3 + TypeScript + Element Plus + ECharts + FastAPI
 
-- ✅ **现代化UI设计** - 参考TradingView/PackyCode的专业设计风格
-- ✅ **蓝紫渐变主题** - 优雅的配色方案，支持暗黑模式
-- ✅ **响应式布局** - 完美适配桌面和移动端
-- ✅ **ECharts可视化** - 雷达图、柱状图、折线图等丰富图表
-- ✅ **实时数据更新** - 基于yfinance的实时行情数据
-- ✅ **多市场支持** - 美股/港股/A股一站式分析
-- ✅ **RESTful API** - 完整的API文档和Swagger UI
+**主要功能**:
+- 📊 多指数历史点位分析、VIX恐慌指数监控
+- 🔄 11个行业ETF轮动雷达图、策略回测可视化
+- 💰 复合收益计算器、🇭🇰 港股市场分析
 
----
-
-## 🐍 **Python量化工具集**
-
-强大的命令行工具集，适合量化研究和自动化监控。
-
----
-
-## 🎯 **核心系统对比** - 快速理解项目架构
-
-本项目包含两个核心系统，**功能互补，各有侧重**：
-
-### 📊 系统对比表
-
-| 维度 | 🏛️ **strategies/position**<br/>历史点位对比分析 | 💼 **russ_trading**<br/>个人持仓管理系统 |
-|------|------|------|
-| **核心功能** | 基于历史数据的点位相似度分析 | 基于实际持仓的动态管理 + 三大核心指标 |
-| **分析对象** | 市场指数（上证/沪深300/创业板/科创50等） | 个人实际持仓（25个资产） |
-| **主要用途** | 判断当前点位的历史胜率 | 日常持仓调整、资产配置、月度规划 |
-| **输出报告** | `reports/position_analysis_*.md` | 持仓调整建议、25资产分析、月度计划 |
-| **核心指标** | 历史概率统计、12维度市场诊断 | 估值/市场宽度/融资融券 + VaR/CVaR风险 |
-| **使用场景** | 判断市场整体环境，择时参考 | 管理个人持仓，具体操作建议 |
-| **报告频率** | 不定期（需要时手动运行） | 每日自动生成 |
-| **入口文件** | `strategies/position/main.py` | `russ_trading/daily_position_report_generator.py` |
-
-### 🔄 两个系统如何配合使用
-
-#### 典型工作流程：
-
-```mermaid
-graph LR
-    A[每日收盘后] --> B[strategies/position<br/>市场环境诊断]
-    B --> C{市场状态?}
-    C -->|牛市| D[russ_trading<br/>持仓调整建议]
-    C -->|熊市| D
-    C -->|震荡| D
-    D --> E[执行具体操作]
+**如需恢复**:
+```bash
+cd web/frontend
+npm install  # 恢复依赖(~283MB,约3-5分钟)
+npm run dev  # 启动前端
 ```
 
-**1️⃣ 早盘前 - 查看市场环境**
+📚 **完整文档**: [web/README.md](web/README.md)
+
+---
+
+## 📝 其他工具和系统
+
+### 🏛️ **strategies/position** - 历史点位对比分析
+
+基于历史数据的点位相似度分析系统,帮助判断当前市场环境。
+
+**核心功能**:
+- 历史相似点位查找
+- 5/10/20/60日涨跌概率统计
+- 12维度市场诊断(牛市/熊市/震荡市)
+- Kelly公式仓位建议
+
+**快速使用**:
 ```bash
-# 运行 strategies/position 系统，判断大盘状态
+# Phase 3.1: 市场状态智能诊断(推荐⭐)
 python strategies/position/main.py
-# 输出：当前沪深300处于历史高位，20日上涨概率45%，建议降低仓位
-```
 
-**2️⃣ 收盘后 - 调整持仓**
-```bash
-# 运行 russ_trading 系统，获取具体操作建议
-python russ_trading/daily_position_report_generator.py
-# 输出：建议减仓恒生科技8%，增持创业板5%，具体执行清单...
-```
-
-**3️⃣ 周末 - 深度复盘**
-```bash
-# strategies/position: 查看各指数潜在空间
+# 指定分析指数
 python strategies/position/main.py --index sz399006
-
-# russ_trading: 生成月度投资计划
-python russ_trading/monthly_plan_generator.py
 ```
 
-### 💡 核心区别总结
+📚 **详细文档**: [strategies/position/README.md](strategies/position/README.md)
 
-| **strategies/position** | **russ_trading** |
-|---|---|
-| ✅ 告诉你"市场怎么样" | ✅ 告诉你"应该怎么做" |
-| 📊 宏观层面（整体市场） | 💰 微观层面（个人持仓） |
-| 🔍 历史数据统计分析 | 🎯 实时持仓动态管理 |
-| 🌍 看森林（大盘趋势） | 🌲 看树木（具体标的） |
-
-**举例说明**：
-- **strategies/position** 告诉你："创业板当前点位历史上出现过100次，后续20日上涨概率65%"
-- **russ_trading** 告诉你："基于当前市场环境，建议你将创业板ETF仓位从20%提升至30%，明天开盘分两批加仓"
-
-### 🚀 快速开始
-
-```bash
-# 系统1: 分析市场环境
-cd strategies/position
-python main.py
-
-# 系统2: 管理个人持仓
-cd russ_trading
-python daily_position_report_generator.py
-```
+**系统对比**:
+| 维度 | strategies/position | russ_trading |
+|------|---------------------|--------------|
+| **定位** | 告诉你"市场怎么样" | 告诉你"应该怎么做" |
+| **层面** | 宏观(整体市场) | 微观(个人持仓) |
+| **对象** | 市场指数 | 实际持仓(25个资产) |
+| **频率** | 不定期 | 每日 |
 
 ---
 
-## 💼 **Russ个人持仓策略系统 v2.0** (机构级量化分析)
+### 🐍 **src/** - 通用分析器和工具
 
-专为个人投资者打造的**机构级持仓管理系统**，对标高盛/摩根士丹利投研体系，提供从持仓诊断到操作建议的全流程量化支持。
+偶尔使用的通用分析工具集:
+- 综合资产分析器
+- 板块分析工具
+- 宏观经济分析
+- 数据源适配器(美股/港股/A股)
 
-### 🎯 报告专业亮点
+---
 
-#### 1️⃣ **结构完整，对标投行研报**
+## 🎯 **系统配合使用** - 典型工作流程
 
-```
-执行摘要 → 市场表现 → 健康度诊断 → 风险管理 → 量化分析 → 情景分析 → 操作建议 → 激进方案
-```
+**主要系统**: `russ_trading` (每日) + `strategies/position` (择时参考)
 
-典型的**投行研报结构**，层层递进，逻辑严密。
+**典型工作流程**:
 
-#### 2️⃣ **量化指标齐全**
+1. **早盘前** - 查看市场环境 (strategies/position)
+2. **收盘后** - 生成持仓调整建议 (russ_trading)
+3. **周末** - 深度复盘和月度规划 (两者配合)
 
-- **VaR/CVaR** (风险价值分析) - 机构风控核心指标，95%置信度极端风险评估
-- **压力测试** (历史危机模拟) - 模拟2015股灾/2018贸易战/2020疫情/2022加息周期
-- **因子暴露分析** (市场/成长/价值/规模/动量) - 量化基金必备的多因子模型
-- **情景分析** (乐观/中性/悲观) - 蒙特卡洛模拟思路，概率加权收益预测
+---
 
-#### 3️⃣ **决策逻辑清晰**
-
-**健康度评分系统**:
-```
-基准100分 → 扣分明细(总仓位/现金/标的数量) → 最终评分(危险/警告/健康) → 具体操作
-```
-
-不是拍脑袋，而是**有理有据**，每一分的扣除都有明确原因。
-
-#### 4️⃣ **操作建议可执行**
-
-不是"建议减仓"这种废话，而是：
-- ✅ **具体标的**: 恒生科技ETF
-- ✅ **具体比例**: 28% → 20%（减8%）
-- ✅ **操作方式**: 分两批，明天开盘减4% + 本周内减4%
-- ✅ **预期影响**: 降低组合波动率约2.4%，释放资金补充现金储备
-
-#### 5️⃣ **风险管理专业**
-
-**资金流向明细表** (树形结构):
-```
-总仓位: 93% → 80% (-13%)
-  ├─ 补充至安全线: 7% → 10% (+3%)
-  └─ 进一步降仓: 10% → 20% (+10%)
-```
-
-一眼看懂每一分钱的去向，数学逻辑完全清晰。
-
-#### 6️⃣ **双轨策略（保守+激进）**
-
-- **保守版**: 年化15%，最大回撤20%，仓位50-90%
-- **激进版**: 年化60%，2年翻倍，最大回撤25%，仓位95%
-
-给不同风险偏好的投资者**分层建议**，这是私人银行的做法。
-
-### 🚀 核心能力
-
-这套系统让你拥有：
-
-1. **专业的风险管理** - VaR/CVaR/压力测试，量化每一分风险
-2. **量化的决策依据** - 不再凭感觉交易，每个建议都有数据支撑
-3. **清晰的操作指引** - 知道什么时候买、买多少、什么时候卖
-4. **个性化的策略** - 保守/激进可选，匹配你的风险承受能力
-
-**这已经超过99%的散户了！** 很多基金经理都不一定有这么完整的分析框架。
-
-### 📊 快速使用
-
-```bash
-# 生成今日持仓调整建议报告
-python russ_trading_strategy/daily_position_report_generator_v2.py
-
-# 生成指定日期报告
-python russ_trading_strategy/daily_position_report_generator_v2.py --date 2025-10-21
-
-# 使用自定义持仓文件
-python russ_trading_strategy/daily_position_report_generator_v2.py --positions data/my_positions.json
-
-# 生成HTML格式报告
-python russ_trading_strategy/daily_position_report_generator_v2.py --format html
-
-# 同时生成Markdown和HTML
-python russ_trading_strategy/daily_position_report_generator_v2.py --format both
-
-# 生成报告并发送邮件通知
-python russ_trading_strategy/daily_position_report_generator_v2.py --email
-
-# 生成HTML报告并发送邮件
-python russ_trading_strategy/daily_position_report_generator_v2.py --format html --email
-```
-
-**邮件通知功能**:
-- 需要先配置 `config/email_config.yaml`（参考 `config/email_config.yaml.template`）
-- 支持多个收件人，自动发送精美HTML格式报告
-- 包含完整的持仓分析、风险评估和操作建议
-
-### 💡 进一步优化方向
-
-如果你想让报告更专业，可以考虑：
-
-1. **接入实时数据** - 使用akshare/tushare获取实时市场数据
-2. **真实相关性矩阵** - 需要历史价格数据计算持仓相关性
-3. **夏普比率/索提诺比率** - 收益风险比指标
-4. **回测数据** - 展示历史业绩验证策略有效性
-5. **图表可视化** - 持仓饼图/收益曲线/风险分布图
-
-### 📖 详细文档
-
-- [Russ专属使用指南](russ_trading_strategy/README_RUSS.md) - 完整的策略说明和配置指南
-- [示例报告](reports/daily/2025-10/持仓调整建议_20251021_v2.md) - 查看实际生成的报告
-
-## 🎯 项目特色
+## 🎯 其他功能模块
 
 ### 🥇 多数据源智能架构
 - **efinance (东方财富)**（推荐）- 免费实时，响应速度快
