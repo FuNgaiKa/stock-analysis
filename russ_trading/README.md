@@ -10,7 +10,7 @@
 
 ## ⚡ 快速开始
 
-**新用户？** 查看 **[快速使用指南 (QUICK_START.md)](QUICK_START.md)** 了解如何生成每日报告！
+**新用户？** 查看 **[快速使用指南 (QUICK_START.md)](docs/QUICK_START.md)** 了解如何生成每日报告！
 
 **最简单的命令**：
 ```bash
@@ -1491,7 +1491,7 @@ python -m russ_trading.generators.daily_position_report_generator --auto-update
 python -m russ_trading.runners.run_unified_analysis --email
 ```
 
-**详细说明**: 请参考 [架构文档](docs/architecture.md) 和 [迁移计划](MIGRATION_PLAN.md)
+**详细说明**: 请参考 [架构文档](docs/architecture.md) 和 [迁移计划](docs/MIGRATION_PLAN.md)
 
 ---
 
