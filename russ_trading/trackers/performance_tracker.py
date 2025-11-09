@@ -24,7 +24,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 try:
-    from russ_trading.risk_manager import RiskManager
+    from russ_trading.managers.risk_manager import RiskManager
 except ImportError:
     RiskManager = None
 

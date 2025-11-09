@@ -20,31 +20,24 @@
 
 ## ⚡ 最简单的命令（推荐）
 
+> ⚠️ **v4.0重要变更**: 必须使用 `-m` 模块方式运行，不再支持直接执行脚本
+
 ### 方式1: 从项目根目录运行（推荐）
 
 ```bash
 # 进入项目根目录
-cd C:\Users\russell.fu\PycharmProjects\stock-analysis
+cd /Users/russ/PycharmProjects/stock-analysis
 
 # 生成报告1：持仓调整建议
-python russ_trading/daily_position_report_generator.py --auto-update
+python -m russ_trading.generators.daily_position_report_generator --auto-update
 
 # 生成报告2：市场标的洞察（发送邮件）
-python russ_trading/run_unified_analysis.py --email
+python -m russ_trading.runners.run_unified_analysis --email
 ```
 
-### 方式2: 从russ_trading目录运行
+### ~~方式2: 从russ_trading目录运行~~ (已弃用)
 
-```bash
-# 进入russ_trading目录
-cd C:\Users\russell.fu\PycharmProjects\stock-analysis\russ_trading
-
-# 生成报告1：持仓调整建议
-python daily_position_report_generator.py --auto-update
-
-# 生成报告2：市场标的洞察（发送邮件）
-python run_unified_analysis.py --email
-```
+**v4.0后不再支持**，请使用方式1
 
 ---
 

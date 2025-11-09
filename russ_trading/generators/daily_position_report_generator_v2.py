@@ -47,10 +47,10 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 # 导入原有模块
-from russ_trading.position_health_checker import PositionHealthChecker
-from russ_trading.unified_email_notifier import UnifiedEmailNotifier
-from russ_trading.performance_tracker import PerformanceTracker
-from russ_trading.daily_position_report_generator import DailyPositionReportGenerator as BaseGenerator
+from russ_trading.trackers.position_health_checker import PositionHealthChecker
+from russ_trading.notifiers.unified_email_notifier import UnifiedEmailNotifier
+from russ_trading.trackers.performance_tracker import PerformanceTracker
+from russ_trading.generators.daily_position_report_generator import DailyPositionReportGenerator as BaseGenerator
 
 # 导入新模块
 from russ_trading.core import (

@@ -2,8 +2,8 @@
 
 > **专属个人投资策略管理系统** - 整合仓位管理、收益追踪、风险分析和智能预警
 >
-> **版本**: v3.0 Ultra Aggressive Edition (激进翻倍版)
-> **最后更新**: 2025-10-21
+> **版本**: v4.0 Modular Architecture Edition (模块化重构版)
+> **最后更新**: 2025-11-10
 > **系统状态**: ✅ 生产就绪
 
 ---
@@ -15,10 +15,10 @@
 **最简单的命令**：
 ```bash
 # 生成今日持仓调整建议
-python russ_trading/daily_position_report_generator.py --auto-update
+python -m russ_trading.generators.daily_position_report_generator --auto-update
 
 # 生成市场标的洞察并发送邮件
-python russ_trading/run_unified_analysis.py --email
+python -m russ_trading.runners.run_unified_analysis --email
 ```
 
 **对Claude说**：`帮我生成今天的两个报告`
@@ -1446,8 +1446,57 @@ KECHUANG50_BASE=955.0
 
 ---
 
+---
+
+## 🔧 v4.0 重构说明 (2025-11-10)
+
+### 📂 目录结构重大调整
+
+为了提高代码组织性和可维护性，v4.0进行了模块化重构：
+
+**主要变化**:
+- ✅ 根目录从27个文件精简到1个`__init__.py`
+- ✅ 按功能分类到子目录: `generators/`, `analyzers/`, `managers/`, `engines/`, `trackers/`, `runners/`, `notifiers/`
+- ✅ 所有import路径已更新
+- ✅ 测试文件移至`tests/`目录
+- ✅ 废弃代码移至`deprecated/`目录
+
+**新目录结构**:
+```
+russ_trading/
+├── generators/      # 📊 报告生成器
+├── analyzers/       # 🔍 分析器
+├── managers/        # 🎯 管理器
+├── engines/         # ⚙️ 策略引擎
+├── trackers/        # 📈 追踪器
+├── runners/         # 🚀 运行器
+├── notifiers/       # 📧 通知模块
+├── tests/           # ✅ 测试
+├── core/            # 💎 核心模块
+├── config/          # ⚙️ 配置
+├── utils/           # 🛠️ 工具
+└── docs/            # 📚 文档
+```
+
+**命令行使用方式变更**:
+
+旧方式 (已弃用):
+```bash
+python russ_trading/daily_position_report_generator.py --auto-update
+```
+
+新方式 (必须使用):
+```bash
+python -m russ_trading.generators.daily_position_report_generator --auto-update
+python -m russ_trading.runners.run_unified_analysis --email
+```
+
+**详细说明**: 请参考 [架构文档](docs/architecture.md) 和 [迁移计划](MIGRATION_PLAN.md)
+
+---
+
 **文档维护**: Claude Code
-**最后更新**: 2025-10-21
-**系统版本**: v3.0 Ultra Aggressive Edition
+**最后更新**: 2025-11-10
+**系统版本**: v4.0 Modular Architecture Edition
 
 **Happy Trading! 🎯**

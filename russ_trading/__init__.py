@@ -5,7 +5,7 @@
 Unified Asset Analysis Module
 """
 
-from .unified_config import (
+from .config.unified_config import (
     UNIFIED_ASSETS,
     ASSET_CATEGORIES,
     get_asset_config,

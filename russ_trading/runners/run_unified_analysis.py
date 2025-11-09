@@ -28,7 +28,7 @@ from datetime import datetime
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from russ_trading.unified_config import (
+from russ_trading.config.unified_config import (
     UNIFIED_ASSETS,
     list_all_assets,
     list_assets_by_analyzer,
@@ -36,7 +36,7 @@ from russ_trading.unified_config import (
 )
 from scripts.analysis.comprehensive_asset_analysis.asset_reporter import ComprehensiveAssetReporter
 from scripts.analysis.sector_analysis.sector_reporter import SectorReporter
-from russ_trading.unified_email_notifier import UnifiedEmailNotifier
+from russ_trading.notifiers.unified_email_notifier import UnifiedEmailNotifier
 from russ_trading.core.investment_advisor import InvestmentAdvisor
 
 # 导入机构级核心指标分析器 (Phase 3.3)

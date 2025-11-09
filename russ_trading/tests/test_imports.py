@@ -62,9 +62,9 @@ except Exception as e:
 # Test 5: Original modules
 print("\nTest 5: Original Modules")
 try:
-    from russ_trading.position_health_checker import PositionHealthChecker
-    from russ_trading.performance_tracker import PerformanceTracker
-    from russ_trading.daily_position_report_generator import DailyPositionReportGenerator
+    from russ_trading.trackers.position_health_checker import PositionHealthChecker
+    from russ_trading.trackers.performance_tracker import PerformanceTracker
+    from russ_trading.generators.daily_position_report_generator import DailyPositionReportGenerator
     print("   PASS")
 except Exception as e:
     print(f"   FAIL: {e}")
@@ -73,7 +73,7 @@ except Exception as e:
 # Test 6: Enhanced report generator v2
 print("\nTest 6: Enhanced Report Generator v2")
 try:
-    from russ_trading.daily_position_report_generator_v2 import EnhancedReportGenerator
+    from russ_trading.generators.daily_position_report_generator_v2 import EnhancedReportGenerator
     generator = EnhancedReportGenerator()
     print("   PASS")
 except Exception as e:

@@ -476,7 +476,7 @@ class UnifiedEmailNotifier:
 
     def _render_assets_by_category(self, assets_data: Dict) -> str:
         """按类别渲染资产详情"""
-        from russ_trading.unified_config import UNIFIED_ASSETS
+        from russ_trading.config.unified_config import UNIFIED_ASSETS
 
         # 按类别分组
         categories = {}

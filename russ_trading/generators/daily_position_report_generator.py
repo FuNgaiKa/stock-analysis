@@ -39,10 +39,10 @@ from typing import Dict, List, Optional
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from russ_trading.position_health_checker import PositionHealthChecker
-from russ_trading.performance_tracker import PerformanceTracker
-from russ_trading.potential_analyzer import PotentialAnalyzer
-from russ_trading.market_depth_analyzer import MarketDepthAnalyzer
+from russ_trading.trackers.position_health_checker import PositionHealthChecker
+from russ_trading.trackers.performance_tracker import PerformanceTracker
+from russ_trading.analyzers.potential_analyzer import PotentialAnalyzer
+from russ_trading.analyzers.market_depth_analyzer import MarketDepthAnalyzer
 
 # 导入机构级核心指标分析器 (Phase 3.3)
 try:
@@ -56,10 +56,10 @@ except ImportError:
 
 # 尝试导入增强模块
 try:
-    from russ_trading.risk_manager import RiskManager
-    from russ_trading.dynamic_position_manager import DynamicPositionManager
-    from russ_trading.data_manager import DataManager
-    from russ_trading.technical_analyzer import TechnicalAnalyzer
+    from russ_trading.managers.risk_manager import RiskManager
+    from russ_trading.managers.dynamic_position_manager import DynamicPositionManager
+    from russ_trading.managers.data_manager import DataManager
+    from russ_trading.analyzers.technical_analyzer import TechnicalAnalyzer
     HAS_ENHANCED_MODULES = True
 except ImportError:
     HAS_ENHANCED_MODULES = False

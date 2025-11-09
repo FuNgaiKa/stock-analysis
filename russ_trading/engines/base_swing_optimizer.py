@@ -46,8 +46,8 @@ try:
 except ImportError:
     # 如果相对导入失败,尝试绝对导入
     try:
-        from russ_trading.dynamic_position_manager import DynamicPositionManager
-        from russ_trading.risk_manager import RiskManager
+        from russ_trading.managers.dynamic_position_manager import DynamicPositionManager
+        from russ_trading.managers.risk_manager import RiskManager
     except ImportError:
         DynamicPositionManager = None
         RiskManager = None

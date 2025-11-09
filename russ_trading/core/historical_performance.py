@@ -381,7 +381,7 @@ class HistoricalPerformanceAnalyzer:
 
 # 示例用法
 if __name__ == "__main__":
-    from russ_trading.data_manager import DataManager
+    from russ_trading.managers.data_manager import DataManager
 
     # 创建数据管理器（使用测试数据目录）
     dm = DataManager(data_dir="data/russ_trading")

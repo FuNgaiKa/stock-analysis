@@ -38,18 +38,18 @@ from typing import Dict, List, Optional
 # 添加父目录到路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from russ_trading.position_health_checker import PositionHealthChecker
-from russ_trading.performance_tracker import PerformanceTracker
-from russ_trading.potential_analyzer import PotentialAnalyzer
-from russ_trading.monthly_plan_generator import MonthlyPlanGenerator
+from russ_trading.trackers.position_health_checker import PositionHealthChecker
+from russ_trading.trackers.performance_tracker import PerformanceTracker
+from russ_trading.analyzers.potential_analyzer import PotentialAnalyzer
+from russ_trading.generators.monthly_plan_generator import MonthlyPlanGenerator
 
 # 新增模块导入
 try:
-    from russ_trading.risk_manager import RiskManager
-    from russ_trading.dynamic_position_manager import DynamicPositionManager
-    from russ_trading.backtest_engine_enhanced import BacktestEngineEnhanced
-    from russ_trading.data_manager import DataManager
-    from russ_trading.visualizer import Visualizer
+    from russ_trading.managers.risk_manager import RiskManager
+    from russ_trading.managers.dynamic_position_manager import DynamicPositionManager
+    from russ_trading.engines.backtest_engine_enhanced import BacktestEngineEnhanced
+    from russ_trading.managers.data_manager import DataManager
+    from russ_trading.utils.visualizer import Visualizer
     HAS_ENHANCED_MODULES = True
 except ImportError as e:
     print(f"警告: 部分增强模块导入失败: {e}")
