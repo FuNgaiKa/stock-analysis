@@ -1,0 +1,1202 @@
+{
+  "创业板指": {
+    "name": "创业板指",
+    "status": "success",
+    "price": 3178.83,
+    "change_pct": -0.92,
+    "signals": {
+      "rsi": {
+        "value": 41.12884383275863,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "volume_ratio": {
+        "value": 1.0753594593320748,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "ma": {
+        "ma20": 3199.2050019177514,
+        "ma60": 2993.217572473453,
+        "deviation_20": -0.63687703368611,
+        "deviation_60": 6.201100422284561,
+        "signal": "震荡",
+        "emoji": "➡️"
+      },
+      "atr": {
+        "value": 90.29575044103912,
+        "stop_loss": 2998.2384991179215,
+        "take_profit": 3449.717251323117
+      },
+      "vwap": {
+        "value": 3003.4968330399024,
+        "diff_pct": 5.837634487619523,
+        "signal": "强势(价格>VWAP)",
+        "emoji": "✅"
+      },
+      "volume_price_divergence": {
+        "has_divergence": false,
+        "top_divergence": false,
+        "bottom_divergence": false,
+        "signal": "无量价背离"
+      }
+    },
+    "judgment": {
+      "bullish_signals": 1,
+      "bearish_signals": 0,
+      "conclusion": "看多"
+    }
+  },
+  "科创50": {
+    "name": "科创50",
+    "status": "success",
+    "price": 1407.56,
+    "change_pct": -0.57,
+    "signals": {
+      "rsi": {
+        "value": 50.644288369227624,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "volume_ratio": {
+        "value": 0.8733437118844758,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "ma": {
+        "ma20": 1422.8358089973792,
+        "ma60": 1292.083840835691,
+        "deviation_20": -1.0736171314203558,
+        "deviation_60": 8.937203261486616,
+        "signal": "震荡",
+        "emoji": "➡️"
+      },
+      "atr": {
+        "value": 45.999470726425784,
+        "stop_loss": 1315.5610585471484,
+        "take_profit": 1545.5584121792772
+      },
+      "vwap": {
+        "value": 1291.383803916379,
+        "diff_pct": 8.996256243209292,
+        "signal": "强势(价格>VWAP)",
+        "emoji": "✅"
+      },
+      "volume_price_divergence": {
+        "has_divergence": true,
+        "top_divergence": true,
+        "bottom_divergence": false,
+        "signal": "看跌(量价背离)"
+      }
+    },
+    "judgment": {
+      "bullish_signals": 1,
+      "bearish_signals": 1,
+      "conclusion": "中性"
+    }
+  },
+  "沪深300": {
+    "name": "沪深300",
+    "status": "success",
+    "price": 4695.05,
+    "change_pct": 0.35,
+    "signals": {
+      "rsi": {
+        "value": 49.150271312007845,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "volume_ratio": {
+        "value": 0.8403531732136695,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "ma": {
+        "ma20": 4602.784306663356,
+        "ma60": 4919.964096572524,
+        "deviation_20": 2.00456261230997,
+        "deviation_60": -4.571458087045988,
+        "signal": "震荡",
+        "emoji": "➡️"
+      },
+      "atr": {
+        "value": 128.37153135451405,
+        "stop_loss": 4438.306937290972,
+        "take_profit": 5080.164594063543
+      },
+      "vwap": {
+        "value": 4882.801059471976,
+        "diff_pct": -3.845150707251616,
+        "signal": "弱势(价格<VWAP)",
+        "emoji": "⚠️"
+      },
+      "volume_price_divergence": {
+        "has_divergence": false,
+        "top_divergence": false,
+        "bottom_divergence": false,
+        "signal": "无量价背离"
+      }
+    },
+    "judgment": {
+      "bullish_signals": 0,
+      "bearish_signals": 1,
+      "conclusion": "看空"
+    }
+  },
+  "纳斯达克": {
+    "name": "纳斯达克",
+    "status": "success",
+    "price": 23364.77,
+    "change_pct": 1.57,
+    "signals": {
+      "rsi": {
+        "value": 30.673726959895276,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "volume_ratio": {
+        "value": 0.38863667478024244,
+        "signal": "缩量",
+        "emoji": "🔉"
+      },
+      "ma": {
+        "ma20": 25168.01607974737,
+        "ma60": 25343.614707354984,
+        "deviation_20": -7.164832039337561,
+        "deviation_60": -7.808060255827286,
+        "signal": "空头排列",
+        "emoji": "⚠️"
+      },
+      "atr": {
+        "value": 642.1011294007031,
+        "stop_loss": 22080.567741198593,
+        "take_profit": 25291.07338820211
+      },
+      "vwap": {
+        "value": 25319.666390339546,
+        "diff_pct": -7.720861563505495,
+        "signal": "弱势(价格<VWAP)",
+        "emoji": "⚠️"
+      },
+      "volume_price_divergence": {
+        "has_divergence": false,
+        "top_divergence": false,
+        "bottom_divergence": false,
+        "signal": "无量价背离"
+      }
+    },
+    "judgment": {
+      "bullish_signals": 0,
+      "bearish_signals": 2,
+      "conclusion": "看空"
+    }
+  },
+  "恒生科技": {
+    "name": "恒生科技",
+    "status": "success",
+    "price": 5.89,
+    "change_pct": 1.38,
+    "signals": {
+      "rsi": {
+        "value": 18.925532666132142,
+        "signal": "超卖",
+        "emoji": "✅"
+      },
+      "volume_ratio": {
+        "value": 0.6146413674363281,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "ma": {
+        "ma20": 6.8149136927025165,
+        "ma60": 7.874635671549487,
+        "deviation_20": -13.571906181187948,
+        "deviation_60": -25.20288879801561,
+        "signal": "空头排列",
+        "emoji": "⚠️"
+      },
+      "atr": {
+        "value": 0.24488982465101986,
+        "stop_loss": 5.40022035069796,
+        "take_profit": 6.624669473953059
+      },
+      "vwap": {
+        "value": 7.844133487292782,
+        "diff_pct": -24.912037645182984,
+        "signal": "弱势(价格<VWAP)",
+        "emoji": "⚠️"
+      },
+      "volume_price_divergence": {
+        "has_divergence": false,
+        "top_divergence": false,
+        "bottom_divergence": false,
+        "signal": "无量价背离"
+      }
+    },
+    "judgment": {
+      "bullish_signals": 1,
+      "bearish_signals": 2,
+      "conclusion": "看空"
+    }
+  },
+  "黄金": {
+    "name": "黄金",
+    "status": "success",
+    "price": 4100.3,
+    "change_pct": 2.52,
+    "signals": {
+      "rsi": {
+        "value": 71.45242314542529,
+        "signal": "超买",
+        "emoji": "⚠️"
+      },
+      "volume_ratio": {
+        "value": 1.1571639075967384,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "ma": {
+        "ma20": 3966.194089585658,
+        "ma60": 3789.7882120403888,
+        "deviation_20": 3.381224100113371,
+        "deviation_60": 8.19338101725834,
+        "signal": "多头排列",
+        "emoji": "✅"
+      },
+      "atr": {
+        "value": 105.18882740660742,
+        "stop_loss": 3889.922345186785,
+        "take_profit": 4415.8664822198225
+      },
+      "vwap": {
+        "value": 3784.879848413647,
+        "diff_pct": 8.33368995104442,
+        "signal": "强势(价格>VWAP)",
+        "emoji": "✅"
+      },
+      "volume_price_divergence": {
+        "has_divergence": false,
+        "top_divergence": false,
+        "bottom_divergence": false,
+        "signal": "无量价背离"
+      }
+    },
+    "judgment": {
+      "bullish_signals": 2,
+      "bearish_signals": 1,
+      "conclusion": "看多"
+    }
+  },
+  "比特币": {
+    "name": "比特币",
+    "status": "success",
+    "price": 105167.86,
+    "change_pct": 0.43,
+    "signals": {
+      "rsi": {
+        "value": 59.22756685829731,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "volume_ratio": {
+        "value": 1.6547307321566007,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "ma": {
+        "ma20": 100290.22056633713,
+        "ma60": 104541.4684946971,
+        "deviation_20": 4.863524485357523,
+        "deviation_60": 0.5991799372271865,
+        "signal": "震荡",
+        "emoji": "➡️"
+      },
+      "atr": {
+        "value": 2544.214814844507,
+        "stop_loss": 100079.43037031099,
+        "take_profit": 112800.50444453352
+      },
+      "vwap": {
+        "value": 104727.90227653715,
+        "diff_pct": 0.4200959953357328,
+        "signal": "强势(价格>VWAP)",
+        "emoji": "✅"
+      },
+      "volume_price_divergence": {
+        "has_divergence": true,
+        "top_divergence": true,
+        "bottom_divergence": false,
+        "signal": "看跌(量价背离)"
+      }
+    },
+    "judgment": {
+      "bullish_signals": 1,
+      "bearish_signals": 1,
+      "conclusion": "中性"
+    }
+  },
+  "港股创新药": {
+    "name": "港股创新药",
+    "status": "success",
+    "price": 1.34,
+    "change_pct": 1.36,
+    "signals": {
+      "rsi": {
+        "value": 82.29864006047328,
+        "signal": "超买",
+        "emoji": "⚠️"
+      },
+      "volume_ratio": {
+        "value": 1.5694098091795057,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "ma": {
+        "ma20": 1.2639606789172748,
+        "ma60": 1.2314119342082002,
+        "deviation_20": 6.015956220082854,
+        "deviation_60": 8.818175524798875,
+        "signal": "多头排列",
+        "emoji": "✅"
+      },
+      "atr": {
+        "value": 0.03131956107081489,
+        "stop_loss": 1.2773608778583703,
+        "take_profit": 1.4339586832124447
+      },
+      "vwap": {
+        "value": 1.229851568360364,
+        "diff_pct": 8.956237847993794,
+        "signal": "强势(价格>VWAP)",
+        "emoji": "✅"
+      },
+      "volume_price_divergence": {
+        "has_divergence": false,
+        "top_divergence": false,
+        "bottom_divergence": false,
+        "signal": "无量价背离"
+      }
+    },
+    "judgment": {
+      "bullish_signals": 2,
+      "bearish_signals": 1,
+      "conclusion": "看多"
+    }
+  },
+  "港股电池": {
+    "name": "港股电池",
+    "status": "success",
+    "price": 1.1,
+    "change_pct": -1.78,
+    "signals": {
+      "rsi": {
+        "value": 56.343258543128435,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "volume_ratio": {
+        "value": 1.2157630456674466,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "ma": {
+        "ma20": 1.0577361848690685,
+        "ma60": 1.0179920828080407,
+        "deviation_20": 3.9956858558415673,
+        "deviation_60": 8.055850195391292,
+        "signal": "多头排列",
+        "emoji": "✅"
+      },
+      "atr": {
+        "value": 0.037756127567076754,
+        "stop_loss": 1.0244877448658465,
+        "take_profit": 1.2132683827012303
+      },
+      "vwap": {
+        "value": 1.0213360509403222,
+        "diff_pct": 7.702063291240299,
+        "signal": "强势(价格>VWAP)",
+        "emoji": "✅"
+      },
+      "volume_price_divergence": {
+        "has_divergence": false,
+        "top_divergence": false,
+        "bottom_divergence": false,
+        "signal": "无量价背离"
+      }
+    },
+    "judgment": {
+      "bullish_signals": 2,
+      "bearish_signals": 0,
+      "conclusion": "看多"
+    }
+  },
+  "A股化工": {
+    "name": "A股化工",
+    "status": "success",
+    "price": 0.82,
+    "change_pct": 1.87,
+    "signals": {
+      "rsi": {
+        "value": 50.52542342031381,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "volume_ratio": {
+        "value": 1.309278859520235,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "ma": {
+        "ma20": 0.8155716063664042,
+        "ma60": 0.7821595955488333,
+        "deviation_20": 0.5429803586867642,
+        "deviation_60": 4.837939042941029,
+        "signal": "多头排列",
+        "emoji": "✅"
+      },
+      "atr": {
+        "value": 0.017617113681673322,
+        "stop_loss": 0.7847657726366533,
+        "take_profit": 0.8728513410450199
+      },
+      "vwap": {
+        "value": 0.781919098321091,
+        "diff_pct": 4.870184365706753,
+        "signal": "强势(价格>VWAP)",
+        "emoji": "✅"
+      },
+      "volume_price_divergence": {
+        "has_divergence": false,
+        "top_divergence": false,
+        "bottom_divergence": false,
+        "signal": "无量价背离"
+      }
+    },
+    "judgment": {
+      "bullish_signals": 2,
+      "bearish_signals": 0,
+      "conclusion": "看多"
+    }
+  },
+  "A股煤炭": {
+    "name": "A股煤炭",
+    "status": "success",
+    "price": 1.25,
+    "change_pct": 0.65,
+    "signals": {
+      "rsi": {
+        "value": 50.8151291990866,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "volume_ratio": {
+        "value": 0.9662723198211011,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "ma": {
+        "ma20": 1.2598088479258416,
+        "ma60": 1.195548513382226,
+        "deviation_20": -0.7785981136734306,
+        "deviation_60": 4.554519202548291,
+        "signal": "震荡",
+        "emoji": "➡️"
+      },
+      "atr": {
+        "value": 0.039524025339007465,
+        "stop_loss": 1.170951949321985,
+        "take_profit": 1.3685720760170224
+      },
+      "vwap": {
+        "value": 1.2017738125482156,
+        "diff_pct": 4.012917151982755,
+        "signal": "强势(价格>VWAP)",
+        "emoji": "✅"
+      },
+      "volume_price_divergence": {
+        "has_divergence": true,
+        "top_divergence": true,
+        "bottom_divergence": false,
+        "signal": "看跌(量价背离)"
+      }
+    },
+    "judgment": {
+      "bullish_signals": 1,
+      "bearish_signals": 1,
+      "conclusion": "中性"
+    }
+  },
+  "A股白酒": {
+    "name": "A股白酒",
+    "status": "success",
+    "price": 0.6,
+    "change_pct": 4.5,
+    "signals": {
+      "rsi": {
+        "value": 66.33505065411948,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "volume_ratio": {
+        "value": 0.8564200036111688,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "ma": {
+        "ma20": 0.5733096401349378,
+        "ma60": 0.5399718867850829,
+        "deviation_20": 4.6554877149423435,
+        "deviation_60": 11.116896024405284,
+        "signal": "多头排列",
+        "emoji": "✅"
+      },
+      "atr": {
+        "value": 0.01651392231755457,
+        "stop_loss": 0.5669721553648909,
+        "take_profit": 0.6495417669526637
+      },
+      "vwap": {
+        "value": 0.5381142079820663,
+        "diff_pct": 11.500493965770945,
+        "signal": "强势(价格>VWAP)",
+        "emoji": "✅"
+      },
+      "volume_price_divergence": {
+        "has_divergence": false,
+        "top_divergence": false,
+        "bottom_divergence": false,
+        "signal": "无量价背离"
+      }
+    },
+    "judgment": {
+      "bullish_signals": 2,
+      "bearish_signals": 0,
+      "conclusion": "看多"
+    }
+  },
+  "A股证券": {
+    "name": "A股证券",
+    "status": "success",
+    "price": 1.26,
+    "change_pct": 1.29,
+    "signals": {
+      "rsi": {
+        "value": 58.39346197327198,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "volume_ratio": {
+        "value": 0.9791421263291509,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "ma": {
+        "ma20": 1.2068892557921946,
+        "ma60": 1.213088757511122,
+        "deviation_20": 4.400631122773879,
+        "deviation_60": 3.86709069706698,
+        "signal": "震荡",
+        "emoji": "➡️"
+      },
+      "atr": {
+        "value": 0.03415769605353859,
+        "stop_loss": 1.1916846078929229,
+        "take_profit": 1.3624730881606157
+      },
+      "vwap": {
+        "value": 1.2170571502236092,
+        "diff_pct": 3.528416867564599,
+        "signal": "强势(价格>VWAP)",
+        "emoji": "✅"
+      },
+      "volume_price_divergence": {
+        "has_divergence": true,
+        "top_divergence": true,
+        "bottom_divergence": false,
+        "signal": "看跌(量价背离)"
+      }
+    },
+    "judgment": {
+      "bullish_signals": 1,
+      "bearish_signals": 1,
+      "conclusion": "中性"
+    }
+  },
+  "A股游戏": {
+    "name": "A股游戏",
+    "status": "success",
+    "price": 1.41,
+    "change_pct": -0.42,
+    "signals": {
+      "rsi": {
+        "value": 59.72387306512832,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "volume_ratio": {
+        "value": 0.9715354878943047,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "ma": {
+        "ma20": 1.3297705601819279,
+        "ma60": 1.3902688950546116,
+        "deviation_20": 6.0333295246885115,
+        "deviation_60": 1.4192294034322948,
+        "signal": "震荡",
+        "emoji": "➡️"
+      },
+      "atr": {
+        "value": 0.04218378234376447,
+        "stop_loss": 1.3256324353124709,
+        "take_profit": 1.5365513470312933
+      },
+      "vwap": {
+        "value": 1.393631702401031,
+        "diff_pct": 1.1745066914571973,
+        "signal": "强势(价格>VWAP)",
+        "emoji": "✅"
+      },
+      "volume_price_divergence": {
+        "has_divergence": false,
+        "top_divergence": false,
+        "bottom_divergence": false,
+        "signal": "无量价背离"
+      }
+    },
+    "judgment": {
+      "bullish_signals": 1,
+      "bearish_signals": 0,
+      "conclusion": "看多"
+    }
+  },
+  "A股传媒": {
+    "name": "A股传媒",
+    "status": "success",
+    "price": 0.99,
+    "change_pct": 0.71,
+    "signals": {
+      "rsi": {
+        "value": 63.4913713413669,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "volume_ratio": {
+        "value": 0.9195781008161832,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "ma": {
+        "ma20": 0.9731744563553054,
+        "ma60": 0.9784576579720036,
+        "deviation_20": 1.72893395781358,
+        "deviation_60": 1.1796465523014672,
+        "signal": "震荡",
+        "emoji": "➡️"
+      },
+      "atr": {
+        "value": 0.028689401795913932,
+        "stop_loss": 0.9326211964081721,
+        "take_profit": 1.0760682053877417
+      },
+      "vwap": {
+        "value": 0.9773087879550895,
+        "diff_pct": 1.298587734125003,
+        "signal": "强势(价格>VWAP)",
+        "emoji": "✅"
+      },
+      "volume_price_divergence": {
+        "has_divergence": false,
+        "top_divergence": false,
+        "bottom_divergence": false,
+        "signal": "无量价背离"
+      }
+    },
+    "judgment": {
+      "bullish_signals": 1,
+      "bearish_signals": 0,
+      "conclusion": "看多"
+    }
+  },
+  "A股半导体": {
+    "name": "A股半导体",
+    "status": "success",
+    "price": 1.45,
+    "change_pct": -0.55,
+    "signals": {
+      "rsi": {
+        "value": 38.253594955138794,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "volume_ratio": {
+        "value": 1.0468241402380272,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "ma": {
+        "ma20": 1.4619673844396908,
+        "ma60": 1.7067099317932457,
+        "deviation_20": -0.8185808087830491,
+        "deviation_60": -15.04121626124949,
+        "signal": "空头排列",
+        "emoji": "⚠️"
+      },
+      "atr": {
+        "value": 0.044555538179818686,
+        "stop_loss": 1.3608889236403625,
+        "take_profit": 1.583666614539456
+      },
+      "vwap": {
+        "value": 1.6916074090471729,
+        "diff_pct": -14.282711683277768,
+        "signal": "弱势(价格<VWAP)",
+        "emoji": "⚠️"
+      },
+      "volume_price_divergence": {
+        "has_divergence": false,
+        "top_divergence": false,
+        "bottom_divergence": false,
+        "signal": "无量价背离"
+      }
+    },
+    "judgment": {
+      "bullish_signals": 0,
+      "bearish_signals": 2,
+      "conclusion": "看空"
+    }
+  },
+  "A股钢铁": {
+    "name": "A股钢铁",
+    "status": "success",
+    "price": 1.54,
+    "change_pct": -0.26,
+    "signals": {
+      "rsi": {
+        "value": 41.41977517680099,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "volume_ratio": {
+        "value": 1.8504696852834388,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "ma": {
+        "ma20": 1.5654539843370394,
+        "ma60": 1.682505704978481,
+        "deviation_20": -1.6259809992319254,
+        "deviation_60": -8.469849734049113,
+        "signal": "空头排列",
+        "emoji": "⚠️"
+      },
+      "atr": {
+        "value": 0.04345925572933307,
+        "stop_loss": 1.453081488541334,
+        "take_profit": 1.6703777671879991
+      },
+      "vwap": {
+        "value": 1.6849538869784157,
+        "diff_pct": -8.602840000467774,
+        "signal": "弱势(价格<VWAP)",
+        "emoji": "⚠️"
+      },
+      "volume_price_divergence": {
+        "has_divergence": false,
+        "top_divergence": false,
+        "bottom_divergence": false,
+        "signal": "无量价背离"
+      }
+    },
+    "judgment": {
+      "bullish_signals": 0,
+      "bearish_signals": 2,
+      "conclusion": "看空"
+    }
+  },
+  "A股有色金属": {
+    "name": "A股有色金属",
+    "status": "success",
+    "price": 1.77,
+    "change_pct": 0.51,
+    "signals": {
+      "rsi": {
+        "value": 48.3974286717667,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "volume_ratio": {
+        "value": 0.6818206942114767,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "ma": {
+        "ma20": 1.7551622771279152,
+        "ma60": 1.591476806308079,
+        "deviation_20": 0.8453761264949681,
+        "deviation_60": 11.217454944006409,
+        "signal": "多头排列",
+        "emoji": "✅"
+      },
+      "atr": {
+        "value": 0.046692394837156447,
+        "stop_loss": 1.676615210325687,
+        "take_profit": 1.9100771845114695
+      },
+      "vwap": {
+        "value": 1.6028140886887803,
+        "diff_pct": 10.430773755426003,
+        "signal": "强势(价格>VWAP)",
+        "emoji": "✅"
+      },
+      "volume_price_divergence": {
+        "has_divergence": false,
+        "top_divergence": false,
+        "bottom_divergence": false,
+        "signal": "无量价背离"
+      }
+    },
+    "judgment": {
+      "bullish_signals": 2,
+      "bearish_signals": 0,
+      "conclusion": "看多"
+    }
+  },
+  "A股银行": {
+    "name": "A股银行",
+    "status": "success",
+    "price": 0.84,
+    "change_pct": 0.48,
+    "signals": {
+      "rsi": {
+        "value": 57.24575897279204,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "volume_ratio": {
+        "value": 0.19764613723985638,
+        "signal": "缩量",
+        "emoji": "🔉"
+      },
+      "ma": {
+        "ma20": 0.8204395344883535,
+        "ma60": 0.7827808604633705,
+        "deviation_20": 2.384144679698409,
+        "deviation_60": 7.309726441543088,
+        "signal": "多头排列",
+        "emoji": "✅"
+      },
+      "atr": {
+        "value": 0.022608339011626788,
+        "stop_loss": 0.7947833219767464,
+        "take_profit": 0.9078250170348803
+      },
+      "vwap": {
+        "value": 0.781607413164218,
+        "diff_pct": 7.470833292047284,
+        "signal": "强势(价格>VWAP)",
+        "emoji": "✅"
+      },
+      "volume_price_divergence": {
+        "has_divergence": true,
+        "top_divergence": true,
+        "bottom_divergence": false,
+        "signal": "看跌(量价背离)"
+      }
+    },
+    "judgment": {
+      "bullish_signals": 2,
+      "bearish_signals": 1,
+      "conclusion": "看多"
+    }
+  },
+  "A股保险": {
+    "name": "A股保险",
+    "status": "success",
+    "price": 1.29,
+    "change_pct": 0.16,
+    "signals": {
+      "rsi": {
+        "value": 27.06641695480222,
+        "signal": "超卖",
+        "emoji": "✅"
+      },
+      "volume_ratio": {
+        "value": 1.005193846617791,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "ma": {
+        "ma20": 1.363336267202679,
+        "ma60": 1.4278286997667633,
+        "deviation_20": -5.379176727481312,
+        "deviation_60": -9.653027690876199,
+        "signal": "空头排列",
+        "emoji": "⚠️"
+      },
+      "atr": {
+        "value": 0.04094164180683051,
+        "stop_loss": 1.208116716386339,
+        "take_profit": 1.4128249254204917
+      },
+      "vwap": {
+        "value": 1.425236803295927,
+        "diff_pct": -9.488725170665363,
+        "signal": "弱势(价格<VWAP)",
+        "emoji": "⚠️"
+      },
+      "volume_price_divergence": {
+        "has_divergence": false,
+        "top_divergence": false,
+        "bottom_divergence": false,
+        "signal": "无量价背离"
+      }
+    },
+    "judgment": {
+      "bullish_signals": 1,
+      "bearish_signals": 2,
+      "conclusion": "看空"
+    }
+  },
+  "A股软件": {
+    "name": "A股软件",
+    "status": "success",
+    "price": 0.93,
+    "change_pct": 0.87,
+    "signals": {
+      "rsi": {
+        "value": 17.565262693509524,
+        "signal": "超卖",
+        "emoji": "✅"
+      },
+      "volume_ratio": {
+        "value": 0.9075441942321889,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "ma": {
+        "ma20": 1.0629190388062077,
+        "ma60": 1.1942381827538069,
+        "deviation_20": -12.505095303918216,
+        "deviation_60": -22.12608728892733,
+        "signal": "空头排列",
+        "emoji": "⚠️"
+      },
+      "atr": {
+        "value": 0.0324611229681561,
+        "stop_loss": 0.8650777540636878,
+        "take_profit": 1.0273833689044682
+      },
+      "vwap": {
+        "value": 1.2047833342981364,
+        "diff_pct": -22.807697158113108,
+        "signal": "弱势(价格<VWAP)",
+        "emoji": "⚠️"
+      },
+      "volume_price_divergence": {
+        "has_divergence": false,
+        "top_divergence": false,
+        "bottom_divergence": false,
+        "signal": "无量价背离"
+      }
+    },
+    "judgment": {
+      "bullish_signals": 1,
+      "bearish_signals": 2,
+      "conclusion": "看空"
+    }
+  },
+  "A股稀土": {
+    "name": "A股稀土",
+    "status": "success",
+    "price": 1.73,
+    "change_pct": -1.37,
+    "signals": {
+      "rsi": {
+        "value": 47.71966881950854,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "volume_ratio": {
+        "value": 1.2801804557831615,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "ma": {
+        "ma20": 1.758448879019707,
+        "ma60": 1.796937693247766,
+        "deviation_20": -1.6178394128560973,
+        "deviation_60": -3.7250981767088223,
+        "signal": "空头排列",
+        "emoji": "⚠️"
+      },
+      "atr": {
+        "value": 0.03996282353821894,
+        "stop_loss": 1.6500743529235622,
+        "take_profit": 1.8498884706146568
+      },
+      "vwap": {
+        "value": 1.8007901253060314,
+        "diff_pct": -3.9310591673752753,
+        "signal": "弱势(价格<VWAP)",
+        "emoji": "⚠️"
+      },
+      "volume_price_divergence": {
+        "has_divergence": false,
+        "top_divergence": false,
+        "bottom_divergence": false,
+        "signal": "无量价背离"
+      }
+    },
+    "judgment": {
+      "bullish_signals": 0,
+      "bearish_signals": 2,
+      "conclusion": "看空"
+    }
+  },
+  "三花智控": {
+    "name": "三花智控",
+    "status": "success",
+    "price": 45.51,
+    "change_pct": -6.01,
+    "signals": {
+      "rsi": {
+        "value": 73.73115788135559,
+        "signal": "超买",
+        "emoji": "⚠️"
+      },
+      "volume_ratio": {
+        "value": 1.0996095623432234,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "ma": {
+        "ma20": 40.26417946254348,
+        "ma60": 39.26427153711367,
+        "deviation_20": 13.028504759016737,
+        "deviation_60": 15.906900136890842,
+        "signal": "多头排列",
+        "emoji": "✅"
+      },
+      "atr": {
+        "value": 1.3647269672883806,
+        "stop_loss": 42.78054606542324,
+        "take_profit": 49.60418090186514
+      },
+      "vwap": {
+        "value": 39.36006401992108,
+        "diff_pct": 15.624811933655097,
+        "signal": "强势(价格>VWAP)",
+        "emoji": "✅"
+      },
+      "volume_price_divergence": {
+        "has_divergence": false,
+        "top_divergence": false,
+        "bottom_divergence": false,
+        "signal": "无量价背离"
+      }
+    },
+    "judgment": {
+      "bullish_signals": 2,
+      "bearish_signals": 1,
+      "conclusion": "看多"
+    }
+  },
+  "阿里巴巴": {
+    "name": "阿里巴巴",
+    "status": "success",
+    "price": 163.4,
+    "change_pct": 2.06,
+    "signals": {
+      "rsi": {
+        "value": 85.45030697624566,
+        "signal": "超买",
+        "emoji": "⚠️"
+      },
+      "volume_ratio": {
+        "value": 0.5913567112426457,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "ma": {
+        "ma20": 153.17674696433167,
+        "ma60": 163.7328367821787,
+        "deviation_20": 6.674154686186733,
+        "deviation_60": -0.20328041016078569,
+        "signal": "震荡",
+        "emoji": "➡️"
+      },
+      "atr": {
+        "value": 3.75152304162782,
+        "stop_loss": 155.89695391674437,
+        "take_profit": 174.65456912488347
+      },
+      "vwap": {
+        "value": 163.36127066379586,
+        "diff_pct": 0.023707783397356415,
+        "signal": "强势(价格>VWAP)",
+        "emoji": "✅"
+      },
+      "volume_price_divergence": {
+        "has_divergence": true,
+        "top_divergence": true,
+        "bottom_divergence": false,
+        "signal": "看跌(量价背离)"
+      }
+    },
+    "judgment": {
+      "bullish_signals": 1,
+      "bearish_signals": 2,
+      "conclusion": "看空"
+    }
+  },
+  "指南针": {
+    "name": "指南针",
+    "status": "success",
+    "price": 133.83,
+    "change_pct": 1.2,
+    "signals": {
+      "rsi": {
+        "value": 41.14592243288188,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "volume_ratio": {
+        "value": 1.3997473537686345,
+        "signal": "正常",
+        "emoji": "➡️"
+      },
+      "ma": {
+        "ma20": 135.51483025579068,
+        "ma60": 132.42304389678108,
+        "deviation_20": -1.2432810878414378,
+        "deviation_60": 1.0624707466440675,
+        "signal": "震荡",
+        "emoji": "➡️"
+      },
+      "atr": {
+        "value": 3.3145921661793096,
+        "stop_loss": 127.2008156676414,
+        "take_profit": 143.77377649853793
+      },
+      "vwap": {
+        "value": 132.82792908768377,
+        "diff_pct": 0.7544128100158396,
+        "signal": "强势(价格>VWAP)",
+        "emoji": "✅"
+      },
+      "volume_price_divergence": {
+        "has_divergence": false,
+        "top_divergence": false,
+        "bottom_divergence": false,
+        "signal": "无量价背离"
+      }
+    },
+    "judgment": {
+      "bullish_signals": 1,
+      "bearish_signals": 0,
+      "conclusion": "看多"
+    }
+  }
+}
