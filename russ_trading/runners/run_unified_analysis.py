@@ -167,7 +167,7 @@ class UnifiedAnalysisRunner:
         """
         lines = []
 
-        # 报告头部
+        # 1. 报告头部
         if format_type == 'markdown':
             lines.append("# 📊 市场洞察报告")
             lines.append("")
@@ -182,7 +182,15 @@ class UnifiedAnalysisRunner:
             lines.append("=" * 80)
             lines.append("")
 
-        # 统计信息
+        # 2. 🎯 今日操作建议 (提前到最前面)
+        investment_advice = self._generate_investment_advice_section(results, format_type)
+        lines.append(investment_advice)
+
+        # 3. 🔥 今日市场大盘分析 (新增)
+        market_overview = self._generate_market_overview_section(results, format_type)
+        lines.append(market_overview)
+
+        # 4. 统计信息
         total_count = len(results['assets'])
         success_count = sum(1 for data in results['assets'].values() if 'error' not in data)
         fail_count = total_count - success_count
@@ -202,7 +210,18 @@ class UnifiedAnalysisRunner:
             lines.append("=" * 80)
             lines.append("")
 
-        # ========== 机构级核心指标 (Phase 3.3) ==========
+        # 5. 生成汇总表格
+        if format_type == 'markdown':
+            summary_table = self._generate_summary_table(results)
+            if summary_table:
+                lines.append("## 📊 标的汇总")
+                lines.append("")
+                lines.append(summary_table)
+                lines.append("")
+            lines.append("---")
+            lines.append("")
+
+        # 6. ========== 机构级核心指标 (Phase 3.3) ==========
         if HAS_CORE_ANALYZERS and self.valuation_analyzer:
             if format_type == 'markdown':
                 lines.append("## 🏛️ 机构级核心指标")
@@ -248,52 +267,73 @@ class UnifiedAnalysisRunner:
                     lines.append("")
 
                 # 2. 市场宽度分析
-                breadth_data = self.breadth_analyzer.analyze_market_breadth(periods=[20, 60])
-                if breadth_data and 'error' not in breadth_data and breadth_data.get('periods'):
-                    if format_type == 'markdown':
-                        lines.append("### 📈 市场宽度 (新高新低)")
-                        lines.append("")
-                        lines.append("| 周期 | 创新高 | 创新低 | 宽度得分 | 市场强度 |")
-                        lines.append("|------|--------|--------|----------|----------|")
-                    else:
-                        lines.append("市场宽度:")
+                breadth_data = self.breadth_analyzer.comprehensive_analysis()
+                if breadth_data and 'error' not in breadth_data:
+                    metrics = breadth_data.get('metrics', {})
+                    strength_analysis = breadth_data.get('strength_analysis', {})
 
-                    period_names = {'20': '20日', '60': '60日'}
-                    for period_key, period_name in period_names.items():
-                        if period_key in breadth_data['periods']:
-                            period_data = breadth_data['periods'][period_key]
-                            new_high = period_data.get('new_high_count', 0)
-                            new_low = period_data.get('new_low_count', 0)
-                            score = period_data.get('breadth_score', 50)
-                            strength = period_data.get('market_strength', '中性')
+                    if metrics:
+                        if format_type == 'markdown':
+                            lines.append("### 📈 市场宽度 (新高新低)")
+                            lines.append("")
+                            lines.append("| 周期 | 创新高 | 创新低 | 宽度比 | 市场强度 |")
+                            lines.append("|------|--------|--------|--------|----------|")
+                        else:
+                            lines.append("市场宽度:")
+
+                        # 20日数据
+                        if 'high20' in metrics and 'low20' in metrics:
+                            high20 = metrics['high20']
+                            low20 = metrics['low20']
+                            ratio20 = metrics.get('high_low_ratio_20', 1.0)
+                            strength20 = strength_analysis.get('20day_strength', '中性')
 
                             if format_type == 'markdown':
-                                strength_emoji = {'强势': '🟢', '健康': '🟢', '中性': '🟡', '弱势': '🔴', '极弱': '🔴🔴'}.get(strength, '⚪')
-                                lines.append(f"| {period_name} | {new_high} | {new_low} | {score:.0f}/100 | {strength_emoji} {strength} |")
+                                strength_emoji = {'强势': '🟢', '健康': '🟢', '中性': '🟡', '弱势': '🔴', '极弱': '🔴🔴'}.get(strength20, '⚪')
+                                lines.append(f"| 20日 | {high20} | {low20} | {ratio20:.2f} | {strength_emoji} {strength20} |")
                             else:
-                                lines.append(f"  {period_name}: 新高{new_high}, 新低{new_low}, 得分{score:.0f} - {strength}")
+                                lines.append(f"  20日: 新高{high20}, 新低{low20}, 比值{ratio20:.2f} - {strength20}")
 
-                    lines.append("")
+                        # 60日数据
+                        if 'high60' in metrics and 'low60' in metrics:
+                            high60 = metrics['high60']
+                            low60 = metrics['low60']
+                            ratio60 = metrics.get('high_low_ratio_60', 1.0)
+                            strength60 = strength_analysis.get('60day_strength', '中性')
+
+                            if format_type == 'markdown':
+                                strength_emoji = {'强势': '🟢', '健康': '🟢', '中性': '🟡', '弱势': '🔴', '极弱': '🔴🔴'}.get(strength60, '⚪')
+                                lines.append(f"| 60日 | {high60} | {low60} | {ratio60:.2f} | {strength_emoji} {strength60} |")
+                            else:
+                                lines.append(f"  60日: 新高{high60}, 新低{low60}, 比值{ratio60:.2f} - {strength60}")
+
+                        lines.append("")
 
                 # 3. 融资融券分析
-                margin_data = self.margin_analyzer.analyze_margin_trading()
-                if margin_data and 'error' not in margin_data and margin_data.get('current'):
-                    current = margin_data['current']
-                    sentiment_score = margin_data.get('sentiment_score', 50)
-                    sentiment_level = margin_data.get('sentiment_level', '中性')
+                margin_data = self.margin_analyzer.comprehensive_analysis(market='sse')
+                if margin_data and 'error' not in margin_data:
+                    metrics = margin_data.get('metrics', {})
+                    sentiment_analysis = margin_data.get('sentiment_analysis', {})
 
-                    if format_type == 'markdown':
-                        lines.append("### 💰 融资融券 (市场情绪)")
+                    if metrics:
+                        margin_balance = metrics.get('latest_margin_balance', 0)
+                        sentiment_score = sentiment_analysis.get('sentiment_score', 50)
+                        sentiment_level = sentiment_analysis.get('sentiment_level', '中性')
+                        trend = metrics.get('trend', '平稳')
+
+                        if format_type == 'markdown':
+                            lines.append("### 💰 融资融券 (市场情绪)")
+                            lines.append("")
+                            lines.append(f"- **融资余额**: ¥{margin_balance/1e8:.0f}亿")
+                            lines.append(f"- **趋势**: {trend}")
+                            lines.append(f"- **情绪得分**: {sentiment_score:.0f}/100")
+                            lines.append(f"- **情绪水平**: {sentiment_level}")
+                        else:
+                            lines.append("融资融券:")
+                            lines.append(f"  融资余额: {margin_balance/1e8:.0f}亿 ({trend})")
+                            lines.append(f"  情绪得分: {sentiment_score:.0f}/100 ({sentiment_level})")
+
                         lines.append("")
-                        lines.append(f"- **融资余额**: ¥{current.get('margin_balance', 0)/1e8:.0f}亿")
-                        lines.append(f"- **情绪得分**: {sentiment_score:.0f}/100")
-                        lines.append(f"- **情绪水平**: {sentiment_level}")
-                    else:
-                        lines.append("融资融券:")
-                        lines.append(f"  融资余额: {current.get('margin_balance', 0)/1e8:.0f}亿")
-                        lines.append(f"  情绪得分: {sentiment_score:.0f}/100 ({sentiment_level})")
-
-                    lines.append("")
 
                 if format_type == 'markdown':
                     lines.append("---")
@@ -360,10 +400,6 @@ class UnifiedAnalysisRunner:
                     lines.append(self._format_sector_markdown(asset_key, data, config))
                 else:
                     lines.append(self.sector_reporter.format_text_report(single_sector_report))
-
-        # 添加投资建议
-        investment_advice = self._generate_investment_advice_section(results, format_type)
-        lines.append(investment_advice)
 
         # 失败的资产
         if fail_count > 0:
@@ -480,6 +516,307 @@ class UnifiedAnalysisRunner:
                 f"{change_pct:+.2f}% {change_emoji} | {direction_with_emoji} | {position} | "
                 f"{prob_display} | {risk_with_emoji} | {hold_suggestion} |"
             )
+
+        return '\n'.join(lines)
+
+    def analyze_market_state(self, market_data: dict) -> dict:
+        """
+        分析市场状态，综合判断当前处于什么市场环境
+
+        基于4个维度:
+        1. 短期趋势: 当日平均涨跌幅
+        2. 长期趋势: 年初至今累计涨幅
+        3. 市场宽度: 主要指数共振情况
+
+        Args:
+            market_data: 市场数据
+
+        Returns:
+            市场状态分析结果
+        """
+        indices = market_data.get('indices', {})
+        if not indices:
+            return {'state': '未知', 'confidence': 0, 'suggestion': '数据不足',
+                    'recommended_position': (0.60, 0.75)}
+
+        # ========== 1. 短期趋势判断(当日涨跌) ==========
+        avg_change = sum(idx.get('change_pct', 0) for idx in indices.values()) / len(indices)
+
+        short_term_score = 0
+        if avg_change > 1.5:
+            short_term_score = 2  # 强势上涨
+        elif avg_change > 0.5:
+            short_term_score = 1  # 温和上涨
+        elif avg_change > -0.5:
+            short_term_score = 0  # 震荡
+        elif avg_change > -1.5:
+            short_term_score = -1  # 温和下跌
+        else:
+            short_term_score = -2  # 强势下跌
+
+        # ========== 2. 长期趋势判断(年初至今涨幅) ==========
+        # 基准点位(2025-01-01)
+        benchmark_points = {
+            'HS300': 3145.0,
+            'CYBZ': 2060.0,
+            'KECHUANG50': 955.0
+        }
+
+        ytd_gains = []
+        for key, idx in indices.items():
+            current = idx.get('current', 0)
+            if key in benchmark_points and current > 0:
+                base = benchmark_points[key]
+                ytd_gain = (current - base) / base
+                ytd_gains.append(ytd_gain)
+
+        avg_ytd_gain = sum(ytd_gains) / len(ytd_gains) if ytd_gains else 0
+
+        long_term_score = 0
+        if avg_ytd_gain > 0.30:  # 年内涨超30%
+            long_term_score = 2  # 强势牛市
+        elif avg_ytd_gain > 0.15:  # 年内涨15%-30%
+            long_term_score = 1  # 温和牛市
+        elif avg_ytd_gain > -0.10:  # 年内±10%以内
+            long_term_score = 0  # 震荡
+        elif avg_ytd_gain > -0.20:  # 年内跌10%-20%
+            long_term_score = -1  # 温和熊市
+        else:  # 年内跌超20%
+            long_term_score = -2  # 深度熊市
+
+        # ========== 3. 市场宽度(指数共振) ==========
+        positive_count = sum(1 for idx in indices.values() if idx.get('change_pct', 0) > 0)
+        total_count = len(indices)
+        positive_ratio = positive_count / total_count if total_count > 0 else 0.5
+
+        breadth_score = 0
+        if positive_ratio >= 0.8:  # 80%以上上涨
+            breadth_score = 2
+        elif positive_ratio >= 0.6:  # 60%-80%上涨
+            breadth_score = 1
+        elif positive_ratio >= 0.4:  # 40%-60%
+            breadth_score = 0
+        elif positive_ratio >= 0.2:  # 20%-40%上涨
+            breadth_score = -1
+        else:  # 20%以下上涨
+            breadth_score = -2
+
+        # ========== 4. 综合评分与状态判断 ==========
+        # 短期权重30%, 长期权重50%, 市场宽度20%
+        total_score = short_term_score * 0.3 + long_term_score * 0.5 + breadth_score * 0.2
+
+        # 根据综合评分判断市场状态
+        if total_score >= 1.2:
+            # 强势牛市上升期
+            state = '牛市上升期'
+            emoji = '🚀'
+            suggestion = '积极配置,把握上涨机会'
+            recommended_position = (0.70, 0.90)
+            confidence = 80
+            phase = 'bull_rally'
+        elif total_score >= 0.5:
+            # 牛市调整/震荡期
+            state = '牛市震荡期'
+            emoji = '📈'
+            suggestion = '维持较高仓位,逢低加仓'
+            recommended_position = (0.60, 0.80)
+            confidence = 70
+            phase = 'bull_consolidation'
+        elif total_score >= -0.3:
+            # 震荡市
+            state = '震荡市'
+            emoji = '🟡'
+            suggestion = '控制仓位,高抛低吸'
+            recommended_position = (0.50, 0.70)
+            confidence = 65
+            phase = 'sideways'
+        elif total_score >= -0.8:
+            # 熊市反弹
+            state = '熊市反弹期'
+            emoji = '⚠️'
+            suggestion = '谨慎参与反弹,保留现金'
+            recommended_position = (0.40, 0.60)
+            confidence = 60
+            phase = 'bear_rally'
+        else:
+            # 熊市下跌期
+            state = '熊市下跌期'
+            emoji = '📉'
+            suggestion = '严控仓位,保留现金为主'
+            recommended_position = (0.30, 0.50)
+            confidence = 75
+            phase = 'bear_decline'
+
+        return {
+            'state': state,
+            'phase': phase,
+            'emoji': emoji,
+            'avg_change': avg_change,
+            'avg_ytd_gain': avg_ytd_gain,
+            'positive_ratio': positive_ratio,
+            'total_score': total_score,
+            'confidence': confidence,
+            'suggestion': suggestion,
+            'recommended_position': recommended_position,
+            'detail_scores': {
+                'short_term': short_term_score,
+                'long_term': long_term_score,
+                'breadth': breadth_score
+            }
+        }
+
+    def _generate_market_overview_section(self, results: dict, format_type: str) -> str:
+        """
+        生成今日市场大盘分析
+
+        Args:
+            results: 分析结果
+            format_type: 报告格式
+
+        Returns:
+            市场大盘分析文本
+        """
+        lines = []
+
+        if format_type == 'markdown':
+            lines.append("## 🔥 今日市场大盘分析")
+            lines.append("")
+        else:
+            lines.append("-" * 80)
+            lines.append("今日市场大盘分析")
+            lines.append("-" * 80)
+            lines.append("")
+
+        try:
+            # 提取核心指数数据
+            index_data = {}
+            for key in ['HS300', 'CYBZ', 'KECHUANG50', 'HKTECH']:
+                if key in results['assets'] and 'error' not in results['assets'][key]:
+                    data = results['assets'][key]
+                    hist = data.get('historical_analysis', {})
+                    index_data[key] = {
+                        'name': data.get('asset_name', key),
+                        'price': hist.get('current_price', 0),
+                        'change_pct': hist.get('current_change_pct', 0),
+                        'direction': data.get('comprehensive_judgment', {}).get('direction', 'N/A')
+                    }
+
+            # 生成市场概况
+            if format_type == 'markdown':
+                lines.append("### 📈 核心指数表现")
+                lines.append("")
+                lines.append("| 指数 | 最新价格 | 涨跌幅 | 方向判断 |")
+                lines.append("|------|----------|--------|----------|")
+
+                for key in ['HS300', 'CYBZ', 'KECHUANG50', 'HKTECH']:
+                    if key in index_data:
+                        idx = index_data[key]
+                        change_emoji = "🔴" if idx['change_pct'] >= 0 else "🟢"
+                        direction_map = {
+                            '强烈看多': '✅✅',
+                            '看多': '✅',
+                            '中性偏多': '⚖️',
+                            '中性': '⚖️',
+                            '看空': '🔴'
+                        }
+                        direction_emoji = direction_map.get(idx['direction'], '')
+                        lines.append(f"| {idx['name']} | {idx['price']:.2f} | {idx['change_pct']:+.2f}% {change_emoji} | {idx['direction']}{direction_emoji} |")
+
+                lines.append("")
+
+            # 市场状态综合判断（增强版）
+            if index_data:
+                # 准备市场数据用于状态分析
+                market_data = {
+                    'indices': {
+                        key: {
+                            'current': data['price'],
+                            'change_pct': data['change_pct']
+                        }
+                        for key, data in index_data.items()
+                    }
+                }
+
+                # 调用市场状态分析
+                market_state = self.analyze_market_state(market_data)
+
+                if format_type == 'markdown':
+                    lines.append("### 🌍 市场环境与仓位策略")
+                    lines.append("")
+                    lines.append(f"**当前市场状态**: {market_state['emoji']} {market_state['state']}")
+                    lines.append("")
+                    lines.append("**多维度分析**:")
+                    lines.append("")
+                    lines.append("| 维度 | 评分 | 数据 | 说明 |")
+                    lines.append("|------|------|------|------|")
+
+                    # 短期趋势
+                    st_score = market_state['detail_scores']['short_term']
+                    st_emoji = "🚀" if st_score >= 1 else "📈" if st_score > 0 else "➡️" if st_score == 0 else "📉"
+                    st_desc = "强势" if abs(st_score) == 2 else "温和" if abs(st_score) == 1 else "震荡"
+                    lines.append(f"| 短期趋势 | {st_score:+.1f} | 当日均涨{market_state['avg_change']:+.2f}% | {st_emoji} {st_desc} |")
+
+                    # 长期趋势
+                    lt_score = market_state['detail_scores']['long_term']
+                    lt_emoji = "🚀" if lt_score >= 1 else "📈" if lt_score > 0 else "➡️" if lt_score == 0 else "📉"
+                    lt_desc = "牛市" if lt_score >= 1 else "震荡" if lt_score == 0 else "熊市"
+                    lines.append(f"| 长期趋势 | {lt_score:+.1f} | 年内累计{market_state['avg_ytd_gain']*100:+.1f}% | {lt_emoji} {lt_desc} |")
+
+                    # 市场宽度
+                    br_score = market_state['detail_scores']['breadth']
+                    br_emoji = "✅" if br_score >= 1 else "🟡" if br_score == 0 else "❌"
+                    br_desc = "普涨" if br_score >= 1 else "分化" if br_score == 0 else "普跌"
+                    lines.append(f"| 市场宽度 | {br_score:+.1f} | {market_state['positive_ratio']*100:.0f}%指数上涨 | {br_emoji} {br_desc} |")
+
+                    # 综合评分
+                    lines.append(f"| **综合评分** | **{market_state['total_score']:.2f}** | 范围:-2到+2 | 置信度: {market_state['confidence']}% |")
+                    lines.append("")
+
+                    # 战略仓位建议
+                    pos_range = market_state['recommended_position']
+                    lines.append("**战略仓位建议** (按周调整):")
+                    lines.append("")
+                    lines.append(f"- **建议仓位**: {int(pos_range[0]*10)}-{int(pos_range[1]*10)}成 ({pos_range[0]*100:.0f}%-{pos_range[1]*100:.0f}%)")
+                    lines.append(f"- **现金储备**: {int((1-pos_range[1])*10)}-{int((1-pos_range[0])*10)}成 ({(1-pos_range[1])*100:.0f}%-{(1-pos_range[0])*100:.0f}%)")
+                    lines.append(f"- **操作策略**: {market_state['suggestion']}")
+                    lines.append(f"- **调整周期**: 每周复盘后调整")
+                    lines.append("")
+
+                    # 动态仓位参考
+                    lines.append("**动态仓位参考**:")
+                    lines.append("- 🚀 牛市上升期: 7-9成")
+                    lines.append("- 📈 牛市震荡期: 6-8成")
+                    lines.append("- 🟡 震荡市: 5-7成")
+                    lines.append("- ⚠️ 熊市反弹期: 4-6成")
+                    lines.append("- 📉 熊市下跌期: 3-5成")
+
+                    # 标注当前状态
+                    phase_marks = {
+                        'bull_rally': ' ← 当前',
+                        'bull_consolidation': ' ← 当前',
+                        'sideways': ' ← 当前',
+                        'bear_rally': ' ← 当前',
+                        'bear_decline': ' ← 当前'
+                    }
+                    if market_state['phase'] in phase_marks:
+                        # 找到对应行并添加标记
+                        for i in range(len(lines) - 5, len(lines)):
+                            if market_state['state'] in lines[i]:
+                                lines[i] += phase_marks[market_state['phase']]
+                                break
+
+                    lines.append("")
+
+            lines.append("---")
+            lines.append("")
+
+        except Exception as e:
+            logger.error(f"生成市场大盘分析失败: {e}")
+            if format_type == 'markdown':
+                lines.append("⚠️ 市场大盘分析生成失败")
+                lines.append("")
+                lines.append("---")
+                lines.append("")
 
         return '\n'.join(lines)
 
