@@ -552,6 +552,246 @@ class DailyPositionReportGenerator:
             logger.warning("未找到持仓文件，使用默认持仓")
             return []
 
+    def _generate_toc(self) -> List[str]:
+        """
+        生成报告目录
+
+        Returns:
+            目录内容列表
+        """
+        toc_lines = []
+        toc_lines.append("## 📑 目录")
+        toc_lines.append("")
+        toc_lines.append("1. [🎯 持仓建议](#-持仓建议)")
+        toc_lines.append("2. [🔥 今日市场表现](#-今日市场表现)")
+        toc_lines.append("   - 📊 市场数据")
+        toc_lines.append("   - 📈 技术形态判断")
+        toc_lines.append("   - 🌍 市场环境判断")
+        toc_lines.append("3. [🎯 核心仓位目标](#-核心仓位目标)")
+        toc_lines.append("4. [📊 深度盘面分析](#-深度盘面分析)")
+        toc_lines.append("   - 🔥 板块轮动追踪")
+        toc_lines.append("   - 🌡️ 市场情绪温度计")
+        toc_lines.append("   - 📈 量价关系深度")
+        toc_lines.append("5. [⚠️ 持仓数据](#-持仓数据)")
+        toc_lines.append("6. [🎯 收益表现与目标达成](#-收益表现与目标达成)")
+        toc_lines.append("7. [🏛️ 机构级核心指标分析](#-机构级核心指标分析)")
+        toc_lines.append("8. [📖 投资策略原则](#-投资策略原则)")
+        toc_lines.append("")
+        toc_lines.append("---")
+        toc_lines.append("")
+        return toc_lines
+
+    def _classify_position_advice(
+        self,
+        position: Dict,
+        market_state: Dict,
+        all_results: Dict = None
+    ) -> str:
+        """
+        分类持仓建议（减仓/持有/观望）
+
+        Args:
+            position: 持仓信息
+            market_state: 市场状态
+            all_results: 所有资产的分析结果
+
+        Returns:
+            建议类型: 'reduce', 'hold', 'wait'
+        """
+        asset_key = position.get('asset_key', '')
+        current_ratio = position.get('position_ratio', 0)
+
+        # 如果没有分析结果，默认观望
+        if not all_results or asset_key not in all_results:
+            return 'wait'
+
+        asset_result = all_results[asset_key]
+        if 'error' in asset_result:
+            return 'wait'
+
+        # 获取关键指标
+        direction = asset_result.get('direction', '中性')
+        prob_20d = asset_result.get('probability_20d', 50)
+        risk_level = asset_result.get('risk_level', '未知')
+
+        # 判断逻辑
+        # 1. 强烈看空 或 历史概率偏空 -> 减仓
+        if direction in ['看空', '强烈看空'] or prob_20d < 40:
+            return 'reduce'
+
+        # 2. 看多/强烈看多 且 低风险 -> 持有
+        if direction in ['看多', '强烈看多', '中性偏多'] and risk_level == '低风险':
+            return 'hold'
+
+        # 3. 其他情况 -> 观望
+        return 'wait'
+
+    def _generate_position_advice(
+        self,
+        positions: List[Dict],
+        market_state: Dict,
+        all_results: Dict = None
+    ) -> List[str]:
+        """
+        生成持仓建议章节
+
+        Args:
+            positions: 持仓列表
+            market_state: 市场状态
+            all_results: 所有资产的分析结果
+
+        Returns:
+            持仓建议内容列表
+        """
+        advice_lines = []
+
+        # 标题
+        advice_lines.append("## 🎯 持仓建议")
+        advice_lines.append("")
+
+        # 当前操作建议
+        advice_lines.append("### 💡 当前操作建议")
+        advice_lines.append("")
+        advice_lines.append(f"**市场状态**: {market_state['emoji']} {market_state['state']}")
+
+        min_pos, max_pos = market_state['recommended_position']
+        advice_lines.append(f"**建议仓位**: {int(min_pos*10)}-{int(max_pos*10)}成 ({min_pos*100:.0f}%-{max_pos*100:.0f}%)")
+        advice_lines.append(f"**操作策略**: {market_state['suggestion']}")
+        advice_lines.append("")
+
+        # 如果没有持仓数据，提示用户
+        if not positions or len(positions) == 0:
+            advice_lines.append("### ⚠️ 未找到持仓数据")
+            advice_lines.append("")
+            advice_lines.append("请提供 `positions.json` 文件以获取个性化持仓建议。")
+            advice_lines.append("")
+            advice_lines.append("---")
+            advice_lines.append("")
+            return advice_lines
+
+        # 计算当前总仓位
+        current_total_position = sum(p.get('position_ratio', 0) for p in positions)
+
+        # 具体建议
+        advice_lines.append("### 📊 具体建议")
+        advice_lines.append("")
+
+        # 分类持仓
+        reduce_positions = []
+        hold_positions = []
+        wait_positions = []
+
+        for position in positions:
+            advice_type = self._classify_position_advice(position, market_state, all_results)
+            if advice_type == 'reduce':
+                reduce_positions.append(position)
+            elif advice_type == 'hold':
+                hold_positions.append(position)
+            else:
+                wait_positions.append(position)
+
+        # 建议减仓/观望
+        if reduce_positions:
+            advice_lines.append("#### 🔴 建议减仓/观望")
+            advice_lines.append("")
+            for pos in reduce_positions:
+                asset_name = pos.get('asset_name', '未知')
+                current_ratio = pos.get('position_ratio', 0)
+                asset_key = pos.get('asset_key', '')
+
+                # 获取具体原因
+                reason = "技术面偏弱"
+                if all_results and asset_key in all_results:
+                    asset_result = all_results[asset_key]
+                    if 'error' not in asset_result:
+                        prob_20d = asset_result.get('probability_20d', 50)
+                        direction = asset_result.get('direction', '中性')
+                        if prob_20d < 40:
+                            reason = f"历史概率偏空 ({prob_20d:.1f}%)"
+                        elif direction in ['看空', '强烈看空']:
+                            reason = f"方向判断{direction}"
+
+                # 建议减至的比例（减少20%-30%）
+                suggested_ratio = max(current_ratio * 0.7, 0.05)  # 至少保留5%
+                advice_lines.append(
+                    f"- **{asset_name}** (当前{current_ratio*100:.0f}%): "
+                    f"建议减至{suggested_ratio*100:.0f}%，{reason}"
+                )
+            advice_lines.append("")
+
+        # 可以持有
+        if hold_positions:
+            advice_lines.append("#### 🟢 可以持有")
+            advice_lines.append("")
+            for pos in hold_positions:
+                asset_name = pos.get('asset_name', '未知')
+                current_ratio = pos.get('position_ratio', 0)
+                asset_key = pos.get('asset_key', '')
+
+                # 获取具体原因
+                reason = "技术面向好"
+                if all_results and asset_key in all_results:
+                    asset_result = all_results[asset_key]
+                    if 'error' not in asset_result:
+                        direction = asset_result.get('direction', '中性')
+                        if direction in ['看多', '强烈看多']:
+                            reason = f"{direction}，可以持有"
+
+                advice_lines.append(
+                    f"- **{asset_name}** (当前{current_ratio*100:.0f}%): "
+                    f"维持现有仓位，{reason}"
+                )
+            advice_lines.append("")
+
+        # 观望等待
+        if wait_positions:
+            advice_lines.append("#### ⚪ 观望等待")
+            advice_lines.append("")
+            for pos in wait_positions:
+                asset_name = pos.get('asset_name', '未知')
+                current_ratio = pos.get('position_ratio', 0)
+                advice_lines.append(
+                    f"- **{asset_name}** (当前{current_ratio*100:.0f}%): "
+                    f"维持现有仓位，等待方向明确"
+                )
+            advice_lines.append("")
+
+        # 风险提醒
+        advice_lines.append("### ⚠️ 风险提醒")
+        advice_lines.append("")
+
+        # 判断是否需要调整仓位
+        if current_total_position > max_pos:
+            advice_lines.append(
+                f"- 当前总仓位: **{current_total_position*100:.0f}%**，"
+                f"建议降至 **{min_pos*100:.0f}%-{max_pos*100:.0f}%**"
+            )
+        elif current_total_position < min_pos:
+            advice_lines.append(
+                f"- 当前总仓位: **{current_total_position*100:.0f}%**，"
+                f"可适度加仓至 **{min_pos*100:.0f}%-{max_pos*100:.0f}%**"
+            )
+        else:
+            advice_lines.append(
+                f"- 当前总仓位: **{current_total_position*100:.0f}%**，"
+                f"处于合理区间 ✅"
+            )
+
+        cash_ratio = 1 - current_total_position
+        suggested_cash_min = 1 - max_pos
+        suggested_cash_max = 1 - min_pos
+        advice_lines.append(
+            f"- 现金储备: **{cash_ratio*100:.0f}%**，"
+            f"建议保持 **{suggested_cash_min*100:.0f}%-{suggested_cash_max*100:.0f}%**"
+        )
+        advice_lines.append("- 调仓时机: 反弹时减仓，不要在低位恐慌卖出")
+        advice_lines.append("")
+
+        advice_lines.append("---")
+        advice_lines.append("")
+
+        return advice_lines
+
     def identify_market_state(self, market_data: Dict) -> Dict:
         """
         识别市场状态(牛市/熊市/震荡的细分阶段)
@@ -1523,11 +1763,19 @@ class DailyPositionReportGenerator:
         lines.append("---")
         lines.append("")
 
+        # ========== 1. 添加目录 ==========
+        toc_lines = self._generate_toc()
+        lines.extend(toc_lines)
+
+        # ========== 2. 持仓建议（需要market_state，稍后填充） ==========
+        # 注意: 持仓建议需要market_state，这里先占位
+        position_advice_placeholder_index = len(lines)
+
         # ========== 核心仓位目标(最优先,基于市场技术面分析) ==========
         # 注意: 这里先生成核心仓位目标框架,market_state会在后面市场数据分析后更新
         core_position_lines = []  # 先占位,稍后填充
 
-        # ========== 第一部分: 市场数据 ==========
+        # ========== 3. 今日市场表现 ==========
         lines.append(f"## 🔥 今日市场表现({date})")
         lines.append("")
 
@@ -1609,8 +1857,20 @@ class DailyPositionReportGenerator:
             lines.append("")
 
         # ========== 新增: 市场状态识别 ==========
+        market_state = None  # 先初始化
         if market_data and market_data.get('indices'):
             market_state = self.identify_market_state(market_data)
+
+            # ========== 生成持仓建议（插入到预留位置） ==========
+            if market_state.get('state') != '未知':
+                # 生成持仓建议
+                position_advice_lines = self._generate_position_advice(
+                    positions=positions,
+                    market_state=market_state,
+                    all_results=None  # 暂时不传分析结果，后续可优化
+                )
+                # 插入到预留位置
+                lines[position_advice_placeholder_index:position_advice_placeholder_index] = position_advice_lines
 
             # ========== 立即生成核心仓位目标(准备插入到最前面) ==========
             if market_state.get('state') != '未知':
@@ -2226,16 +2486,19 @@ class DailyPositionReportGenerator:
             lines.append("---")
             lines.append("")
 
-        # ========== 第七部分: 投资原则 ==========
-        lines.append("## 📖 投资策略原则回顾")
+        # ========== 第七部分: 投资原则（改为引用） ==========
+        lines.append("## 📖 投资策略原则")
         lines.append("")
-        lines.append("### 核心原则")
+        lines.append("详细的投资纪律和策略原则，请参考：")
+        lines.append("👉 [投资纪律手册](../docs/投资纪律手册.md)")
         lines.append("")
-        lines.append("1. **仓位管理**: 滚动保持5-9成,留至少1成应对黑天鹅 ✅")
-        lines.append("2. **标的选择**: 集中投资3-5只,单一标的≤20%")
-        lines.append("3. **投资节奏**: 长线底仓+波段加减仓 ✅")
-        lines.append("4. **收益目标**: 年化15%,穿越牛熊 ✅")
-        lines.append("5. **纪律执行**: 先制定方案→执行→迭代,不情绪化操作 ✅")
+        lines.append("**快速提醒**:")
+        lines.append("")
+        lines.append("- ✅ **仓位管理**: 保持5-9成，留至少1成应对黑天鹅")
+        lines.append("- ✅ **标的选择**: 集中3-5只，单一标的≤20%")
+        lines.append("- ✅ **投资节奏**: 长线底仓+波段加减仓")
+        lines.append("- ✅ **收益目标**: 年化15%，穿越牛熊")
+        lines.append("- ✅ **纪律执行**: 先制定方案→执行→迭代，不情绪化操作")
         lines.append("")
 
         # 使用配置获取目标描述
@@ -2247,7 +2510,7 @@ class DailyPositionReportGenerator:
         else:
             final_target_text = "最终目标"
 
-        lines.append("### 三大目标")
+        lines.append("**三大目标**:")
         lines.append("")
         lines.append(f"1. 资金达到{final_target_text}")
         lines.append("2. 跑赢沪深300(从2025.1.1起)")
