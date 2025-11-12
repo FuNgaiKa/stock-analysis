@@ -350,17 +350,6 @@ class UnifiedAnalysisRunner:
                     lines.append("---")
                     lines.append("")
 
-        # 生成汇总表格
-        if format_type == 'markdown':
-            summary_table = self._generate_summary_table(results)
-            if summary_table:
-                lines.append("## 📊 标的汇总")
-                lines.append("")
-                lines.append(summary_table)
-                lines.append("")
-            lines.append("---")
-            lines.append("")
-
         # 分组整理报告数据
         comprehensive_report = {'assets': {}}
         sector_reports = []
