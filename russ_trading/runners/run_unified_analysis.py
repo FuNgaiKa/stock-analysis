@@ -862,6 +862,8 @@ class UnifiedAnalysisRunner:
                 }
 
                 advice = self.investment_advisor.generate_asset_advice(asset_data)
+                # 添加方向判断字段
+                advice['direction'] = data.get('comprehensive_judgment', {}).get('direction', '中性')
                 assets_advice.append(advice)
 
             # 生成投资组合建议
@@ -911,86 +913,60 @@ class UnifiedAnalysisRunner:
         }
 
     def _format_markdown_advice(self, assets_advice: list, portfolio_advice: dict) -> str:
-        """格式化Markdown投资建议"""
+        """格式化Markdown投资建议 - 简化版，直接按方向判断归类"""
         lines = []
 
-        # 强烈建议参与
-        strong_recommendations = [a for a in assets_advice if a['score'] >= 80]
-        if strong_recommendations:
-            lines.append("## 🎯 强烈建议参与（⭐⭐⭐）")
+        # 从results中提取所有资产的方向判断
+        assets_by_direction = {
+            '强烈看多': [],
+            '看多': [],
+            '中性偏多': [],
+            '中性': [],
+            '看空': []
+        }
+
+        # 遍历所有资产，按方向分类
+        for advice in assets_advice:
+            asset_name = advice['asset_name']
+            # 从asset_data中获取方向判断
+            direction = advice.get('direction', '中性')
+            if direction in assets_by_direction:
+                assets_by_direction[direction].append(asset_name)
+
+        # 1. 强烈看多 - 建议积极配置
+        if assets_by_direction['强烈看多']:
+            lines.append("### ✅✅ 强烈看多 (建议积极配置)")
+            lines.append("")
+            lines.append("- " + "、".join(assets_by_direction['强烈看多']))
             lines.append("")
 
-            for i, advice in enumerate(strong_recommendations, 1):
-                lines.append(f"### {i}. {advice['asset_name']}")
-                lines.append(f"- **当前状态**: {advice['current_state']}")
-                lines.append(f"- **技术位置**: {advice['technical_position']}")
-                lines.append(f"- **近期表现**: {advice['recent_performance']}")
-                lines.append(f"- **评分**: {advice['rating']}")
-                lines.append(f"- **建议**: {advice['action']}，{advice['target_price']}" if advice['target_price'] else f"- **建议**: {advice['action']}")
-                lines.append("")
-
-        # 谨慎参与
-        moderate_recommendations = [a for a in assets_advice if 65 <= a['score'] < 80]
-        if moderate_recommendations:
-            lines.append("## 🟡 谨慎参与（⭐⭐）")
+        # 2. 看多 - 可以适度配置
+        if assets_by_direction['看多']:
+            lines.append("### ✅ 看多 (可以适度配置)")
+            lines.append("")
+            lines.append("- " + "、".join(assets_by_direction['看多']))
             lines.append("")
 
-            for i, advice in enumerate(moderate_recommendations, 1):
-                lines.append(f"### {i + len(strong_recommendations)}. {advice['asset_name']}")
-                lines.append(f"- **当前状态**: {advice['current_state']}")
-                lines.append(f"- **技术位置**: {advice['technical_position']}")
-                lines.append(f"- **近期表现**: {advice['recent_performance']}")
-                lines.append(f"- **评分**: {advice['rating']}")
-                lines.append(f"- **建议**: {advice['position_suggestion']}")
-                lines.append("")
-
-        # 暂不建议参与
-        avoid_recommendations = [a for a in assets_advice if a['score'] < 65]
-        if avoid_recommendations:
-            lines.append("## ❌ 暂不建议参与")
+        # 3. 中性偏多 - 观望或少量配置
+        if assets_by_direction['中性偏多']:
+            lines.append("### ⚖️ 中性偏多 (观望或少量配置)")
             lines.append("")
-            lines.append("以下标的技术面偏弱，建议等待更好时机：")
-            lines.append("")
-            avoid_names = [a['asset_name'] for a in avoid_recommendations[:10]]
-            lines.append(f"- {', '.join(avoid_names)}")
-            if len(avoid_recommendations) > 10:
-                lines.append(f"- 等{len(avoid_recommendations) - 10}个标的")
+            lines.append("- " + "、".join(assets_by_direction['中性偏多']))
             lines.append("")
 
-        # 具体操作建议
-        lines.append("## 💡 具体操作建议")
-        lines.append("")
-
-        lines.append("### 优先级排序：")
-        for i, advice in enumerate(portfolio_advice['priority_ranking'][:5], 1):
-            lines.append(f"{i}. {advice['asset_name']} - {advice['advice_text']}")
-        lines.append("")
-
-        # 仓位配置建议
-        if portfolio_advice['allocation_suggestions']:
-            lines.append("### 仓位配置建议：")
+        # 4. 中性 - 观望为主
+        if assets_by_direction['中性']:
+            lines.append("### ⚪ 中性 (观望为主)")
+            lines.append("")
+            lines.append("- " + "、".join(assets_by_direction['中性']))
             lines.append("")
 
-            aggressive = portfolio_advice['allocation_suggestions']['aggressive']
-            if aggressive:
-                lines.append("- **激进策略**: " + " + ".join([f"{k} {v}" for k, v in aggressive.items()]))
-
-            conservative = portfolio_advice['allocation_suggestions']['conservative']
-            if conservative:
-                lines.append("- **稳健策略**: " + " + ".join([f"{k} {v}" for k, v in conservative.items()]))
+        # 5. 看空 - 暂不建议参与
+        if assets_by_direction['看空']:
+            lines.append("### 🔴 看空 (暂不建议参与)")
             lines.append("")
-
-        # 关键时点
-        if portfolio_advice['key_events']:
-            lines.append("### 关键时点：")
+            lines.append("- " + "、".join(assets_by_direction['看空']))
             lines.append("")
-            for event in portfolio_advice['key_events']:
-                lines.append(f"- {event}")
-            lines.append("")
-
-        # 总结
-        lines.append(f"**总结**: {portfolio_advice['summary']}")
-        lines.append("")
 
         return '\n'.join(lines)
 
