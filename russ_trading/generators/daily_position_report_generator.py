@@ -1783,37 +1783,85 @@ class DailyPositionReportGenerator:
             lines.append("")
 
             # 技术信号（如果有）
-            if market_data.get('technical'):
+            if HAS_ENHANCED_MODULES and self.technical_analyzer and market_data.get('technical'):
                 lines.append("**技术信号**:")
-                lines.append("- MACD: [状态简述]")
-                lines.append("- RSI: [状态简述]")
+
+                # 提取主要指数的技术指标
+                macd_values = []
+                rsi_values = []
+                technical_data = market_data['technical']
+
+                for idx_key, idx_name in [('HS300', '沪深300'), ('CYBZ', '创业板'), ('KC50', '科创50'), ('HSTECH', '恒科')]:
+                    if idx_key in technical_data:
+                        df = technical_data[idx_key]
+                        analysis = self.technical_analyzer.analyze_index(idx_name, df)
+
+                        if analysis.get('has_data'):
+                            # 提取MACD和RSI
+                            if 'macd' in analysis:
+                                macd_val = analysis['macd'].get('macd', 0)
+                                macd_values.append((idx_name, macd_val))
+                            if 'rsi' in analysis:
+                                rsi_val = analysis['rsi'].get('rsi', 0)
+                                rsi_values.append((idx_name, rsi_val))
+
+                # 显示MACD
+                if macd_values:
+                    macd_status = "多头" if all(v > 0 for _, v in macd_values) else "空头" if all(v < 0 for _, v in macd_values) else "分化"
+                    macd_str = "，".join([f"{name} {val:.2f}" for name, val in macd_values[:3]])  # 只显示前3个
+                    lines.append(f"- MACD: {macd_status}（{macd_str}）")
+
+                # 显示RSI
+                if rsi_values:
+                    avg_rsi = sum(v for _, v in rsi_values) / len(rsi_values)
+                    rsi_status = "超买" if avg_rsi > 70 else "超卖" if avg_rsi < 30 else "正常区间"
+                    rsi_str = "，".join([f"{val:.1f}" for _, val in rsi_values[:3]])  # 只显示前3个
+                    lines.append(f"- RSI: {rsi_status}（{rsi_str}）")
+
                 lines.append("")
 
         # 明天操作
         lines.append("### 🎯 明天操作")
         lines.append("")
+
+        # 计算当前仓位(需要在整个方法中使用,所以提前计算)
+        current_position = None
+        if positions:
+            total_value = sum(p.get('market_value', 0) for p in positions)
+            if total_value > 0:
+                position_value = sum(p.get('market_value', 0) for p in positions
+                                   if p.get('symbol') != 'CASH')
+                current_position = position_value / total_value
+
         if market_state:
             min_pos, max_pos = market_state['recommended_position']
             lines.append(f"**建议仓位**: {int(min_pos*10)}-{int(max_pos*10)}成 ({min_pos*100:.0f}%-{max_pos*100:.0f}%)")
 
-            # 计算当前仓位
-            current_position = 0
-            if positions:
-                total_value = sum(p.get('market_value', 0) for p in positions)
-                if total_value > 0:
-                    position_value = sum(p.get('market_value', 0) for p in positions
-                                       if p.get('symbol') != 'CASH')
-                    current_position = position_value / total_value
+            if current_position is not None:
+                lines.append(f"**当前仓位**: {current_position*100:.0f}% "
+                            f"{'✅ **处于合理区间**' if min_pos <= current_position <= max_pos else '⚠️ **需要调整**'}")
+                lines.append(f"**现金储备**: {(1-current_position)*100:.0f}% "
+                            f"{'✅ 符合20%-40%目标' if 0.2 <= (1-current_position) <= 0.4 else '⚠️ 需调整'}")
+            else:
+                lines.append(f"**当前仓位**: 无持仓数据")
+                lines.append(f"**现金储备**: --")
 
-            lines.append(f"**当前仓位**: {current_position*100:.0f}% "
-                        f"{'✅ **处于合理区间**' if min_pos <= current_position <= max_pos else '⚠️ **需要调整**'}")
-            lines.append(f"**现金储备**: {(1-current_position)*100:.0f}% "
-                        f"{'✅' if 0.1 <= (1-current_position) <= 0.4 else '⚠️'}")
             lines.append("")
             lines.append("**操作策略**:")
             lines.append(f"- ✅ **{market_state['suggestion']}**")
-            lines.append("- ⚠️ [具体操作建议]")
-            lines.append("- 💡 [注意事项]")
+
+            # 根据持仓情况给出具体建议
+            if current_position is not None and market_state:
+                if current_position < min_pos:
+                    lines.append(f"- ⚠️ 仓位偏低,可考虑加仓至{int(min_pos*10)}成")
+                elif current_position > max_pos:
+                    lines.append(f"- ⚠️ 仓位偏高,建议减仓至{int(max_pos*10)}成")
+                else:
+                    lines.append("- ⚠️ 维持现有仓位,等待市场明确方向")
+            else:
+                lines.append("- ⚠️ [需要持仓数据才能给出具体建议]")
+
+            lines.append("- 💡 反弹时考虑减仓,不要低位恐慌卖出")
             lines.append("")
 
         # 依据
@@ -1865,61 +1913,37 @@ class DailyPositionReportGenerator:
         lines.append("---")
         lines.append("")
 
-        # ========== 3. 动态仓位策略参考 ==========
-        lines.append("## 🎯 动态仓位策略参考")
-        lines.append("")
-        lines.append("**根据市场状态的仓位指引**:")
-        lines.append("")
-        lines.append("| 市场状态 | 建议仓位 | 现金储备 | 操作策略 |")
-        lines.append("|---------|---------|----------|----------|")
-        lines.append("| 🚀 牛市上升期 | 7-9成 | 1-3成 | 积极进攻，把握上涨 |")
-
-        # 标记当前状态
-        current_marker = " ← 当前" if market_state and market_state['state'] == '牛市震荡期' else ""
-        lines.append(f"| 📈 **牛市震荡期** | **6-8成**{current_marker} | **2-4成** | 维持仓位，逢低加仓 |")
-
-        lines.append("| 🟡 震荡市 | 5-7成 | 3-5成 | 控制仓位，高抛低吸 |")
-        lines.append("| ⚠️ 熊市反弹期 | 4-6成 | 4-6成 | 谨慎参与，保留现金 |")
-        lines.append("| 📉 熊市下跌期 | 3-5成 | 5-7成 | 严控仓位，等待机会 |")
-        lines.append("")
-
-        if market_state:
-            min_pos, max_pos = market_state['recommended_position']
-            current_position_pct = current_position * 100 if 'current_position' in locals() else 0
-            lines.append(f"**当前执行**: {current_position_pct:.0f}%仓位符合{market_state['state']}的"
-                        f"{int(min_pos*10)}-{int(max_pos*10)}成标准 ✅")
-        lines.append("")
-        lines.append("---")
-        lines.append("")
-
-        # ========== 4. 风险预警 ==========
+        # ========== 3. 风险预警 ==========
         lines.append("## 🚨 风险预警")
         lines.append("")
 
         # 检查各项风险指标
         has_warning = False
 
-        # 检查仓位
-        if 'current_position' in locals():
-            if market_state:
-                min_pos, max_pos = market_state['recommended_position']
-                if not (min_pos <= current_position <= max_pos):
-                    has_warning = True
-                    lines.append("### 🟡 仓位预警")
-                    lines.append("")
-                    if current_position > max_pos:
-                        lines.append(f"- ⚠️ **仓位过高**: 当前{current_position*100:.0f}%，建议降至{int(max_pos*10)}成以下")
-                    else:
-                        lines.append(f"- ⚠️ **仓位过低**: 当前{current_position*100:.0f}%，可考虑加仓至{int(min_pos*10)}成以上")
-                    lines.append("")
+        # 检查仓位(只有在有持仓数据时才检查)
+        if current_position is not None and market_state:
+            min_pos, max_pos = market_state['recommended_position']
+            if not (min_pos <= current_position <= max_pos):
+                has_warning = True
+                lines.append("### 🟡 仓位预警")
+                lines.append("")
+                if current_position > max_pos:
+                    lines.append(f"- ⚠️ **仓位过高**: 当前{current_position*100:.0f}%，建议降至{int(max_pos*10)}成以下")
+                else:
+                    lines.append(f"- ⚠️ **仓位过低**: 当前{current_position*100:.0f}%，可考虑加仓至{int(min_pos*10)}成以上")
+                lines.append("")
 
         if not has_warning:
             lines.append("### 🟢 正常监控（无预警）")
             lines.append("")
-            lines.append("- ✅ 仓位健康：处于合理区间")
-            lines.append("- ✅ 现金充足：应对风险")
-            lines.append("- ✅ 集中度可控：单一标的最高不超标")
-            lines.append("- ✅ 风险承受：积极型风格，可承受20-30%回调")
+            if current_position is not None:
+                lines.append("- ✅ 仓位健康：处于合理区间")
+                lines.append("- ✅ 现金充足：应对风险")
+                lines.append("- ✅ 集中度可控：单一标的最高不超标")
+                lines.append("- ✅ 风险承受：积极型风格，可承受20-30%回调")
+            else:
+                lines.append("- ℹ️ 无持仓数据，无法进行风险评估")
+                lines.append("- 💡 建议：提供持仓数据以获得完整风险分析")
             lines.append("")
 
         lines.append("**下周关注**:")
