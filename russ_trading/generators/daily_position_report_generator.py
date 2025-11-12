@@ -1720,11 +1720,246 @@ class DailyPositionReportGenerator:
 
         return result
 
+    def _generate_simplified_report(
+        self,
+        date: str,
+        positions: List[Dict] = None,
+        market_data: Dict = None
+    ) -> str:
+        """
+        生成简化版持仓调整报告(200行左右)
+
+        结构:
+        1. 🎯 今日结论 (市场状态 + 明天操作 + 依据)
+        2. 💼 持仓建议 (个性化调仓方案)
+        3. 🎯 动态仓位策略参考
+        4. 🚨 风险预警
+
+        注意: 市场表现和机构级指标已在"市场洞察报告"中展示,此处不重复
+        """
+        logger.info(f"生成简化版持仓调整报告 ({date})...")
+
+        lines = []
+
+        # ========== 标题 ==========
+        lines.append("# 📊 Russ个人持仓调整策略报告")
+        lines.append("")
+        lines.append(f"**生成时间**: {date}")
+        lines.append("**报告类型**: 日度持仓调整方案（精简版）")
+        lines.append("**投资风格**: 长线底仓+波段加减仓，年化15%目标")
+        lines.append("")
+        lines.append("---")
+        lines.append("")
+
+        # ========== 1. 今日结论 ==========
+        lines.append("## 🎯 今日结论")
+        lines.append("")
+
+        # 识别市场状态
+        market_state = None
+        if market_data and market_data.get('indices'):
+            market_state = self.identify_market_state(market_data)
+
+        # 市场状态显示
+        if market_state:
+            lines.append("### 📊 今天盘面")
+            lines.append("")
+            lines.append(f"**市场状态**: {market_state['emoji']} {market_state['state']}（置信度{market_state['confidence']}%）")
+            lines.append("")
+
+            # 核心指数表现（简化版，只显示数据，不要详细技术分析）
+            lines.append("**核心指数表现**:")
+            indices = market_data.get('indices', {})
+            for idx_key, idx_name in [('HS300', '沪深300'), ('CYBZ', '创业板指'),
+                                      ('KC50ETF', '科创50'), ('HSTECH', '恒生科技')]:
+                if idx_key in indices:
+                    idx = indices[idx_key]
+                    emoji = "📈" if idx['change_pct'] >= 0 else "📉"
+                    trend = "小幅上涨" if 0 < idx['change_pct'] < 1 else \
+                            "大幅上涨" if idx['change_pct'] >= 1 else \
+                            "小幅下跌" if -1 < idx['change_pct'] < 0 else \
+                            "大幅下跌" if idx['change_pct'] <= -1 else "平盘"
+                    lines.append(f"- {idx_name}: {idx['current']:.2f} ({idx['change_pct']:+.2f}% {emoji}) {trend}")
+            lines.append("")
+
+            # 技术信号（如果有）
+            if market_data.get('technical'):
+                lines.append("**技术信号**:")
+                lines.append("- MACD: [状态简述]")
+                lines.append("- RSI: [状态简述]")
+                lines.append("")
+
+        # 明天操作
+        lines.append("### 🎯 明天操作")
+        lines.append("")
+        if market_state:
+            min_pos, max_pos = market_state['recommended_position']
+            lines.append(f"**建议仓位**: {int(min_pos*10)}-{int(max_pos*10)}成 ({min_pos*100:.0f}%-{max_pos*100:.0f}%)")
+
+            # 计算当前仓位
+            current_position = 0
+            if positions:
+                total_value = sum(p.get('market_value', 0) for p in positions)
+                if total_value > 0:
+                    position_value = sum(p.get('market_value', 0) for p in positions
+                                       if p.get('symbol') != 'CASH')
+                    current_position = position_value / total_value
+
+            lines.append(f"**当前仓位**: {current_position*100:.0f}% "
+                        f"{'✅ **处于合理区间**' if min_pos <= current_position <= max_pos else '⚠️ **需要调整**'}")
+            lines.append(f"**现金储备**: {(1-current_position)*100:.0f}% "
+                        f"{'✅' if 0.1 <= (1-current_position) <= 0.4 else '⚠️'}")
+            lines.append("")
+            lines.append("**操作策略**:")
+            lines.append(f"- ✅ **{market_state['suggestion']}**")
+            lines.append("- ⚠️ [具体操作建议]")
+            lines.append("- 💡 [注意事项]")
+            lines.append("")
+
+        # 依据
+        lines.append("### 📋 依据")
+        lines.append("")
+        if market_state:
+            scores = market_state.get('detail_scores', {})
+            lines.append("#### 长期趋势 ✅")
+            lines.append(f"- 年内累计涨幅: +{market_state['avg_ytd_gain']:.1f}% "
+                        f"{'🚀 **强势牛市**' if market_state['avg_ytd_gain'] > 30 else '📈 **震荡上行**'}")
+            lines.append(f"- 长期评分: {scores.get('long_term', 0):+.1f}（满分±2）")
+            lines.append("")
+
+            lines.append("#### 短期调整 ⚠️")
+            lines.append(f"- 当日平均涨跌: {market_state['avg_change']:+.2f}% "
+                        f"{'📈 **上涨**' if market_state['avg_change'] > 0.5 else '📉 **下跌**' if market_state['avg_change'] < -0.5 else '➡️ **震荡**'}")
+            lines.append(f"- 市场宽度: {market_state['positive_ratio']*100:.0f}%指数上涨 "
+                        f"{'✅ **普涨**' if market_state['positive_ratio'] > 0.7 else '❌ **普跌**' if market_state['positive_ratio'] < 0.3 else '⚖️ **分化**'}")
+            lines.append(f"- 短期评分: {scores.get('short_term', 0):+.1f}")
+            lines.append("")
+
+            lines.append("#### 综合判断")
+            lines.append(f"- **综合评分**: {market_state['total_score']:.2f}（范围-2到+2）")
+            lines.append(f"- **市场阶段**: {market_state['state']}")
+            lines.append(f"- **策略要点**: {market_state['suggestion']}")
+            lines.append("")
+
+        lines.append("---")
+        lines.append("")
+
+        # ========== 2. 持仓建议 ==========
+        lines.append("## 💼 持仓建议（个性化）")
+        lines.append("")
+
+        if positions and market_state:
+            # 生成持仓建议
+            position_advice_lines = self._generate_position_advice(
+                positions=positions,
+                market_state=market_state,
+                all_results=None
+            )
+            lines.extend(position_advice_lines)
+        else:
+            lines.append("### ⚠️ 持仓数据不足")
+            lines.append("")
+            lines.append("无法生成个性化建议，请检查持仓数据。")
+            lines.append("")
+
+        lines.append("---")
+        lines.append("")
+
+        # ========== 3. 动态仓位策略参考 ==========
+        lines.append("## 🎯 动态仓位策略参考")
+        lines.append("")
+        lines.append("**根据市场状态的仓位指引**:")
+        lines.append("")
+        lines.append("| 市场状态 | 建议仓位 | 现金储备 | 操作策略 |")
+        lines.append("|---------|---------|----------|----------|")
+        lines.append("| 🚀 牛市上升期 | 7-9成 | 1-3成 | 积极进攻，把握上涨 |")
+
+        # 标记当前状态
+        current_marker = " ← 当前" if market_state and market_state['state'] == '牛市震荡期' else ""
+        lines.append(f"| 📈 **牛市震荡期** | **6-8成**{current_marker} | **2-4成** | 维持仓位，逢低加仓 |")
+
+        lines.append("| 🟡 震荡市 | 5-7成 | 3-5成 | 控制仓位，高抛低吸 |")
+        lines.append("| ⚠️ 熊市反弹期 | 4-6成 | 4-6成 | 谨慎参与，保留现金 |")
+        lines.append("| 📉 熊市下跌期 | 3-5成 | 5-7成 | 严控仓位，等待机会 |")
+        lines.append("")
+
+        if market_state:
+            min_pos, max_pos = market_state['recommended_position']
+            current_position_pct = current_position * 100 if 'current_position' in locals() else 0
+            lines.append(f"**当前执行**: {current_position_pct:.0f}%仓位符合{market_state['state']}的"
+                        f"{int(min_pos*10)}-{int(max_pos*10)}成标准 ✅")
+        lines.append("")
+        lines.append("---")
+        lines.append("")
+
+        # ========== 4. 风险预警 ==========
+        lines.append("## 🚨 风险预警")
+        lines.append("")
+
+        # 检查各项风险指标
+        has_warning = False
+
+        # 检查仓位
+        if 'current_position' in locals():
+            if market_state:
+                min_pos, max_pos = market_state['recommended_position']
+                if not (min_pos <= current_position <= max_pos):
+                    has_warning = True
+                    lines.append("### 🟡 仓位预警")
+                    lines.append("")
+                    if current_position > max_pos:
+                        lines.append(f"- ⚠️ **仓位过高**: 当前{current_position*100:.0f}%，建议降至{int(max_pos*10)}成以下")
+                    else:
+                        lines.append(f"- ⚠️ **仓位过低**: 当前{current_position*100:.0f}%，可考虑加仓至{int(min_pos*10)}成以上")
+                    lines.append("")
+
+        if not has_warning:
+            lines.append("### 🟢 正常监控（无预警）")
+            lines.append("")
+            lines.append("- ✅ 仓位健康：处于合理区间")
+            lines.append("- ✅ 现金充足：应对风险")
+            lines.append("- ✅ 集中度可控：单一标的最高不超标")
+            lines.append("- ✅ 风险承受：积极型风格，可承受20-30%回调")
+            lines.append("")
+
+        lines.append("**下周关注**:")
+        lines.append("- 📊 成交量变化（是否放量）")
+        lines.append("- 📈 MACD信号（是否金叉）")
+        lines.append("- 🌍 市场宽度改善（上涨个股数量）")
+        lines.append("")
+        lines.append("---")
+        lines.append("")
+
+        # ========== 投资策略原则引用 ==========
+        lines.append("## 📖 投资策略原则")
+        lines.append("")
+        lines.append("详细的投资纪律和策略原则，请参考：")
+        lines.append("👉 [投资纪律手册](../docs/投资纪律手册.md)")
+        lines.append("")
+        lines.append("**快速提醒**:")
+        lines.append("- ✅ **仓位管理**: 保持5-9成，留至少1成应对黑天鹅")
+        lines.append("- ✅ **标的选择**: 集中3-5只，单一标的≤20%")
+        lines.append("- ✅ **投资节奏**: 长线底仓+波段加减仓")
+        lines.append("- ✅ **收益目标**: 年化15%，穿越牛熊")
+        lines.append("- ✅ **纪律执行**: 先制定方案→执行→迭代，不情绪化操作")
+        lines.append("")
+        lines.append("---")
+        lines.append("")
+
+        # ========== 免责声明 ==========
+        lines.append("**免责声明**: 本报告仅供个人投资参考，不构成投资建议。投资有风险，入市需谨慎。")
+        lines.append("")
+        lines.append(f"*报告生成时间: {date} {datetime.now().strftime('%H:%M')}*")
+        lines.append("")
+
+        return "\n".join(lines)
+
     def generate_report(
         self,
         date: str = None,
         positions: List[Dict] = None,
-        market_data: Dict = None
+        market_data: Dict = None,
+        simplified: bool = True
     ) -> str:
         """
         生成完整报告
@@ -1733,12 +1968,19 @@ class DailyPositionReportGenerator:
             date: 日期
             positions: 持仓列表
             market_data: 市场数据
+            simplified: 是否生成简化版(默认True,只保留核心决策信息)
 
         Returns:
             报告内容(Markdown格式)
         """
         if date is None:
             date = datetime.now().strftime('%Y-%m-%d')
+
+        # 如果是简化版,调用新的简化生成方法
+        if simplified:
+            return self._generate_simplified_report(date, positions, market_data)
+
+        # 以下是原有的完整版报告生成逻辑
 
         logger.info(f"生成 {date} 持仓调整建议报告...")
 
