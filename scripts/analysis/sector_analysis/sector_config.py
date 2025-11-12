@@ -79,26 +79,15 @@ SECTOR_DEFINITIONS = {
         'description': '跟踪证券行业，覆盖中信证券、华泰证券等龙头券商'
     },
 
-    # A股游戏板块
-    'CN_GAME': {
-        'name': 'A股游戏',
+    # A股电力板块
+    'CN_POWER': {
+        'name': 'A股电力',
         'market': 'CN',
         'type': 'etf',
-        'symbols': ['159869'],  # 华夏中证动漫游戏ETF
+        'symbols': ['159611'],  # 电力ETF
         'weights': None,
-        'category': 'media',
-        'description': '跟踪动漫游戏产业，覆盖腾讯控股、网易、三七互娱等游戏龙头'
-    },
-
-    # A股传媒板块
-    'CN_MEDIA': {
-        'name': 'A股传媒',
-        'market': 'CN',
-        'type': 'etf',
-        'symbols': ['512980'],  # 广发中证传媒ETF
-        'weights': None,
-        'category': 'media',
-        'description': '跟踪文化传媒行业，覆盖影视、广告、出版等传媒龙头企业'
+        'category': 'utilities',
+        'description': '跟踪电力行业，覆盖电力生产、输配电及新能源发电等电力产业链'
     },
 
     # 三花智控(个股)
@@ -249,7 +238,7 @@ SECTOR_CATEGORIES = {
     'realestate': '地产',
     'chemical': '化工',
     'coal': '煤炭',
-    'media': '传媒娱乐',
+    'utilities': '电力公用',
     'manufacturing': '先进制造',
     'materials': '有色金属材料'
 }
