@@ -38,6 +38,7 @@ from scripts.analysis.comprehensive_asset_analysis.asset_reporter import Compreh
 from scripts.analysis.sector_analysis.sector_reporter import SectorReporter
 from russ_trading.notifiers.unified_email_notifier import UnifiedEmailNotifier
 from russ_trading.core.investment_advisor import InvestmentAdvisor
+from russ_trading.generators.daily_position_report_generator import DailyPositionReportGenerator
 
 # 导入机构级核心指标分析器 (Phase 3.3)
 try:
@@ -152,7 +153,13 @@ class UnifiedAnalysisRunner:
         logger.info("所有资产分析完成")
         return results
 
-    def format_report(self, results: dict, format_type: str = 'markdown') -> str:
+    def format_report(
+        self,
+        results: dict,
+        format_type: str = 'markdown',
+        positions: list = None,
+        market_data: dict = None
+    ) -> str:
         """
         格式化报告
 
@@ -161,6 +168,8 @@ class UnifiedAnalysisRunner:
         Args:
             results: 分析结果
             format_type: 报告格式 ('text' 或 'markdown')
+            positions: 持仓数据列表(可选)
+            market_data: 市场数据(可选)
 
         Returns:
             格式化后的报告文本
@@ -390,6 +399,27 @@ class UnifiedAnalysisRunner:
                 else:
                     lines.append(self.sector_reporter.format_text_report(single_sector_report))
 
+        # ========== 我的持仓分析 (NEW!) ==========
+        if format_type == 'markdown' and positions is not None:
+            try:
+                # 创建持仓报告生成器
+                position_generator = DailyPositionReportGenerator()
+
+                # 生成持仓分析部分
+                position_section = position_generator.generate_my_position_section(
+                    positions=positions,
+                    market_data=market_data,
+                    market_results=results
+                )
+
+                lines.append(position_section)
+            except Exception as e:
+                logger.warning(f"生成持仓分析失败: {e}")
+                lines.append("## 💼 【我的持仓分析】")
+                lines.append("")
+                lines.append(f"⚠️ 持仓分析生成失败: {e}")
+                lines.append("")
+
         # 失败的资产
         if fail_count > 0:
             if format_type == 'markdown':
@@ -410,6 +440,18 @@ class UnifiedAnalysisRunner:
 
         # 报告尾部
         if format_type == 'markdown':
+            lines.append("## 📖 【投资纪律】")
+            lines.append("")
+            lines.append("详细的投资策略原则和纪律,请参考:")
+            lines.append("👉 [投资纪律手册](../../docs/投资纪律手册.md)")
+            lines.append("")
+            lines.append("**快速提醒**:")
+            lines.append("- ✅ **仓位管理**: 保持5-9成,留至少1成应对黑天鹅")
+            lines.append("- ✅ **标的选择**: 集中3-5只,单一标的≤20%")
+            lines.append("- ✅ **投资节奏**: 长线底仓+波段加减仓")
+            lines.append("- ✅ **收益目标**: 年化15%,穿越牛熊")
+            lines.append("- ✅ **纪律执行**: 先制定方案→执行→迭代,不情绪化操作")
+            lines.append("")
             lines.append("---")
             lines.append("")
             lines.append("**免责声明**: 本报告仅供参考,不构成投资建议。投资有风险,入市需谨慎。")
