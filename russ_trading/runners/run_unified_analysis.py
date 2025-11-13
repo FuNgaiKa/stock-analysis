@@ -199,17 +199,47 @@ class UnifiedAnalysisRunner:
         market_overview = self._generate_market_overview_section(results, format_type)
         lines.append(market_overview)
 
-        # 4. 统计信息
+        # 4. ========== 我的持仓分析 (放在市场大盘分析后面) ==========
+        if format_type == 'markdown' and positions is not None:
+            try:
+                # 创建持仓报告生成器
+                position_generator = DailyPositionReportGenerator()
+
+                # 生成持仓分析部分
+                position_section = position_generator.generate_my_position_section(
+                    positions=positions,
+                    market_data=market_data,
+                    market_results=results
+                )
+
+                lines.append(position_section)
+            except Exception as e:
+                logger.warning(f"生成持仓分析失败: {e}")
+                lines.append("## 💼 【我的持仓分析】")
+                lines.append("")
+                lines.append(f"⚠️ 持仓分析生成失败: {e}")
+                lines.append("")
+
+        # 5. 统计信息 (移到标的汇总里面)
         total_count = len(results['assets'])
         success_count = sum(1 for data in results['assets'].values() if 'error' not in data)
         fail_count = total_count - success_count
 
+        # 6. 生成汇总表格 (包含分析概览)
         if format_type == 'markdown':
-            lines.append("## 📋 分析概览")
-            lines.append("")
-            lines.append(f"- **总资产数**: {total_count}")
-            lines.append(f"- **成功分析**: {success_count}")
-            lines.append(f"- **失败数**: {fail_count}")
+            summary_table = self._generate_summary_table(results)
+            if summary_table:
+                lines.append("## 📊 标的汇总")
+                lines.append("")
+                lines.append("### 📋 分析概览")
+                lines.append("")
+                lines.append(f"- **总资产数**: {total_count}")
+                lines.append(f"- **成功分析**: {success_count}")
+                lines.append(f"- **失败数**: {fail_count}")
+                lines.append("")
+                lines.append(summary_table)
+                lines.append("")
+            lines.append("---")
             lines.append("")
         else:
             lines.append(f"总资产数: {total_count}")
@@ -217,17 +247,6 @@ class UnifiedAnalysisRunner:
             lines.append(f"失败数: {fail_count}")
             lines.append("")
             lines.append("=" * 80)
-            lines.append("")
-
-        # 5. 生成汇总表格
-        if format_type == 'markdown':
-            summary_table = self._generate_summary_table(results)
-            if summary_table:
-                lines.append("## 📊 标的汇总")
-                lines.append("")
-                lines.append(summary_table)
-                lines.append("")
-            lines.append("---")
             lines.append("")
 
         # 6. ========== 机构级核心指标 (Phase 3.3) ==========
@@ -398,27 +417,6 @@ class UnifiedAnalysisRunner:
                     lines.append(self._format_sector_markdown(asset_key, data, config))
                 else:
                     lines.append(self.sector_reporter.format_text_report(single_sector_report))
-
-        # ========== 我的持仓分析 (NEW!) ==========
-        if format_type == 'markdown' and positions is not None:
-            try:
-                # 创建持仓报告生成器
-                position_generator = DailyPositionReportGenerator()
-
-                # 生成持仓分析部分
-                position_section = position_generator.generate_my_position_section(
-                    positions=positions,
-                    market_data=market_data,
-                    market_results=results
-                )
-
-                lines.append(position_section)
-            except Exception as e:
-                logger.warning(f"生成持仓分析失败: {e}")
-                lines.append("## 💼 【我的持仓分析】")
-                lines.append("")
-                lines.append(f"⚠️ 持仓分析生成失败: {e}")
-                lines.append("")
 
         # 失败的资产
         if fail_count > 0:
