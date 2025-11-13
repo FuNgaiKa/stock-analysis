@@ -1893,8 +1893,6 @@ class DailyPositionReportGenerator:
         lines.append("")
 
         # ========== 2. 持仓建议 ==========
-        lines.append("## 💼 持仓建议（个性化）")
-        lines.append("")
 
         if positions and market_state:
             # 生成持仓建议
