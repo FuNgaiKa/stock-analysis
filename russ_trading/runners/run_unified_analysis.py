@@ -958,7 +958,11 @@ class UnifiedAnalysisRunner:
         for advice in assets_advice:
             asset_name = advice['asset_name']
             # 从asset_data中获取方向判断
-            direction = advice.get('direction', '中性')
+            direction_raw = advice.get('direction', '中性')
+
+            # 去掉emoji,只保留文字部分
+            direction = direction_raw.replace('✅✅', '').replace('✅', '').replace('⚖️', '').replace('🔴', '').strip()
+
             if direction in assets_by_direction:
                 assets_by_direction[direction].append(asset_name)
 
