@@ -2892,8 +2892,10 @@ class DailyPositionReportGenerator:
         lines.append("")
 
         if market_state:
+            min_pos, max_pos = market_state['recommended_position']
+            position_range = f"{int(min_pos*10)}-{int(max_pos*10)}成"
             lines.append(f"**市场状态**: {market_state['emoji']} {market_state['state']}")
-            lines.append(f"**建议仓位**: {market_state['position_range']}")
+            lines.append(f"**建议仓位**: {position_range}")
             lines.append("")
 
         # 根据市场洞察报告的结果分类持仓
@@ -2969,9 +2971,8 @@ class DailyPositionReportGenerator:
 
         if market_state:
             # 获取建议仓位范围
-            pos_range = market_state.get('position_range', '5-7成')
-            recommended_min = int(pos_range.split('-')[0]) / 10
-            recommended_max = int(pos_range.split('-')[1].replace('成', '')) / 10
+            recommended_min, recommended_max = market_state.get('recommended_position', (0.50, 0.70))
+            pos_range = f"{int(recommended_min*10)}-{int(recommended_max*10)}成"
 
             if total_position > recommended_max:
                 lines.append(f"- ⚠️ **仓位偏高**: 当前{total_position*100:.0f}%, 建议降至{pos_range}")
