@@ -2822,6 +2822,174 @@ class DailyPositionReportGenerator:
         logger.info(f"✅ 报告已保存: {filepath}")
         return str(filepath)
 
+    def generate_my_position_section(
+        self,
+        positions: List[Dict] = None,
+        market_data: Dict = None,
+        market_results: Dict = None
+    ) -> str:
+        """
+        生成"我的持仓分析"部分(用于整合到市场洞察报告中)
+
+        Args:
+            positions: 持仓列表
+            market_data: 市场数据
+            market_results: 市场洞察报告的分析结果(包含24个标的的方向判断)
+
+        Returns:
+            "我的持仓分析"部分的Markdown文本
+        """
+        lines = []
+
+        lines.append("## 💼 【我的持仓分析】")
+        lines.append("")
+
+        # 如果没有持仓数据,返回提示信息
+        if not positions:
+            lines.append("### 📝 持仓概览")
+            lines.append("")
+            lines.append("⚠️ **未提供持仓数据**")
+            lines.append("")
+            lines.append("💡 **建议**: 提供持仓数据(JSON格式)以获得个性化调仓建议")
+            lines.append("")
+            lines.append("**示例数据格式**:")
+            lines.append("```json")
+            lines.append('[')
+            lines.append('  {"asset_name": "恒生科技ETF", "position_pct": 0.28},')
+            lines.append('  {"asset_name": "证券ETF", "position_pct": 0.23}')
+            lines.append(']')
+            lines.append("```")
+            lines.append("")
+            return "\n".join(lines)
+
+        # 识别市场状态
+        market_state = None
+        if market_data and market_data.get('indices'):
+            market_state = self.identify_market_state(market_data)
+
+        # 计算总仓位
+        total_position = sum(p.get('position_pct', 0) for p in positions)
+        cash_reserve = 1 - total_position
+
+        # === 当前持仓概览 ===
+        lines.append("### 📝 当前持仓概览")
+        lines.append("")
+        lines.append(f"- **总仓位**: {total_position*100:.0f}%")
+        lines.append(f"- **现金储备**: {cash_reserve*100:.0f}%")
+        lines.append("")
+
+        # 持仓分布(降序)
+        sorted_positions = sorted(positions, key=lambda x: x.get('position_pct', 0), reverse=True)
+        lines.append("**持仓分布**:")
+        for pos in sorted_positions[:10]:  # 只显示前10个
+            asset_name = pos.get('asset_name', '未知')
+            position_pct = pos.get('position_pct', 0) * 100
+            lines.append(f"- {asset_name}: {position_pct:.0f}%")
+        lines.append("")
+
+        # === 具体调仓建议 ===
+        lines.append("### 🎯 具体调仓建议")
+        lines.append("")
+
+        if market_state:
+            lines.append(f"**市场状态**: {market_state['emoji']} {market_state['state']}")
+            lines.append(f"**建议仓位**: {market_state['position_range']}")
+            lines.append("")
+
+        # 根据市场洞察报告的结果分类持仓
+        bullish_positions = []  # 强烈看多 + 看多
+        neutral_positions = []  # 中性偏多 + 中性
+        bearish_positions = []  # 看空
+
+        # 如果有market_results,使用其中的方向判断
+        if market_results and 'results' in market_results:
+            # 创建资产名称到方向判断的映射
+            direction_map = {}
+            for result in market_results['results']:
+                asset_name = result.get('asset_name', '')
+                direction = result.get('direction', '')
+                direction_map[asset_name] = direction
+
+            # 分类持仓
+            for pos in positions:
+                asset_name = pos.get('asset_name', '')
+                # 尝试匹配方向(模糊匹配)
+                matched_direction = None
+                for market_asset, direction in direction_map.items():
+                    if asset_name in market_asset or market_asset in asset_name:
+                        matched_direction = direction
+                        break
+
+                if matched_direction:
+                    if '强烈看多' in matched_direction or '看多✅' in matched_direction:
+                        bullish_positions.append((pos, matched_direction))
+                    elif '看空' in matched_direction:
+                        bearish_positions.append((pos, matched_direction))
+                    else:
+                        neutral_positions.append((pos, matched_direction))
+                else:
+                    neutral_positions.append((pos, '方向未明'))
+        else:
+            # 如果没有market_results,全部归为neutral
+            neutral_positions = [(pos, '方向未明') for pos in positions]
+
+        # 输出看多标的
+        if bullish_positions:
+            lines.append("#### ✅ 看多标的 - 建议加仓")
+            lines.append("")
+            for pos, direction in bullish_positions:
+                asset_name = pos.get('asset_name', '未知')
+                position_pct = pos.get('position_pct', 0) * 100
+                lines.append(f"- **{asset_name}** (当前{position_pct:.0f}%): {direction} | 可适当加仓")
+            lines.append("")
+
+        # 输出看空标的
+        if bearish_positions:
+            lines.append("#### 🔴 看空标的 - 建议减仓")
+            lines.append("")
+            for pos, direction in bearish_positions:
+                asset_name = pos.get('asset_name', '未知')
+                position_pct = pos.get('position_pct', 0) * 100
+                lines.append(f"- **{asset_name}** (当前{position_pct:.0f}%): {direction} | 建议减仓")
+            lines.append("")
+
+        # 输出中性/观望标的
+        if neutral_positions:
+            lines.append("#### ⚪ 观望等待")
+            lines.append("")
+            for pos, direction in neutral_positions:
+                asset_name = pos.get('asset_name', '未知')
+                position_pct = pos.get('position_pct', 0) * 100
+                lines.append(f"- **{asset_name}** (当前{position_pct:.0f}%): 维持现有仓位")
+            lines.append("")
+
+        # === 仓位风险提醒 ===
+        lines.append("### ⚠️ 仓位风险提醒")
+        lines.append("")
+
+        if market_state:
+            # 获取建议仓位范围
+            pos_range = market_state.get('position_range', '5-7成')
+            recommended_min = int(pos_range.split('-')[0]) / 10
+            recommended_max = int(pos_range.split('-')[1].replace('成', '')) / 10
+
+            if total_position > recommended_max:
+                lines.append(f"- ⚠️ **仓位偏高**: 当前{total_position*100:.0f}%, 建议降至{pos_range}")
+                lines.append(f"- 💡 **建议**: 反弹时适当减仓，降低风险敞口")
+            elif total_position < recommended_min:
+                lines.append(f"- ⚠️ **仓位偏低**: 当前{total_position*100:.0f}%, 建议提升至{pos_range}")
+                lines.append(f"- 💡 **建议**: 回调时分批加仓，把握机会")
+            else:
+                lines.append(f"- ✅ **仓位合理**: 当前{total_position*100:.0f}%, 符合{pos_range}建议")
+        else:
+            lines.append("- ℹ️ 无法获取市场状态，请参考市场环境自行判断")
+
+        lines.append("")
+        lines.append("---")
+        lines.append("")
+
+        return "\n".join(lines)
+
 
 def main():
     """主函数"""
