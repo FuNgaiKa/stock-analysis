@@ -1,16 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-周度操作策略生成器 (极简版)
-Weekly Strategy Generator (Minimalist Edition)
+周度操作策略生成器 (增强版)
+Weekly Strategy Generator (Enhanced Edition)
 
-基于最新的持仓调整建议和市场洞察报告,生成极简版周度操作策略
+基于最新的持仓调整建议和市场洞察报告,生成周度操作策略
+
+集成功能:
+- 事件日历分析 (提前布局重要事件窗口)
+- VaR风险预算配置 (量化风险管理)
 
 运行方式:
     python russ_trading/weekly_strategy_generator.py
 
 作者: Claude Code
-日期: 2025-11-09
+日期: 2025-11-14
+版本: v2.0
 """
 
 import sys
@@ -25,13 +30,25 @@ sys.path.insert(0, str(project_root))
 
 
 class WeeklyStrategyGenerator:
-    """周度策略生成器"""
+    """周度策略生成器 (增强版)"""
 
     def __init__(self):
         self.project_root = Path(__file__).parent.parent
         self.reports_dir = self.project_root / "reports" / "daily"
         self.docs_dir = self.project_root / "docs"
         self.docs_dir.mkdir(parents=True, exist_ok=True)
+
+        # 导入分析器
+        try:
+            from russ_trading.analyzers.event_calendar_analyzer import EventCalendarAnalyzer
+            from russ_trading.managers.dynamic_position_manager import DynamicPositionManager
+
+            self.event_analyzer = EventCalendarAnalyzer()
+            self.position_manager = DynamicPositionManager()
+            self.features_enabled = True
+        except Exception as e:
+            print(f"⚠️ 无法加载增强功能: {e}")
+            self.features_enabled = False
 
     def find_latest_reports(self) -> Dict[str, Path]:
         """查找最新的每日报告"""
@@ -82,14 +99,242 @@ class WeeklyStrategyGenerator:
 
         return info
 
+    def _generate_event_calendar_section(self, positions: Optional[List[Dict]] = None) -> str:
+        """生成事件日历章节"""
+        if not self.features_enabled:
+            return ""
+
+        try:
+            # 获取未来7天的事件
+            upcoming_events = self.event_analyzer.get_upcoming_events(days=7, positions=positions)
+
+            if not upcoming_events:
+                return """
+## 📅 本周重要事件日历
+
+暂无重要事件影响当前持仓。
+
+---
+"""
+
+            lines = []
+            lines.append("## 📅 本周重要事件日历")
+            lines.append("")
+            lines.append("### 🔥 事件驱动分析")
+            lines.append("")
+            lines.append("根据你的持仓,本周及下周有以下重要事件:")
+            lines.append("")
+
+            for i, event in enumerate(upcoming_events, 1):
+                event_date = event['date']
+                event_name = event['event']
+                event_type = event['type']
+                impact_level = event['impact_level']
+                markets = ', '.join(event.get('markets', []))
+                affected_assets = event.get('affected_assets', [])
+                notes = event.get('notes', '')
+
+                # 影响程度emoji
+                if impact_level == '高':
+                    impact_emoji = '🔴 高'
+                elif impact_level == '中':
+                    impact_emoji = '🟡 中'
+                else:
+                    impact_emoji = '🟢 低'
+
+                # 历史影响
+                historical_impact = ""
+                if 'historical_volatility' in event:
+                    vol = event['historical_volatility'] * 100
+                    historical_impact = f"历史平均波动±{vol:.1f}%"
+                elif 'historical_return' in event:
+                    ret = event['historical_return'] * 100
+                    historical_impact = f"历史前3天平均涨{ret:.1f}%"
+
+                # 持仓暴露
+                exposure = ""
+                if positions and affected_assets:
+                    for pos in positions:
+                        if any(asset in pos.get('asset_name', '') for asset in affected_assets):
+                            exposure = f"你持有{pos['asset_name']}{pos.get('current_ratio',0)*100:.0f}%,高度相关"
+                            break
+
+                # 建议
+                suggestion = self.event_analyzer._generate_event_suggestion(event, positions)
+
+                # 格式化输出
+                lines.append(f"#### {i}. {event_date} {event_name}")
+                lines.append(f"- **事件类型**: {event_type}")
+                lines.append(f"- **影响市场**: {markets}")
+                lines.append(f"- **影响程度**: {impact_emoji}")
+                if historical_impact:
+                    lines.append(f"- **历史影响**: {historical_impact}")
+                if event.get('expected_value'):
+                    lines.append(f"- **预期值**: {event['expected_value']}")
+                if exposure:
+                    lines.append(f"- **持仓暴露**: {exposure}")
+                if suggestion:
+                    lines.append(f"- **建议**: {suggestion}")
+                if notes:
+                    lines.append(f"- **备注**: {notes}")
+                lines.append("")
+
+            # 风险提示
+            high_impact_count = sum(1 for e in upcoming_events if e.get('impact_level') == '高')
+            if high_impact_count > 0:
+                lines.append(f"**⚠️ 风险提示**: 本周有{high_impact_count}个高影响事件,建议预留5-10%现金应对波动。")
+                lines.append("")
+
+            lines.append("---")
+            lines.append("")
+
+            return '\n'.join(lines)
+
+        except Exception as e:
+            print(f"⚠️ 生成事件日历失败: {e}")
+            return ""
+
+    def _generate_risk_budget_section(
+        self,
+        positions: Optional[List[Dict]] = None,
+        total_capital: float = 500000
+    ) -> str:
+        """生成风险预算配置章节"""
+        if not self.features_enabled or not positions:
+            return ""
+
+        try:
+            # 设定风险预算为总资金的20%
+            risk_budget = total_capital * 0.20
+
+            # 计算风险预算分配
+            result = self.position_manager.allocate_by_risk_budget(
+                positions=positions,
+                total_capital=total_capital,
+                risk_budget=risk_budget,
+                confidence_level=0.95
+            )
+
+            total_var = result['total_var']
+            over_budget = result['over_budget']
+            var_utilization = result['var_utilization']
+            suggestions = result['suggestions']
+
+            lines = []
+            lines.append("## 💰 风险预算配置建议")
+            lines.append("")
+            lines.append("### 核心理念: VaR风险价值管理")
+            lines.append("")
+            lines.append("**什么是VaR?**")
+            lines.append("- VaR = 在95%置信度下,未来1日最大可能亏损")
+            lines.append("- 简单理解: \"有95%的把握,明天最多亏这么多钱\"")
+            lines.append("")
+            lines.append("**为什么要用VaR?**")
+            lines.append("- 传统仓位管理只看\"占比%\",不看\"风险大小\"")
+            lines.append("- 20%的高波动标的,风险可能等于40%的低波动标的")
+            lines.append("- VaR把不同波动率的标的放在同一个尺度上比较")
+            lines.append("")
+
+            lines.append("### 当前风险预算配置")
+            lines.append("")
+            lines.append(f"**总资金**: ¥{total_capital/10000:.1f}万")
+            lines.append(f"**风险预算**: ¥{risk_budget/10000:.1f}万 (总资金的20%)")
+            lines.append(f"**当前总VaR**: ¥{total_var/10000:.1f}万 (95%置信度)")
+
+            if over_budget:
+                lines.append(f"**VaR利用率**: {var_utilization*100:.1f}% ⚠️ **超预算{(var_utilization-1)*100:.1f}%**")
+            else:
+                lines.append(f"**VaR利用率**: {var_utilization*100:.1f}% ✅")
+
+            lines.append("")
+            lines.append("### 仓位调整建议")
+            lines.append("")
+
+            # 表格
+            lines.append("| 标的 | VaR(95%) | 风险占比 | 当前仓位 | 建议仓位 | 调整 |")
+            lines.append("|------|---------|---------|---------|---------|------|")
+
+            for s in suggestions:
+                asset_name = s['asset_name']
+                var = s['var']
+                var_contribution = s['var_contribution']
+                current_ratio = s['current_ratio']
+                suggested_ratio = s['suggested_ratio']
+                adjustment = s['adjustment']
+
+                # 调整标记
+                if adjustment > 0.01:
+                    adj_mark = f"加{abs(adjustment)*100:.0f}% ⬆️"
+                elif adjustment < -0.01:
+                    adj_mark = f"减{abs(adjustment)*100:.0f}% ⬇️"
+                else:
+                    adj_mark = "维持 ➡️"
+
+                lines.append(
+                    f"| {asset_name} | ¥{var/10000:.1f}万 | {var_contribution*100:.0f}% | "
+                    f"{current_ratio*100:.0f}% | {suggested_ratio*100:.0f}% | {adj_mark} |"
+                )
+
+            lines.append("")
+
+            # 调整逻辑说明
+            lines.append("**调整逻辑**:")
+            if over_budget:
+                lines.append(f"- ⚠️ 总VaR超预算{(var_utilization-1)*100:.1f}%,建议按VaR比例缩减各标的仓位")
+                lines.append(f"- 调整后总VaR: ¥{risk_budget/10000:.1f}万 (符合预算)")
+
+                # 计算调整后总仓位
+                adjusted_total_ratio = sum(s['suggested_ratio'] for s in suggestions)
+                original_total_ratio = sum(s['current_ratio'] for s in suggestions)
+                lines.append(f"- 调整后总仓位: 约{adjusted_total_ratio*100:.0f}% (从{original_total_ratio*100:.0f}%降至{adjusted_total_ratio*100:.0f}%,释放{(original_total_ratio-adjusted_total_ratio)*100:.0f}%现金)")
+            else:
+                lines.append("- ✅ 总VaR未超预算,可适当加仓提高风险利用率")
+                lines.append(f"- 当前风险利用率{var_utilization*100:.0f}%,还有{(1-var_utilization)*100:.0f}%风险预算可用")
+
+            lines.append("")
+
+            # 执行建议
+            if over_budget:
+                lines.append("**执行建议**:")
+                # 找出调整幅度最大的前2个
+                sorted_suggestions = sorted(suggestions, key=lambda x: abs(x['adjustment']), reverse=True)
+                for i, s in enumerate(sorted_suggestions[:2], 1):
+                    if abs(s['adjustment']) > 0.01:
+                        action = "减持" if s['adjustment'] < 0 else "加仓"
+                        amount = abs(s['adjustment']) * total_capital
+                        lines.append(f"{i}. **本周**: {action}{s['asset_name']} {abs(s['adjustment'])*100:.0f}%,释放¥{amount/10000:.1f}万现金")
+
+                lines.append(f"3. **目标**: 两周内完成调整,总仓位降至{adjusted_total_ratio*100:.0f}%,现金提升至{(1-adjusted_total_ratio)*100:.0f}%")
+                lines.append("")
+                lines.append("**为什么要降仓?**")
+                lines.append("- 当前VaR超预算,意味着\"风险暴露过大\"")
+                lines.append("- 如果市场大跌,可能触发连环止损")
+                lines.append("- 降低仓位后,即使大跌,损失也在可控范围内")
+
+            lines.append("")
+            lines.append("---")
+            lines.append("")
+
+            return '\n'.join(lines)
+
+        except Exception as e:
+            print(f"⚠️ 生成风险预算配置失败: {e}")
+            import traceback
+            traceback.print_exc()
+            return ""
+
     def generate_strategy_markdown(self, info: Dict, week_info: Dict) -> str:
-        """生成策略markdown文档"""
+        """生成策略markdown文档 (增强版)"""
 
         today = datetime.now()
         week_start = today + timedelta(days=(7 - today.weekday()))  # 下周一
         week_end = week_start + timedelta(days=6)  # 下周日
 
-        content = f"""# 本周操作策略 ({week_start.strftime('%m.%d')}-{week_end.strftime('%m.%d')})
+        # 构建报告各部分
+        parts = []
+
+        # 标题和基本信息
+        parts.append(f"""# 本周操作策略 ({week_start.strftime('%m.%d')}-{week_end.strftime('%m.%d')})
 
 **生成时间**: {today.strftime('%Y-%m-%d')}
 **当前仓位**: {week_info.get('current_position', '78%')} | 现金: {week_info.get('cash', '22%')}
@@ -132,8 +377,24 @@ class WeeklyStrategyGenerator:
 3. **战略优化**: 按方案C+逐步调整持仓结构
 
 ---
+""")
 
-## 二、本周核心策略 (T0/T1/T2分级)
+        # 插入事件日历章节 (如果有持仓数据)
+        positions = week_info.get('positions')
+        if self.features_enabled and positions:
+            event_section = self._generate_event_calendar_section(positions)
+            if event_section:
+                parts.append(event_section)
+
+        # 插入风险预算章节 (如果有持仓数据)
+        if self.features_enabled and positions:
+            total_capital = week_info.get('total_capital', 500000)
+            risk_section = self._generate_risk_budget_section(positions, total_capital)
+            if risk_section:
+                parts.append(risk_section)
+
+        # 核心策略部分
+        parts.append("""## 二、本周核心策略 (T0/T1/T2分级)
 
 ### 🟢 T0 优先级 (立即执行)
 
@@ -260,10 +521,12 @@ class WeeklyStrategyGenerator:
 **免责声明**: 本报告仅供个人参考,不构成投资建议
 
 **报告生成**: {today.strftime('%Y-%m-%d')}
-**系统版本**: Weekly Strategy Generator v1.0
+**系统版本**: Weekly Strategy Generator v2.0 (Enhanced with Event Calendar & Risk Budget)
 **核心原则**: 仓位管理 + 择时加仓 + 纪律执行
-"""
-        return content
+""")
+
+        # 拼接所有部分并返回
+        return ''.join(parts)
 
     def generate(self, user_input: Optional[Dict] = None) -> str:
         """生成周度策略"""
