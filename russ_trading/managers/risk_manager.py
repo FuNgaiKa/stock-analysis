@@ -930,6 +930,218 @@ class RiskManager:
 
         return "\n".join(lines)
 
+    # ==================== 动态止损 (ATR-based) ====================
+
+    def calculate_atr(
+        self,
+        prices: List[float],
+        highs: List[float],
+        lows: List[float],
+        period: int = 20
+    ) -> float:
+        """
+        计算ATR(平均真实波幅) - Average True Range
+
+        ATR是衡量价格波动的技术指标,由J. Welles Wilder提出
+        计算公式:
+        - True Range = max(high-low, |high-close_prev|, |low-close_prev|)
+        - ATR = MA(True Range, period)
+
+        Args:
+            prices: 收盘价序列
+            highs: 最高价序列
+            lows: 最低价序列
+            period: 计算周期 (默认20日)
+
+        Returns:
+            ATR值 (绝对价格波幅)
+
+        Example:
+            >>> prices = [100, 102, 101, 103, 102]
+            >>> highs = [101, 103, 102, 104, 103]
+            >>> lows = [99, 101, 100, 102, 101]
+            >>> atr = rm.calculate_atr(prices, highs, lows, period=4)
+        """
+        if len(prices) < period + 1 or len(highs) < period + 1 or len(lows) < period + 1:
+            return 0.0
+
+        true_ranges = []
+
+        for i in range(1, len(prices)):
+            high = highs[i]
+            low = lows[i]
+            close_prev = prices[i-1]
+
+            # True Range的三种计算方式,取最大值
+            tr = max(
+                high - low,                    # 当日振幅
+                abs(high - close_prev),        # 跳空高开的波幅
+                abs(low - close_prev)          # 跳空低开的波幅
+            )
+            true_ranges.append(tr)
+
+        # 计算ATR (使用简单移动平均)
+        if len(true_ranges) < period:
+            return 0.0
+
+        atr = np.mean(true_ranges[-period:])
+        return atr
+
+    def calculate_dynamic_stop_loss(
+        self,
+        symbol: str,
+        current_price: float,
+        entry_price: float,
+        price_data: pd.DataFrame,
+        lookback_days: int = 20,
+        fixed_stop_loss: float = -0.15
+    ) -> Dict:
+        """
+        计算动态止损建议 - 基于ATR的个性化止损
+
+        核心思想: 根据标的的波动率特征,动态调整止损线
+        - 低波动标的(ATR < 1.5%): 收紧止损,提高资金效率
+        - 中波动标的(ATR 1.5-3%): 正常止损,平衡风险收益
+        - 高波动标的(ATR > 3%): 放宽止损,避免震荡出局
+
+        Args:
+            symbol: 标的代码 (如 '510300.SS')
+            current_price: 当前价格
+            entry_price: 买入价格
+            price_data: 价格数据DataFrame,必须包含列:
+                - 'Close': 收盘价
+                - 'High': 最高价
+                - 'Low': 最低价
+            lookback_days: 回溯天数 (默认20日,建议10-60日)
+            fixed_stop_loss: 固定止损线 (默认-15%)
+
+        Returns:
+            {
+                'symbol': 标的代码,
+                'atr': ATR值 (绝对值),
+                'atr_pct': ATR百分比 (相对当前价格),
+                'volatility_level': 波动率等级 ('低'/'中'/'高'),
+                'fixed_stop_loss': 固定止损比例,
+                'dynamic_stop_loss': 动态止损比例,
+                'stop_loss_price': 建议止损价格,
+                'current_price': 当前价格,
+                'entry_price': 买入价格,
+                'current_loss': 当前亏损比例,
+                'is_triggered': 是否触发止损,
+                'recommendation': 操作建议,
+                'reason': 原因说明
+            }
+
+        Example:
+            >>> rm = RiskManager()
+            >>> result = rm.calculate_dynamic_stop_loss(
+            ...     symbol='510300.SS',
+            ...     current_price=1.20,
+            ...     entry_price=1.30,
+            ...     price_data=df  # 包含Close/High/Low的DataFrame
+            ... )
+            >>> print(result['recommendation'])
+        """
+        # 参数校验
+        required_columns = ['Close', 'High', 'Low']
+        if not all(col in price_data.columns for col in required_columns):
+            return {
+                'symbol': symbol,
+                'error': f"price_data缺少必需列: {required_columns}",
+                'recommendation': '⚠️ 数据不足,建议使用固定止损',
+                'dynamic_stop_loss': fixed_stop_loss
+            }
+
+        # 1. 计算ATR
+        prices = price_data['Close'].tolist()[-(lookback_days+1):]
+        highs = price_data['High'].tolist()[-(lookback_days+1):]
+        lows = price_data['Low'].tolist()[-(lookback_days+1):]
+
+        atr = self.calculate_atr(prices, highs, lows, period=lookback_days)
+
+        if atr == 0 or current_price == 0:
+            return {
+                'symbol': symbol,
+                'error': 'ATR计算失败或价格为0',
+                'recommendation': '⚠️ 计算失败,建议使用固定止损',
+                'dynamic_stop_loss': fixed_stop_loss
+            }
+
+        # 2. 计算ATR百分比 (相对当前价格)
+        atr_pct = atr / current_price
+
+        # 3. 根据波动率确定止损倍数和等级
+        if atr_pct < 0.015:  # 低波动 (< 1.5%)
+            volatility_level = '低'
+            stop_loss_multiplier = 7  # 收紧止损: 7倍ATR
+            color = '🟢'
+        elif atr_pct < 0.03:  # 中波动 (1.5% - 3%)
+            volatility_level = '中'
+            stop_loss_multiplier = 10  # 正常止损: 10倍ATR
+            color = '🟡'
+        else:  # 高波动 (> 3%)
+            volatility_level = '高'
+            stop_loss_multiplier = 13  # 放宽止损: 13倍ATR
+            color = '🔴'
+
+        # 4. 计算动态止损
+        dynamic_stop_loss = -atr_pct * stop_loss_multiplier
+
+        # 5. 确保动态止损在合理范围 [-5%, -30%]
+        # 过紧(<-5%)容易被震出,过松(>-30%)风险过大
+        dynamic_stop_loss = max(-0.30, min(-0.05, dynamic_stop_loss))
+
+        # 6. 计算止损价格
+        stop_loss_price = entry_price * (1 + dynamic_stop_loss)
+
+        # 7. 计算当前亏损
+        current_loss = (current_price - entry_price) / entry_price
+
+        # 8. 判断是否触发止损
+        # 当前亏损比例 小于等于 止损线时触发 (因为都是负数,所以是<)
+        is_triggered = current_loss < dynamic_stop_loss
+
+        # 9. 生成建议
+        diff_pct = (dynamic_stop_loss - fixed_stop_loss) * 100
+
+        if is_triggered:
+            recommendation = f"🚨 触发止损!建议在{stop_loss_price:.2f}元附近止损出局"
+            reason = f"当前亏损{current_loss*100:.1f}%已超过动态止损线{dynamic_stop_loss*100:.1f}%"
+        else:
+            if diff_pct > 2:
+                recommendation = f"{color} 建议放宽止损至{dynamic_stop_loss*100:.0f}%"
+                reason = (
+                    f"波动率{volatility_level}(ATR {atr_pct*100:.2f}%),动态止损{dynamic_stop_loss*100:.0f}%"
+                    f"比固定止损{fixed_stop_loss*100:.0f}%宽松{abs(diff_pct):.0f}个百分点,避免震荡出局"
+                )
+            elif diff_pct < -2:
+                recommendation = f"{color} 建议收紧止损至{dynamic_stop_loss*100:.0f}%"
+                reason = (
+                    f"波动率{volatility_level}(ATR {atr_pct*100:.2f}%),动态止损{dynamic_stop_loss*100:.0f}%"
+                    f"比固定止损{fixed_stop_loss*100:.0f}%收紧{abs(diff_pct):.0f}个百分点,提高资金效率"
+                )
+            else:
+                recommendation = f"{color} 维持当前止损线{dynamic_stop_loss*100:.0f}%"
+                reason = f"波动率{volatility_level}(ATR {atr_pct*100:.2f}%),动态止损与固定止损接近,保持现状"
+
+        return {
+            'symbol': symbol,
+            'atr': atr,
+            'atr_pct': atr_pct,
+            'volatility_level': volatility_level,
+            'volatility_color': color,
+            'stop_loss_multiplier': stop_loss_multiplier,
+            'fixed_stop_loss': fixed_stop_loss,
+            'dynamic_stop_loss': dynamic_stop_loss,
+            'stop_loss_price': stop_loss_price,
+            'current_price': current_price,
+            'entry_price': entry_price,
+            'current_loss': current_loss,
+            'is_triggered': is_triggered,
+            'recommendation': recommendation,
+            'reason': reason
+        }
+
 
 # 示例用法
 if __name__ == "__main__":
