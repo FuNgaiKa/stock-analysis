@@ -42,30 +42,65 @@ market_state:
     recommended_position: [0.30, 0.50]
 
 # 历史危机数据 (用于压力测试)
+# 扩展到7个历史场景,覆盖不同类型的危机
 historical_crises:
+  # 已有场景
   - name: "2015股灾"
     date: "2015-06-15"
     market_drop: -0.40
     duration_days: 90
     recovery_days: 365
+    characteristics: "杠杆去化、连续熔断、千股跌停"
+    type: "流动性危机"
 
   - name: "2018贸易战"
     date: "2018-10-01"
     market_drop: -0.25
     duration_days: 60
     recovery_days: 180
+    characteristics: "持续阴跌、外部冲击、情绪低迷"
+    type: "地缘政治"
 
   - name: "2020疫情"
     date: "2020-02-03"
     market_drop: -0.30
     duration_days: 30
     recovery_days: 120
+    characteristics: "全球停摆、流动性危机、快速反弹"
+    type: "公共卫生"
 
   - name: "2022美联储加息"
     date: "2022-04-01"
     market_drop: -0.20
     duration_days: 180
     recovery_days: 270
+    characteristics: "利率上行、估值压缩、成长股重挫"
+    type: "货币政策"
+
+  # 新增场景
+  - name: "2008年全球金融危机"
+    date: "2008-09-15"
+    market_drop: -0.50
+    duration_days: 175
+    recovery_days: 730
+    characteristics: "次贷危机、雷曼倒闭、全球衰退"
+    type: "金融危机"
+
+  - name: "2015年A股股灾"
+    date: "2015-06-12"
+    market_drop: -0.40
+    duration_days: 75
+    recovery_days: 365
+    characteristics: "杠杆去化、连续熔断、千股跌停"
+    type: "流动性危机"
+
+  - name: "2022年俄乌冲突"
+    date: "2022-02-24"
+    market_drop: -0.15
+    duration_days: 20
+    recovery_days: 60
+    characteristics: "地缘政治、能源暴涨、避险升温"
+    type: "地缘政治"
 
 # 情景分析参数
 scenario_analysis:
