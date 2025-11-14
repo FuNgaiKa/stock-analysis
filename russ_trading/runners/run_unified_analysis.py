@@ -25,7 +25,7 @@ from pathlib import Path
 from datetime import datetime
 
 # 添加项目根目录到路径
-project_root = Path(__file__).parent.parent
+project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from russ_trading.config.unified_config import (
@@ -1296,8 +1296,39 @@ def main():
         runner = UnifiedAnalysisRunner()
         results = runner.analyze_assets(asset_keys)
 
-        # 格式化报告
-        report = runner.format_report(results, args.format)
+        # 读取持仓数据 (如果存在)
+        positions = None
+        positions_dir = Path(__file__).parent.parent.parent / 'data'
+
+        # 尝试按日期查找持仓文件
+        import glob
+        position_files = sorted(glob.glob(str(positions_dir / 'positions_*.json')), reverse=True)
+
+        if position_files:
+            # 使用最新的持仓文件
+            latest_position_file = position_files[0]
+            try:
+                with open(latest_position_file, 'r', encoding='utf-8') as f:
+                    positions_raw = json.load(f)
+
+                # 转换字段名: position_ratio -> position_pct
+                positions = []
+                for p in positions_raw:
+                    position_data = {
+                        'asset_name': p.get('asset_name'),
+                        'asset_code': p.get('asset_code'),
+                        'asset_key': p.get('asset_key'),
+                        'position_pct': p.get('position_ratio', 0),  # 转换字段名
+                        'current_value': p.get('current_value', 0)
+                    }
+                    positions.append(position_data)
+
+                logger.info(f"成功读取 {len(positions)} 个持仓")
+            except Exception as e:
+                logger.warning(f"读取持仓数据失败: {e}")
+
+        # 格式化报告 (传入持仓数据)
+        report = runner.format_report(results, args.format, positions=positions)
 
         # 打印到控制台 (处理 Windows GBK 编码)
         try:
@@ -1310,10 +1341,16 @@ def main():
         # 保存到文件
         if args.save:
             save_path = Path(args.save)
-            save_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(save_path, 'w', encoding='utf-8') as f:
-                f.write(report)
-            logger.info(f"报告已保存到: {save_path}")
+        else:
+            # 默认保存路径: russ_trading/reports/daily/YYYY-MM/市场洞察报告_YYYYMMDD.md
+            today = datetime.now()
+            report_dir = Path(__file__).parent.parent / 'reports' / 'daily' / today.strftime('%Y-%m')
+            save_path = report_dir / f"市场洞察报告_{today.strftime('%Y%m%d')}.md"
+
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(save_path, 'w', encoding='utf-8') as f:
+            f.write(report)
+        logger.info(f"报告已保存到: {save_path}")
 
         # 发送邮件(始终使用文本格式)
         if args.email:
