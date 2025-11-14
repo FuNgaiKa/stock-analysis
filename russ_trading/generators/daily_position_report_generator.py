@@ -1135,7 +1135,7 @@ class DailyPositionReportGenerator:
                     'limit': f"{self.thresholds['max_single_position']*100:.0f}%",
                     'excess': f"{excess:.1f}%",
                     'message': f"⚠️ {name}仓位超标: 当前{ratio*100:.1f}% > 建议{self.thresholds['max_single_position']*100:.0f}%, 超配{excess:.1f}%",
-                    'action': f'建议减仓至{self.thresholds['max_single_position']*100:.0f}%以内'
+                    'action': f"建议减仓至{self.thresholds['max_single_position']*100:.0f}%以内"
                 })
 
         # 检查现金储备
