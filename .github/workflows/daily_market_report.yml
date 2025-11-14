@@ -35,10 +35,10 @@ jobs:
           RECIPIENT_EMAILS: ${{ secrets.RECIPIENT_EMAILS }}
         run: |
           # 创建邮件配置目录
-          mkdir -p config
+          mkdir -p russ_trading/config
 
           # 创建临时配置文件
-          cat > config/email_config.yaml <<EOF
+          cat > russ_trading/config/email_config.yaml <<EOF
           smtp:
             server: ${SMTP_SERVER}
             port: ${SMTP_PORT}
@@ -53,11 +53,11 @@ jobs:
           # 解析逗号分隔的邮箱地址并追加到配置文件
           IFS=',' read -ra EMAILS <<< "${RECIPIENT_EMAILS}"
           for email in "${EMAILS[@]}"; do
-            echo "  - ${email}" >> config/email_config.yaml
+            echo "  - ${email}" >> russ_trading/config/email_config.yaml
           done
 
           # 追加其他配置
-          cat >> config/email_config.yaml <<EOF
+          cat >> russ_trading/config/email_config.yaml <<EOF
 
           send_no_alert_email: false
           EOF
@@ -68,7 +68,7 @@ jobs:
       - name: 清理配置文件
         if: always()
         run: |
-          rm -f config/email_config.yaml
+          rm -f russ_trading/config/email_config.yaml
 
       - name: 上传报告日志 (失败时)
         if: failure()
