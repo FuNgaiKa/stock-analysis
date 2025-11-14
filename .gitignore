@@ -112,3 +112,4 @@ config/investment_goals.yaml
 !config/investment_goals.yaml.example
 .env
 !.env.example
+russ_trading/data/cache/
