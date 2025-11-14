@@ -564,6 +564,226 @@ class DynamicPositionManager:
 
         return ", ".join(rationale_parts)
 
+    # ==================== VaR风险计算 ====================
+
+    def calculate_var(
+        self,
+        current_value: float,
+        daily_volatility: float,
+        confidence_level: float = 0.95,
+        holding_days: int = 1
+    ) -> float:
+        """
+        计算VaR(风险价值) - Value at Risk
+
+        VaR = 当前市值 × Z分数 × 日波动率 × sqrt(持有天数)
+
+        Args:
+            current_value: 当前市值
+            daily_volatility: 日波动率 (如0.02表示2%)
+            confidence_level: 置信度 (默认95%)
+            holding_days: 持有天数 (默认1天)
+
+        Returns:
+            VaR值 (绝对金额)
+
+        示例:
+            >>> manager = DynamicPositionManager()
+            >>> var = manager.calculate_var(
+            ...     current_value=1000000,
+            ...     daily_volatility=0.02,  # 2%日波动率
+            ...     confidence_level=0.95
+            ... )
+            >>> print(f"95%置信度下,1日VaR: {var:.2f}元")
+        """
+        from scipy import stats
+
+        # 根据置信度计算Z分数
+        # 95%置信度 → Z=1.645 (单侧)
+        # 99%置信度 → Z=2.326 (单侧)
+        z_score = stats.norm.ppf(confidence_level)
+
+        # VaR计算 (考虑持有天数)
+        var = current_value * z_score * daily_volatility * np.sqrt(holding_days)
+
+        return var
+
+    def allocate_by_risk_budget(
+        self,
+        positions: List[Dict],
+        total_capital: float,
+        risk_budget: float,
+        confidence_level: float = 0.95
+    ) -> Dict:
+        """
+        按风险预算分配仓位
+
+        核心逻辑:
+        1. 计算每个标的的VaR(风险价值)
+        2. 设定总风险预算 (如总资金的20%)
+        3. 按风险分配仓位,使得总VaR ≈ 风险预算
+
+        Args:
+            positions: 持仓列表,每个包含:
+                - symbol: 标的代码
+                - asset_name: 标的名称 (可选)
+                - current_value: 当前市值
+                - current_ratio: 当前仓位比例
+                - daily_volatility: 日波动率
+            total_capital: 总资金
+            risk_budget: 总风险预算 (绝对金额)
+            confidence_level: 置信度 (默认95%)
+
+        Returns:
+            {
+                'total_var': 当前总VaR,
+                'risk_budget': 风险预算,
+                'over_budget': 是否超预算,
+                'var_utilization': VaR利用率,
+                'suggestions': [
+                    {
+                        'symbol': 标的代码,
+                        'asset_name': 标的名称,
+                        'current_value': 当前市值,
+                        'current_ratio': 当前仓位比例,
+                        'var': 当前VaR,
+                        'var_contribution': VaR占比,
+                        'suggested_ratio': 建议仓位比例,
+                        'adjustment': 调整幅度,
+                        'reason': 调整原因
+                    },
+                    ...
+                ]
+            }
+
+        示例:
+            >>> positions = [
+            ...     {
+            ...         'symbol': '510300.SS',
+            ...         'asset_name': '证券ETF',
+            ...         'current_value': 200000,
+            ...         'current_ratio': 0.40,
+            ...         'daily_volatility': 0.025
+            ...     },
+            ...     {
+            ...         'symbol': '159915.SZ',
+            ...         'asset_name': '创业板ETF',
+            ...         'current_value': 150000,
+            ...         'current_ratio': 0.30,
+            ...         'daily_volatility': 0.030
+            ...     }
+            ... ]
+            >>> result = manager.allocate_by_risk_budget(
+            ...     positions=positions,
+            ...     total_capital=500000,
+            ...     risk_budget=100000,  # 风险预算10万
+            ...     confidence_level=0.95
+            ... )
+        """
+        # 1. 计算每个标的的VaR
+        for pos in positions:
+            current_value = pos.get('current_value', 0)
+            daily_volatility = pos.get('daily_volatility', 0)
+
+            var = self.calculate_var(current_value, daily_volatility, confidence_level)
+            pos['var'] = var
+
+        # 2. 计算总VaR (简化:直接求和,不考虑相关性)
+        # 注: 更精确的方法需要考虑相关性矩阵,但数据获取困难
+        total_var = sum(p['var'] for p in positions)
+
+        # 3. 判断是否超预算
+        over_budget = total_var > risk_budget
+
+        # 4. 计算建议仓位
+        suggestions = []
+
+        if over_budget:
+            # 超预算: 按VaR比例缩减仓位
+            shrink_factor = risk_budget / total_var if total_var > 0 else 1.0
+
+            for pos in positions:
+                current_value = pos.get('current_value', 0)
+                current_ratio = pos.get('current_ratio', 0)
+                var = pos['var']
+
+                # 建议仓位 = 当前仓位 × 缩减因子
+                suggested_ratio = current_ratio * shrink_factor
+                adjustment = suggested_ratio - current_ratio
+
+                var_contribution = var / total_var if total_var > 0 else 0
+
+                reason = f"VaR占比{var_contribution*100:.1f}%,超预算需缩减{abs(adjustment)*100:.1f}%"
+
+                suggestions.append({
+                    'symbol': pos['symbol'],
+                    'asset_name': pos.get('asset_name', pos['symbol']),
+                    'current_value': current_value,
+                    'current_ratio': current_ratio,
+                    'var': var,
+                    'var_contribution': var_contribution,
+                    'suggested_ratio': suggested_ratio,
+                    'adjustment': adjustment,
+                    'reason': reason
+                })
+        else:
+            # 未超预算: 可适当加仓利用风险预算
+            available_risk = risk_budget - total_var
+
+            # 按当前VaR比例分配额外风险预算
+            for pos in positions:
+                current_value = pos.get('current_value', 0)
+                current_ratio = pos.get('current_ratio', 0)
+                var = pos['var']
+                daily_volatility = pos.get('daily_volatility', 0)
+
+                var_contribution = var / total_var if total_var > 0 else 0
+
+                # 分配额外风险预算
+                extra_var = available_risk * var_contribution
+
+                # 计算可增加的市值
+                if daily_volatility > 0:
+                    from scipy import stats
+                    z_score = stats.norm.ppf(confidence_level)
+                    extra_value = extra_var / (z_score * daily_volatility)
+
+                    # 建议仓位
+                    suggested_value = current_value + extra_value
+                    suggested_ratio = suggested_value / total_capital
+
+                    # 限制最大仓位
+                    suggested_ratio = min(suggested_ratio, self.max_position)
+                else:
+                    suggested_ratio = current_ratio
+
+                adjustment = suggested_ratio - current_ratio
+
+                if abs(adjustment) > 0.01:  # 调整超过1%才提示
+                    reason = f"VaR占比{var_contribution*100:.1f}%,风险利用率不足可加仓{adjustment*100:.1f}%"
+                else:
+                    reason = "当前仓位合理"
+
+                suggestions.append({
+                    'symbol': pos['symbol'],
+                    'asset_name': pos.get('asset_name', pos['symbol']),
+                    'current_value': current_value,
+                    'current_ratio': current_ratio,
+                    'var': var,
+                    'var_contribution': var_contribution,
+                    'suggested_ratio': suggested_ratio,
+                    'adjustment': adjustment,
+                    'reason': reason
+                })
+
+        return {
+            'total_var': total_var,
+            'risk_budget': risk_budget,
+            'over_budget': over_budget,
+            'var_utilization': total_var / risk_budget if risk_budget > 0 else 0,
+            'suggestions': suggestions
+        }
+
 
 # 示例用法
 if __name__ == "__main__":
