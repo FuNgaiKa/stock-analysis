@@ -6,6 +6,7 @@
 """
 
 import sys
+import os
 from pathlib import Path
 import argparse
 import logging
@@ -19,6 +20,9 @@ from src.analyzers.macro.leverage.leverage_strategy_engine import LeverageStrate
 
 def setup_logging(verbose: bool = False):
     """配置日志"""
+    # 确保日志目录存在
+    os.makedirs('logs', exist_ok=True)
+
     level = logging.DEBUG if verbose else logging.INFO
     logging.basicConfig(
         level=level,

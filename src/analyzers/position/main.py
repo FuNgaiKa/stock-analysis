@@ -28,6 +28,9 @@ from strategies.position.reporting.report_generator import TextReportGenerator, 
 from strategies.position.reporting.chart_generator import ChartGenerator
 
 # 配置日志
+# 确保日志目录存在
+os.makedirs('logs', exist_ok=True)
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
