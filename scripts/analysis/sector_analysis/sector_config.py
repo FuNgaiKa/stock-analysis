@@ -190,6 +190,17 @@ SECTOR_DEFINITIONS = {
         'description': '跟踪中证稀土产业指数，覆盖北方稀土、盛和资源、五矿稀土等稀土龙头'
     },
 
+    # A股科创芯片板块
+    'CN_CHIP': {
+        'name': 'A股科创芯片',
+        'market': 'CN',
+        'type': 'etf',
+        'symbols': ['588200'],  # 科创芯片ETF
+        'weights': None,
+        'category': 'tech',
+        'description': '跟踪科创芯片指数，覆盖科创板芯片设计、制造等半导体产业链龙头'
+    },
+
     # 指南针(个股)
     'ZHINANZHEN': {
         'name': '指南针',

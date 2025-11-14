@@ -255,6 +255,18 @@ UNIFIED_ASSETS = {
         'description': '跟踪中证稀土产业指数，覆盖北方稀土、盛和资源、五矿稀土等稀土龙头'
     },
 
+    # A股科创芯片板块
+    'CN_CHIP': {
+        'type': 'etf',
+        'analyzer_type': 'sector',
+        'market': 'CN',
+        'name': 'A股科创芯片',
+        'symbols': ['588200'],
+        'weights': None,
+        'category': 'tech',
+        'description': '跟踪科创芯片指数，覆盖科创板芯片设计、制造等半导体产业链龙头'
+    },
+
     # ==================== 个股类 ====================
     # 三花智控
     'SANHUA_A': {
