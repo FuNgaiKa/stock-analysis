@@ -2,8 +2,8 @@ name: Daily Market Report
 
 on:
   schedule:
-    # 北京时间 15:10 = UTC 07:10 (工作日)
-    - cron: '10 7 * * 1-5'  # 周一到周五
+    # 北京时间 16:10 = UTC 08:10 (工作日,A股港股都收盘后10分钟)
+    - cron: '10 8 * * 1-5'  # 周一到周五
   workflow_dispatch:  # 允许手动触发
 
 jobs:
@@ -25,7 +25,7 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: 生成并发送每日市场报告
+      - name: 生成并发送每日市场洞察报告
         env:
           # SMTP配置 (需在GitHub Secrets中设置)
           SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
@@ -34,8 +34,11 @@ jobs:
           SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
           RECIPIENT_EMAILS: ${{ secrets.RECIPIENT_EMAILS }}
         run: |
+          # 创建邮件配置目录
+          mkdir -p config
+
           # 创建临时配置文件
-          cat > email_config.yaml <<EOF
+          cat > config/email_config.yaml <<EOF
           smtp:
             server: ${SMTP_SERVER}
             port: ${SMTP_PORT}
@@ -50,22 +53,22 @@ jobs:
           # 解析逗号分隔的邮箱地址并追加到配置文件
           IFS=',' read -ra EMAILS <<< "${RECIPIENT_EMAILS}"
           for email in "${EMAILS[@]}"; do
-            echo "  - ${email}" >> email_config.yaml
+            echo "  - ${email}" >> config/email_config.yaml
           done
 
           # 追加其他配置
-          cat >> email_config.yaml <<EOF
+          cat >> config/email_config.yaml <<EOF
 
           send_no_alert_email: false
           EOF
 
-          # 运行每日报告脚本
-          python scripts/run_daily_report.py --email --verbose
+          # 运行市场洞察报告生成并发送邮件
+          python -m russ_trading.runners.run_unified_analysis --email --verbose
 
       - name: 清理配置文件
         if: always()
         run: |
-          rm -f email_config.yaml
+          rm -f config/email_config.yaml
 
       - name: 上传报告日志 (失败时)
         if: failure()
