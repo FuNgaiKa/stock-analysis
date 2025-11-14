@@ -7,6 +7,7 @@ scipy>=1.11.0
 yfinance>=0.2.66
 akshare>=1.17.70
 tushare>=1.4.24
+efinance>=0.5.3
 
 # FastAPI后端
 fastapi>=0.119.1
@@ -21,6 +22,7 @@ plotly>=5.20.0
 # 邮件和报告
 jinja2>=3.1.2
 PyYAML>=6.0
+markdown>=3.5.0
 
 # 工具
 python-dateutil>=2.8.0
