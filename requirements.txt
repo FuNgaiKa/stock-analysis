@@ -1,7 +1,7 @@
-# 核心依赖
-pandas>=2.3.3
-numpy>=2.3.4
-scipy>=1.15.0
+# 核心依赖 (Python 3.11+)
+pandas>=2.2.0
+numpy>=1.26.0
+scipy>=1.11.0
 
 # 数据源
 yfinance>=0.2.66
@@ -14,9 +14,9 @@ uvicorn>=0.38.0
 pydantic>=2.12.3
 
 # 可视化
-matplotlib>=3.10.0
+matplotlib>=3.8.0
 seaborn>=0.13.0
-plotly>=5.24.0
+plotly>=5.20.0
 
 # 邮件和报告
 jinja2>=3.1.2
