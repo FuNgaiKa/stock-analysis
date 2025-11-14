@@ -24,6 +24,8 @@ import logging
 import json
 from pathlib import Path
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import List, Dict, Any
 
 # 添加项目根目录到路径
 project_root = Path(__file__).parent.parent.parent
@@ -60,13 +62,21 @@ logger = logging.getLogger(__name__)
 
 
 class UnifiedAnalysisRunner:
-    """统一资产分析执行器"""
+    """统一资产分析执行器(优化版:支持并发+缓存)"""
 
-    def __init__(self):
-        """初始化分析器"""
+    def __init__(self, max_workers: int = 6, enable_parallel: bool = True):
+        """
+        初始化分析器
+
+        Args:
+            max_workers: 最大并发线程数(默认6)
+            enable_parallel: 是否启用并发执行(默认True)
+        """
         self.comprehensive_reporter = None
         self.sector_reporter = None
         self.investment_advisor = InvestmentAdvisor()
+        self.max_workers = max_workers
+        self.enable_parallel = enable_parallel
 
         # 初始化机构级核心分析器 (Phase 3.3)
         if HAS_CORE_ANALYZERS:
@@ -78,6 +88,8 @@ class UnifiedAnalysisRunner:
             self.valuation_analyzer = None
             self.breadth_analyzer = None
             self.margin_analyzer = None
+
+        logger.info(f"分析器配置: 并发={'启用' if enable_parallel else '禁用'}, 最大线程数={max_workers}")
 
     def analyze_assets(self, asset_keys: list = None) -> dict:
         """
@@ -121,17 +133,26 @@ class UnifiedAnalysisRunner:
             if self.comprehensive_reporter is None:
                 self.comprehensive_reporter = ComprehensiveAssetReporter()
 
-            for asset_key in comprehensive_assets:
-                try:
-                    logger.info(f"分析 {UNIFIED_ASSETS[asset_key]['name']}...")
-                    result = self.comprehensive_reporter.analyze_single_asset(asset_key)
-                    results['assets'][asset_key] = result
-                except Exception as e:
-                    logger.error(f"分析 {asset_key} 失败: {str(e)}")
-                    results['assets'][asset_key] = {
-                        'error': str(e),
-                        'asset_name': UNIFIED_ASSETS[asset_key]['name']
-                    }
+            if self.enable_parallel:
+                # 并发执行
+                comprehensive_results = self._analyze_assets_parallel(
+                    comprehensive_assets,
+                    self.comprehensive_reporter.analyze_single_asset
+                )
+                results['assets'].update(comprehensive_results)
+            else:
+                # 串行执行(向后兼容)
+                for asset_key in comprehensive_assets:
+                    try:
+                        logger.info(f"分析 {UNIFIED_ASSETS[asset_key]['name']}...")
+                        result = self.comprehensive_reporter.analyze_single_asset(asset_key)
+                        results['assets'][asset_key] = result
+                    except Exception as e:
+                        logger.error(f"分析 {asset_key} 失败: {str(e)}")
+                        results['assets'][asset_key] = {
+                            'error': str(e),
+                            'asset_name': UNIFIED_ASSETS[asset_key]['name']
+                        }
 
         # 分析板块类资产 (使用 SectorReporter)
         if sector_assets:
@@ -139,19 +160,68 @@ class UnifiedAnalysisRunner:
             if self.sector_reporter is None:
                 self.sector_reporter = SectorReporter()
 
-            for asset_key in sector_assets:
+            if self.enable_parallel:
+                # 并发执行
+                sector_results = self._analyze_assets_parallel(
+                    sector_assets,
+                    self.sector_reporter.analyze_single_sector
+                )
+                results['assets'].update(sector_results)
+            else:
+                # 串行执行(向后兼容)
+                for asset_key in sector_assets:
+                    try:
+                        logger.info(f"分析 {UNIFIED_ASSETS[asset_key]['name']}...")
+                        result = self.sector_reporter.analyze_single_sector(asset_key)
+                        results['assets'][asset_key] = result
+                    except Exception as e:
+                        logger.error(f"分析 {asset_key} 失败: {str(e)}")
+                        results['assets'][asset_key] = {
+                            'error': str(e),
+                            'asset_name': UNIFIED_ASSETS[asset_key]['name']
+                        }
+
+        logger.info("所有资产分析完成")
+        return results
+
+    def _analyze_assets_parallel(
+        self,
+        asset_keys: List[str],
+        analyzer_func: callable
+    ) -> Dict[str, Any]:
+        """
+        并发分析多个资产
+
+        Args:
+            asset_keys: 资产代码列表
+            analyzer_func: 分析函数(接受asset_key,返回结果字典)
+
+        Returns:
+            {asset_key: result} 字典
+        """
+        results = {}
+
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            # 提交所有任务
+            future_to_asset = {
+                executor.submit(analyzer_func, asset_key): asset_key
+                for asset_key in asset_keys
+            }
+
+            # 收集结果
+            for future in as_completed(future_to_asset):
+                asset_key = future_to_asset[future]
                 try:
-                    logger.info(f"分析 {UNIFIED_ASSETS[asset_key]['name']}...")
-                    result = self.sector_reporter.analyze_single_sector(asset_key)
-                    results['assets'][asset_key] = result
+                    result = future.result()
+                    results[asset_key] = result
+                    logger.info(f"✓ {UNIFIED_ASSETS[asset_key]['name']} 分析完成")
                 except Exception as e:
-                    logger.error(f"分析 {asset_key} 失败: {str(e)}")
-                    results['assets'][asset_key] = {
+                    logger.error(f"✗ {asset_key} 分析失败: {str(e)}")
+                    results[asset_key] = {
                         'error': str(e),
                         'asset_name': UNIFIED_ASSETS[asset_key]['name']
                     }
 
-        logger.info("所有资产分析完成")
         return results
 
     def format_report(

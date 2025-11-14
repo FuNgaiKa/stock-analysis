@@ -60,6 +60,12 @@ from strategies.position.analyzers.performance.relative_strength_analyzer import
 from strategies.position.analyzers.market_structure.chip_distribution_analyzer import ChipDistributionAnalyzer
 from strategies.position.analyzers.technical_analysis.enhanced_divergence_analyzer import EnhancedDivergenceAnalyzer
 
+# 导入缓存管理器
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+from russ_trading.utils.data_cache_manager import get_cache_manager
+
 logger = logging.getLogger(__name__)
 
 
@@ -159,11 +165,49 @@ class ComprehensiveAssetReporter:
         self.chip_analyzer = ChipDistributionAnalyzer()  # 筹码分布
         self.enhanced_divergence_analyzer = EnhancedDivergenceAnalyzer()  # 增强背离分析
 
+        # 初始化缓存管理器
+        self.cache_manager = get_cache_manager(enable_file_cache=True)
+
         logger.info("综合资产分析系统初始化完成")
+
+    def _fetch_asset_data(self, market: str, code: str, asset_type: str, period: str = '5y') -> pd.DataFrame:
+        """
+        统一数据获取方法(带缓存)
+
+        Args:
+            market: 市场(CN/HK/US)
+            code: 代码
+            asset_type: 资产类型
+            period: 时间周期
+
+        Returns:
+            DataFrame
+        """
+        cache_key = f"asset_data_{market}_{code}_{period}"
+
+        def fetcher():
+            """实际数据获取逻辑"""
+            if asset_type in ['commodity', 'crypto']:
+                return self.us_source.get_us_index_daily(code, period=period)
+            elif market == 'CN':
+                return self.cn_analyzer.get_index_data(code, period=period)
+            elif market == 'HK':
+                return self.hk_analyzer.get_index_data(code, period=period)
+            elif market == 'US':
+                return self.us_analyzer.get_index_data(code, period=period)
+            else:
+                raise ValueError(f"不支持的市场: {market}")
+
+        # 使用缓存获取数据
+        return self.cache_manager.get_or_fetch(
+            key=cache_key,
+            fetcher=fetcher,
+            cache_type='daily'  # 日线数据缓存24小时
+        )
 
     def analyze_single_asset(self, asset_key: str) -> Dict:
         """
-        综合分析单个资产
+        综合分析单个资产(优化版:一次性获取数据,所有分析共享)
 
         Args:
             asset_key: 资产代码(CYBZ/KECHUANG50/HKTECH/NASDAQ/CSI300/GOLD/BTC)
@@ -184,14 +228,28 @@ class ComprehensiveAssetReporter:
         }
 
         try:
-            # 1. 历史点位分析
-            result['historical_analysis'] = self._analyze_historical_position(
-                config['market'], config['code'], config['type']
+            # ========== 数据获取阶段(一次性获取,避免重复请求) ==========
+            logger.debug(f"获取 {config['name']} 的数据...")
+
+            # 获取5年数据(用于历史点位和技术分析)
+            df_5y = self._fetch_asset_data(
+                config['market'], config['code'], config['type'], period='5y'
             )
 
-            # 2. 技术面分析
+            # 从5年数据中提取1年和120天数据(避免重复请求)
+            df_1y = df_5y.tail(252) if len(df_5y) >= 252 else df_5y  # 约1年交易日
+            df_120d = df_5y.tail(120) if len(df_5y) >= 120 else df_5y  # 约120天
+
+            # ========== 分析阶段(所有分析共享数据) ==========
+
+            # 1. 历史点位分析(使用5年数据)
+            result['historical_analysis'] = self._analyze_historical_position(
+                config['market'], config['code'], config['type'], df=df_5y
+            )
+
+            # 2. 技术面分析(使用5年数据)
             result['technical_analysis'] = self._analyze_technical(
-                config['market'], config['code'], config['type']
+                config['market'], config['code'], config['type'], df=df_5y
             )
 
             # 3. 资金面分析(仅A股/港股指数)
@@ -216,14 +274,14 @@ class ComprehensiveAssetReporter:
             # 7. 综合判断
             result['comprehensive_judgment'] = self._generate_judgment(result, config)
 
-            # 8. 成交量分析(所有资产)
+            # 8. 成交量分析(使用1年数据)
             result['volume_analysis'] = self._analyze_volume(
-                config['market'], config['code'], config['type']
+                config['market'], config['code'], config['type'], df=df_1y
             )
 
-            # 9. 支撑压力位(所有资产)
+            # 9. 支撑压力位(使用1年数据)
             result['support_resistance'] = self._analyze_support_resistance(
-                config['market'], config['code'], config['type']
+                config['market'], config['code'], config['type'], df=df_1y
             )
 
             # 10. 市场宽度(仅A股指数)
@@ -250,21 +308,21 @@ class ComprehensiveAssetReporter:
                 result['macro_environment'] = self._analyze_macro_environment(config['market'])
 
             # ========== Phase 1 机构级分析 ==========
-            # 13. 相对强度/Alpha分析(需要基准数据)
+            # 13. 相对强度/Alpha分析(使用1年数据)
             if config['type'] in ['index', 'crypto', 'commodity']:
                 result['relative_strength'] = self._analyze_relative_strength(
-                    config['market'], config['code'], config['type']
+                    config['market'], config['code'], config['type'], df=df_1y
                 )
 
-            # 14. 筹码分布分析(仅股票和指数)
+            # 14. 筹码分布分析(使用120天数据)
             if config['type'] == 'index':
                 result['chip_distribution'] = self._analyze_chip_distribution(
-                    config['market'], config['code'], config['type']
+                    config['market'], config['code'], config['type'], df=df_120d
                 )
 
-            # 15. 增强量价背离分析(所有资产)
+            # 15. 增强量价背离分析(使用120天数据)
             result['enhanced_divergence'] = self._analyze_enhanced_divergence(
-                config['market'], config['code'], config['type']
+                config['market'], config['code'], config['type'], df=df_120d
             )
 
             logger.info(f"{config['name']} 分析完成")
@@ -275,12 +333,29 @@ class ComprehensiveAssetReporter:
 
         return result
 
-    def _analyze_historical_position(self, market: str, code: str, asset_type: str) -> Dict:
-        """历史点位分析"""
+    def _analyze_historical_position(self, market: str, code: str, asset_type: str, df: Optional[pd.DataFrame] = None) -> Dict:
+        """
+        历史点位分析(优化版:支持传入DataFrame)
+
+        Args:
+            market: 市场
+            code: 代码
+            asset_type: 资产类型
+            df: 可选的DataFrame,如果提供则直接使用,否则获取数据
+
+        Returns:
+            历史点位分析结果
+        """
         try:
-            # 对于大宗商品和加密货币,使用US数据源获取历史数据
+            # 如果没有传入DataFrame,则获取数据(向后兼容)
+            if df is None:
+                if asset_type in ['commodity', 'crypto']:
+                    df = self.us_source.get_us_index_daily(code, period='5y')
+                else:
+                    df = self._fetch_asset_data(market, code, asset_type, period='5y')
+
+            # 使用传入的或获取的DataFrame进行分析
             if asset_type in ['commodity', 'crypto']:
-                df = self.us_source.get_us_index_daily(code, period='5y')
                 if df.empty:
                     return {'error': '数据获取失败'}
 
@@ -382,21 +457,35 @@ class ComprehensiveAssetReporter:
             logger.error(f"历史点位分析失败: {str(e)}")
             return {'error': str(e)}
 
-    def _analyze_technical(self, market: str, code: str, asset_type: str) -> Dict:
-        """技术面分析"""
+    def _analyze_technical(self, market: str, code: str, asset_type: str, df: Optional[pd.DataFrame] = None) -> Dict:
+        """
+        技术面分析(优化版:支持传入DataFrame)
+
+        Args:
+            market: 市场
+            code: 代码
+            asset_type: 资产类型
+            df: 可选的DataFrame,如果提供则直接使用
+
+        Returns:
+            技术面分析结果
+        """
         try:
-            # 获取资产数据
+            # 如果没有传入DataFrame,则获取数据(向后兼容)
+            if df is None:
+                if asset_type in ['commodity', 'crypto']:
+                    df = self.us_source.get_us_index_daily(code, period='5y')
+                else:
+                    df = self._fetch_asset_data(market, code, asset_type, period='5y')
+
+            # 获取symbol
             if asset_type in ['commodity', 'crypto']:
-                df = self.us_source.get_us_index_daily(code, period='5y')
                 symbol = code
             elif market == 'CN':
-                df = self.cn_analyzer.get_index_data(code, period="5y")
                 symbol = CN_INDICES[code].symbol
             elif market == 'HK':
-                df = self.hk_analyzer.get_index_data(code, period="5y")
                 symbol = HK_INDICES[code].symbol
             else:  # US
-                df = self.us_analyzer.get_index_data(code, period="5y")
                 symbol = US_INDICES[code].symbol
 
             if df.empty:
