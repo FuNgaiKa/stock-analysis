@@ -2904,13 +2904,25 @@ class DailyPositionReportGenerator:
         bearish_positions = []  # 看空
 
         # 如果有market_results,使用其中的方向判断
-        if market_results and 'results' in market_results:
+        # 兼容两种数据格式: {'results': [...]} 和 {'assets': {...}}
+        if market_results and ('results' in market_results or 'assets' in market_results):
             # 创建资产名称到方向判断的映射
             direction_map = {}
-            for result in market_results['results']:
-                asset_name = result.get('asset_name', '')
-                direction = result.get('direction', '')
-                direction_map[asset_name] = direction
+
+            if 'results' in market_results:
+                # 旧格式: {'results': [...]}
+                for result in market_results['results']:
+                    asset_name = result.get('asset_name', '')
+                    direction = result.get('direction', '')
+                    direction_map[asset_name] = direction
+            elif 'assets' in market_results:
+                # 新格式: {'assets': {asset_key: {data}}}
+                for asset_key, asset_data in market_results['assets'].items():
+                    asset_name = asset_data.get('asset_name', asset_data.get('sector_name', ''))
+                    judgment = asset_data.get('comprehensive_judgment', {})
+                    direction = judgment.get('direction', '')
+                    if asset_name:
+                        direction_map[asset_name] = direction
 
             # 分类持仓
             for pos in positions:

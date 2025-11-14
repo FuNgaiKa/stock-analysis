@@ -21,6 +21,7 @@ Unified Asset Analysis Runner
 import sys
 import argparse
 import logging
+import json
 from pathlib import Path
 from datetime import datetime
 
@@ -202,8 +203,10 @@ class UnifiedAnalysisRunner:
         # 4. ========== 我的持仓分析 (放在市场大盘分析后面) ==========
         if format_type == 'markdown' and positions is not None:
             try:
+                logger.info(f"开始生成持仓分析, 持仓数: {len(positions)}")
                 # 创建持仓报告生成器
                 position_generator = DailyPositionReportGenerator()
+                logger.info("持仓报告生成器初始化成功")
 
                 # 生成持仓分析部分
                 position_section = position_generator.generate_my_position_section(
@@ -211,13 +214,16 @@ class UnifiedAnalysisRunner:
                     market_data=market_data,
                     market_results=results
                 )
+                logger.info(f"持仓分析生成成功, 长度: {len(position_section)}")
 
                 lines.append(position_section)
             except Exception as e:
-                logger.warning(f"生成持仓分析失败: {e}")
+                logger.error(f"生成持仓分析失败: {e}", exc_info=True)
                 lines.append("## 💼 【我的持仓分析】")
                 lines.append("")
-                lines.append(f"⚠️ 持仓分析生成失败: {e}")
+                lines.append(f"⚠️ 持仓分析生成失败: {str(e)}")
+                lines.append("")
+                lines.append("请检查日志了解详细错误信息")
                 lines.append("")
 
         # 5. 统计信息 (移到标的汇总里面)
@@ -1328,6 +1334,11 @@ def main():
                 logger.warning(f"读取持仓数据失败: {e}")
 
         # 格式化报告 (传入持仓数据)
+        if positions:
+            logger.info(f"✅ 将使用持仓数据生成报告, 共 {len(positions)} 个持仓")
+        else:
+            logger.warning("⚠️ 未找到持仓数据,将生成不包含持仓分析的报告")
+
         report = runner.format_report(results, args.format, positions=positions)
 
         # 打印到控制台 (处理 Windows GBK 编码)
