@@ -602,18 +602,12 @@ class ComprehensiveAssetReporter:
             logger.error(f"技术面分析失败: {str(e)}")
             return {'error': str(e)}
 
-    def _analyze_volume(self, market: str, code: str, asset_type: str) -> Dict:
-        """成交量分析(维度8)"""
+    def _analyze_volume(self, market: str, code: str, asset_type: str, df: Optional[pd.DataFrame] = None) -> Dict:
+        """成交量分析(维度8) - 优化版:支持传入DataFrame"""
         try:
-            # 获取资产数据
-            if asset_type in ['commodity', 'crypto']:
-                df = self.us_source.get_us_index_daily(code, period='1y')
-            elif market == 'CN':
-                df = self.cn_analyzer.get_index_data(code, period="1y")
-            elif market == 'HK':
-                df = self.hk_analyzer.get_index_data(code, period="1y")
-            else:  # US
-                df = self.us_analyzer.get_index_data(code, period="1y")
+            # 如果没有传入DataFrame,则获取数据(向后兼容)
+            if df is None:
+                df = self._fetch_asset_data(market, code, asset_type, period='1y')
 
             if df.empty:
                 return {'error': '数据获取失败'}
@@ -636,21 +630,21 @@ class ComprehensiveAssetReporter:
             logger.error(f"成交量分析失败: {str(e)}")
             return {'error': str(e)}
 
-    def _analyze_support_resistance(self, market: str, code: str, asset_type: str) -> Dict:
-        """支撑压力位分析(维度9)"""
+    def _analyze_support_resistance(self, market: str, code: str, asset_type: str, df: Optional[pd.DataFrame] = None) -> Dict:
+        """支撑压力位分析(维度9) - 优化版:支持传入DataFrame"""
         try:
-            # 获取资产数据
+            # 如果没有传入DataFrame,则获取数据(向后兼容)
+            if df is None:
+                df = self._fetch_asset_data(market, code, asset_type, period='1y')
+
+            # 获取symbol用于分析
             if asset_type in ['commodity', 'crypto']:
-                df = self.us_source.get_us_index_daily(code, period='1y')
                 symbol = code
             elif market == 'CN':
-                df = self.cn_analyzer.get_index_data(code, period="1y")
                 symbol = CN_INDICES[code].symbol
             elif market == 'HK':
-                df = self.hk_analyzer.get_index_data(code, period="1y")
                 symbol = HK_INDICES[code].symbol
             else:  # US
-                df = self.us_analyzer.get_index_data(code, period="1y")
                 symbol = US_INDICES[code].symbol
 
             if df.empty:
@@ -2128,32 +2122,31 @@ class ComprehensiveAssetReporter:
 
     # ========== Phase 1 机构级分析方法 ==========
 
-    def _analyze_relative_strength(self, market: str, code: str, asset_type: str) -> Dict:
+    def _analyze_relative_strength(self, market: str, code: str, asset_type: str, df: Optional[pd.DataFrame] = None) -> Dict:
         """
-        相对强度/Alpha分析
+        相对强度/Alpha分析 - 优化版:支持传入DataFrame
 
         计算资产相对于基准的Alpha和Beta
         """
         try:
-            # 获取资产数据
+            # 如果没有传入DataFrame,则获取数据(向后兼容)
+            if df is None:
+                df = self._fetch_asset_data(market, code, asset_type, period='1y')
+
+            # 获取基准数据
             if market == 'CN':
-                df = self.cn_analyzer.get_index_data(code, period='1y')
                 benchmark_df = self.cn_analyzer.get_index_data('HS300', period='1y')  # 沪深300作为基准
                 benchmark_name = '沪深300'
             elif market == 'HK':
-                df = self.hk_analyzer.get_index_data(code, period='1y')
                 benchmark_df = self.cn_analyzer.get_index_data('HS300', period='1y')  # 使用沪深300
                 benchmark_name = '沪深300'
             elif market == 'US':
-                df = self.us_source.get_us_index_daily(code, period='1y')
                 benchmark_df = self.us_source.get_us_index_daily('SPY', period='1y')  # 标普500
                 benchmark_name = 'S&P 500'
             elif asset_type == 'commodity':
-                df = self.us_source.get_us_index_daily(code, period='1y')
                 benchmark_df = self.us_source.get_us_index_daily('SPY', period='1y')
                 benchmark_name = 'S&P 500'
             elif asset_type == 'crypto':
-                df = self.us_source.get_us_index_daily(code, period='1y')
                 benchmark_df = self.us_source.get_us_index_daily('SPY', period='1y')
                 benchmark_name = 'S&P 500'
             else:
@@ -2177,22 +2170,16 @@ class ComprehensiveAssetReporter:
             logger.error(f"相对强度分析失败: {str(e)}")
             return {'error': str(e)}
 
-    def _analyze_chip_distribution(self, market: str, code: str, asset_type: str) -> Dict:
+    def _analyze_chip_distribution(self, market: str, code: str, asset_type: str, df: Optional[pd.DataFrame] = None) -> Dict:
         """
-        筹码分布分析
+        筹码分布分析 - 优化版:支持传入DataFrame
 
         分析主力成本、筹码集中度、控盘程度
         """
         try:
-            # 获取资产数据（需要成交量）
-            if market == 'CN':
-                df = self.cn_analyzer.get_index_data(code, period='120d')
-            elif market == 'HK':
-                df = self.hk_analyzer.get_index_data(code, period='120d')
-            elif market == 'US':
-                df = self.us_source.get_us_index_daily(code, period='120d')
-            else:
-                return {'error': '不支持的市场'}
+            # 如果没有传入DataFrame,则获取数据(向后兼容)
+            if df is None:
+                df = self._fetch_asset_data(market, code, asset_type, period='120d')
 
             if df.empty:
                 return {'error': '数据获取失败'}
@@ -2210,26 +2197,16 @@ class ComprehensiveAssetReporter:
             logger.error(f"筹码分布分析失败: {str(e)}")
             return {'error': str(e)}
 
-    def _analyze_enhanced_divergence(self, market: str, code: str, asset_type: str) -> Dict:
+    def _analyze_enhanced_divergence(self, market: str, code: str, asset_type: str, df: Optional[pd.DataFrame] = None) -> Dict:
         """
-        增强量价背离分析
+        增强量价背离分析 - 优化版:支持传入DataFrame
 
         综合量价关系、MACD背离、RSI背离等多维度判断
         """
         try:
-            # 获取资产数据
-            if market == 'CN':
-                df = self.cn_analyzer.get_index_data(code, period='120d')
-            elif market == 'HK':
-                df = self.hk_analyzer.get_index_data(code, period='120d')
-            elif market == 'US':
-                df = self.us_source.get_us_index_daily(code, period='120d')
-            elif asset_type == 'commodity':
-                df = self.us_source.get_us_index_daily(code, period='120d')
-            elif asset_type == 'crypto':
-                df = self.us_source.get_us_index_daily(code, period='120d')
-            else:
-                return {'error': '不支持的市场'}
+            # 如果没有传入DataFrame,则获取数据(向后兼容)
+            if df is None:
+                df = self._fetch_asset_data(market, code, asset_type, period='120d')
 
             if df.empty:
                 return {'error': '数据获取失败'}
