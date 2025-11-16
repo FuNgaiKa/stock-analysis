@@ -30,10 +30,11 @@ class UnifiedEmailNotifier:
         self.logger = logging.getLogger(__name__)
 
         if config_path is None:
-            # __file__ = .../stock-analysis/russ_trading_strategy/unified_email_notifier.py
-            # parent = .../stock-analysis/russ_trading_strategy
-            # parent.parent = .../stock-analysis (项目根目录)
-            project_root = Path(__file__).parent.parent
+            # __file__ = .../stock-analysis/russ_trading/notifiers/unified_email_notifier.py
+            # parent = .../stock-analysis/russ_trading/notifiers
+            # parent.parent = .../stock-analysis/russ_trading
+            # parent.parent.parent = .../stock-analysis (项目根目录)
+            project_root = Path(__file__).parent.parent.parent
             config_path = project_root / 'config' / 'email_config.yaml'
 
         self.config = self._load_config(config_path)
@@ -52,20 +53,393 @@ class UnifiedEmailNotifier:
             self.logger.error(f"加载配置文件失败: {str(e)}")
             raise
 
-    def send_unified_report(self, report: Dict, text_content: str) -> bool:
+    def _filter_email_report(self, markdown_content: str, report: Dict) -> str:
+        """
+        精简邮件报告 - 只保留看多/强烈看多/中性偏多标的的详细分析
+
+        参考: scripts/filter_report_targets.py
+
+        Args:
+            markdown_content: 完整的Markdown报告
+            report: 报告数据字典
+
+        Returns:
+            精简后的Markdown报告
+        """
+        import re
+
+        # 从 report 数据中动态提取看多标的
+        KEEP_TARGETS = set()
+        assets_data = report.get('assets', {})
+
+        for asset_key, asset_data in assets_data.items():
+            if 'error' in asset_data:
+                continue
+
+            judgment = asset_data.get('comprehensive_judgment', {})
+            direction = judgment.get('direction', '')
+
+            # 只保留看多/强烈看多/中性偏多
+            if any(x in direction for x in ['强烈看多', '看多', '中性偏多']):
+                asset_name = asset_data.get('asset_name', '')
+                if asset_name:
+                    KEEP_TARGETS.add(asset_name)
+
+        self.logger.info(f"📋 需要保留的标的: {', '.join(sorted(KEEP_TARGETS))} (共{len(KEEP_TARGETS)}个)")
+
+        lines = markdown_content.split('\n')
+
+        # 1. 找到详细分析的起始位置
+        detail_start = None
+        for i, line in enumerate(lines):
+            if "## 📈 详细资产分析" in line or line.strip() == "## 四大科技指数":
+                detail_start = i
+                break
+
+        if detail_start is None:
+            # 未找到详细分析章节,返回原内容
+            self.logger.warning("⚠️ 未找到详细分析章节,保留完整报告")
+            return markdown_content
+
+        # 2. 找到详细分析的结束位置
+        detail_end = None
+        for i in range(detail_start, len(lines)):
+            if "## 📊 投资纪律" in lines[i] or lines[i].strip() == "## 投资纪律":
+                detail_end = i
+                break
+
+        if detail_end is None:
+            detail_end = len(lines)
+
+        self.logger.info(f"📍 详细分析部分: 第{detail_start+1}行 到 第{detail_end}行")
+
+        # 3. 处理详细分析部分 - 只保留指定标的
+        detail_lines = lines[detail_start:detail_end]
+        filtered_detail = []
+
+        in_target_section = False
+        current_target = None
+
+        for i, line in enumerate(detail_lines):
+            # 检测标的章节 (### 标的名称)
+            if line.startswith("### ") and not any(x in line for x in [
+                "📈", "💰", "⚠️", "🎯", "📝", "📉", "💎", "📋",
+                "✅", "⚖️", "⚪", "🔴", "当前", "综合", "历史", "技术",
+                "资金", "风险", "成交"
+            ]):
+                # 这是一个标的章节
+                target_name = line.replace("###", "").strip()
+                target_base = target_name.split("(")[0].strip()
+
+                # 检查是否需要保留
+                should_keep = any(keep in target_name or keep in target_base for keep in KEEP_TARGETS)
+
+                if should_keep:
+                    current_target = target_name
+                    in_target_section = True
+                    filtered_detail.append(line)
+                    self.logger.info(f"  ✅ 保留: {target_name}")
+                else:
+                    current_target = target_name
+                    in_target_section = False
+                    self.logger.info(f"  🗑️  删除: {target_name}")
+
+            # 检测二级章节 (##), 表示新的大章节
+            elif line.startswith("##"):
+                in_target_section = False
+                filtered_detail.append(line)
+
+            # 如果在保留的标的章节中,保留所有内容
+            elif in_target_section:
+                filtered_detail.append(line)
+
+        # 4. 修改章节标题
+        for i, line in enumerate(filtered_detail):
+            if "详细资产分析" in line or line.strip() == "## 四大科技指数":
+                filtered_detail[i] = "## 📈 看多标的详细分析 (精简版)"
+                filtered_detail.insert(i+1, "")
+                filtered_detail.insert(i+2, "**说明**: 仅保留看多/强烈看多/中性偏多标的的详细分析,其他标的已省略。如需查看完整报告,请访问本地生成的Markdown文件。")
+                filtered_detail.insert(i+3, "")
+                break
+
+        # 5. 重新组合内容
+        result_lines = lines[:detail_start] + filtered_detail + lines[detail_end:]
+        result_content = '\n'.join(result_lines)
+
+        # 统计信息
+        original_lines = len(lines)
+        filtered_lines = len(result_lines)
+        saved_lines = original_lines - filtered_lines
+        saved_pct = saved_lines / original_lines * 100 if original_lines > 0 else 0
+
+        self.logger.info(f"📊 报告精简统计: 原始{original_lines}行 → 精简后{filtered_lines}行, 减少{saved_lines}行 ({saved_pct:.1f}%)")
+
+        return result_content
+
+    def _markdown_to_html(self, markdown_text: str) -> str:
+        """
+        将Markdown转换为带样式的HTML邮件
+
+        Args:
+            markdown_text: Markdown格式文本
+
+        Returns:
+            HTML格式邮件内容
+        """
+        try:
+            import markdown
+        except ImportError:
+            self.logger.error("❌ 缺少markdown库,请安装: pip install markdown")
+            # 降级为简单的纯文本转HTML
+            return f"<html><body><pre>{markdown_text}</pre></body></html>"
+
+        # Markdown → HTML
+        html_body = markdown.markdown(
+            markdown_text,
+            extensions=[
+                'tables',           # 支持表格
+                'fenced_code',      # 支持代码块
+                'nl2br',            # 换行转<br>
+                'sane_lists'        # 更好的列表支持
+            ]
+        )
+
+        # 包裹邮件样式
+        html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        /* 基础样式 */
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                         "Helvetica Neue", Arial, "Microsoft YaHei", sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+        }}
+
+        /* 内容容器 */
+        .email-content {{
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }}
+
+        /* 标题样式 */
+        h1 {{
+            color: #1a1a1a;
+            font-size: 28px;
+            margin-bottom: 10px;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 10px;
+        }}
+
+        h2 {{
+            color: #2c3e50;
+            font-size: 22px;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            border-left: 4px solid #4CAF50;
+            padding-left: 12px;
+        }}
+
+        h3 {{
+            color: #34495e;
+            font-size: 18px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }}
+
+        /* 表格样式 */
+        table {{
+            border-collapse: collapse;
+            width: 100%;
+            margin: 20px 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }}
+
+        th {{
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: 600;
+            border: 1px solid #45a049;
+        }}
+
+        td {{
+            padding: 10px 8px;
+            border: 1px solid #ddd;
+        }}
+
+        tr:nth-child(even) {{
+            background-color: #f9f9f9;
+        }}
+
+        tr:hover {{
+            background-color: #f1f1f1;
+        }}
+
+        /* 列表样式 */
+        ul, ol {{
+            margin: 10px 0;
+            padding-left: 25px;
+        }}
+
+        li {{
+            margin: 5px 0;
+        }}
+
+        /* 代码样式 */
+        code {{
+            background-color: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', Consolas, monospace;
+            font-size: 0.9em;
+            color: #e83e8c;
+        }}
+
+        pre {{
+            background-color: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            border: 1px solid #ddd;
+        }}
+
+        pre code {{
+            background-color: transparent;
+            padding: 0;
+            color: #333;
+        }}
+
+        /* 分隔线 */
+        hr {{
+            border: none;
+            border-top: 2px solid #e0e0e0;
+            margin: 30px 0;
+        }}
+
+        /* 强调文本 */
+        strong {{
+            color: #2c3e50;
+            font-weight: 600;
+        }}
+
+        em {{
+            color: #7f8c8d;
+        }}
+
+        /* 链接样式 */
+        a {{
+            color: #4CAF50;
+            text-decoration: none;
+        }}
+
+        a:hover {{
+            text-decoration: underline;
+        }}
+
+        /* 引用块 */
+        blockquote {{
+            border-left: 4px solid #4CAF50;
+            padding-left: 15px;
+            margin: 15px 0;
+            color: #555;
+            font-style: italic;
+            background-color: #f9f9f9;
+            padding: 10px 15px;
+            border-radius: 0 5px 5px 0;
+        }}
+
+        /* 页脚 */
+        .email-footer {{
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+            text-align: center;
+            color: #999;
+            font-size: 14px;
+        }}
+
+        /* 移动端适配 */
+        @media only screen and (max-width: 600px) {{
+            body {{
+                padding: 10px;
+            }}
+
+            .email-content {{
+                padding: 15px;
+            }}
+
+            h1 {{
+                font-size: 24px;
+            }}
+
+            h2 {{
+                font-size: 20px;
+            }}
+
+            h3 {{
+                font-size: 16px;
+            }}
+
+            table {{
+                font-size: 14px;
+            }}
+
+            th, td {{
+                padding: 8px 4px;
+            }}
+        }}
+    </style>
+</head>
+<body>
+    <div class="email-content">
+        {html_body}
+
+        <div class="email-footer">
+            <p>🤖 Claude Code 量化分析系统 | 自动生成</p>
+            <p style="font-size: 12px; color: #bbb;">
+                本报告由AI驱动的量化分析系统自动生成,仅供参考,不构成投资建议
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+    """
+
+        return html
+
+    def send_unified_report(self, report: Dict, markdown_content: str) -> bool:
         """
         发送市场标的洞察报告邮件
 
         Args:
             report: 报告数据字典
-            text_content: 文本格式报告
+            markdown_content: Markdown格式报告(完整内容)
 
         Returns:
             是否发送成功
         """
         date = report.get('date', datetime.now().strftime('%Y-%m-%d'))
 
-        # 计算整体趋势
+        # 1. 精简报告内容 (只保留看多标的)
+        filtered_markdown = self._filter_email_report(markdown_content, report)
+
+        # 2. Markdown转HTML
+        html_content = self._markdown_to_html(filtered_markdown)
+
+        # 3. 计算整体趋势 (用于邮件主题)
         assets_data = report.get('assets', {})
         bullish_count = 0
         bearish_count = 0
@@ -82,27 +456,23 @@ class UnifiedEmailNotifier:
             elif '看空' in direction:
                 bearish_count += 1
 
-        # 确定邮件主题
+        # 4. 确定邮件主题
         if bullish_count >= total_count * 0.6:
-            subject = f"📈 【偏多】市场标的洞察 - {bullish_count}个看多"
+            subject = f"📈 【偏多】市场洞察报告 - {bullish_count}个看多"
         elif bearish_count >= total_count * 0.6:
-            subject = f"📉 【偏空】市场标的洞察 - {bearish_count}个看空"
+            subject = f"📉 【偏空】市场洞察报告 - {bearish_count}个看空"
         else:
-            subject = f"➡️ 【中性】市场标的洞察 - 多空分化"
+            subject = f"➡️ 【中性】市场洞察报告 - 多空分化"
 
         subject += f" ({total_count}个标的, {date})"
 
-        # 构建HTML邮件内容
-        html_content = self._format_html_content(report)
-
-        # 从配置文件获取收件人列表
+        # 5. 从配置文件获取收件人列表
         recipients = self.config.get('recipients', ['your_email@example.com'])
 
-        # 发送邮件 - 给每个收件人单独发送一封,每次都建立新连接
+        # 6. 发送邮件 - 给每个收件人单独发送一封
         success_count = 0
         failed_recipients = []
 
-        # 为每个收件人单独创建连接和发送邮件
         for recipient in recipients:
             try:
                 # 每个收件人建立独立的SMTP连接
@@ -118,13 +488,30 @@ class UnifiedEmailNotifier:
                 # 创建邮件
                 message = MIMEMultipart('alternative')
                 message['From'] = self.config['sender']['email']
-                message['To'] = recipient  # 单个收件人
+                message['To'] = recipient
                 message['Subject'] = Header(subject, 'utf-8')
                 message['X-Priority'] = '3'
 
-                # 添加纯文本和HTML版本
-                text_part = MIMEText(text_content, 'plain', 'utf-8')
+                # 添加纯文本版本(简要摘要,用于不支持HTML的邮件客户端)
+                text_summary = f"""
+市场洞察报告 ({date})
+
+本次分析了 {total_count} 个标的:
+- 看多: {bullish_count} 个
+- 看空: {bearish_count} 个
+- 中性: {total_count - bullish_count - bearish_count} 个
+
+请使用支持HTML的邮件客户端查看完整报告。
+
+---
+🤖 Claude Code 量化分析系统
+            """
+                text_part = MIMEText(text_summary.strip(), 'plain', 'utf-8')
+
+                # 添加HTML版本(完整报告)
                 html_part = MIMEText(html_content, 'html', 'utf-8')
+
+                # 先添加纯文本,再添加HTML(邮件客户端优先显示HTML)
                 message.attach(text_part)
                 message.attach(html_part)
 
@@ -147,7 +534,7 @@ class UnifiedEmailNotifier:
                 except:
                     pass
 
-        # 汇总结果
+        # 7. 汇总结果
         if success_count == len(recipients):
             self.logger.info(f"🎉 所有邮件发送成功(共{success_count}个收件人): {subject}")
             return True

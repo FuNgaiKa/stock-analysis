@@ -1433,14 +1433,14 @@ def main():
             f.write(report)
         logger.info(f"报告已保存到: {save_path}")
 
-        # 发送邮件(始终使用文本格式)
+        # 发送邮件(使用Markdown格式,转HTML)
         if args.email:
             logger.info("准备发送邮件到配置的收件人列表...")
             try:
-                # 邮件发送使用文本格式报告
-                text_report = runner.format_report(results, 'text')
+                # 邮件发送使用Markdown格式报告
+                markdown_report = runner.format_report(results, 'markdown')
                 notifier = UnifiedEmailNotifier()
-                success = notifier.send_unified_report(results, text_report)
+                success = notifier.send_unified_report(results, markdown_report)
                 if success:
                     logger.info("✅ 邮件发送成功")
                 else:
