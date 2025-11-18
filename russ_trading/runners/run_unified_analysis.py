@@ -266,8 +266,8 @@ class UnifiedAnalysisRunner:
         investment_advice = self._generate_investment_advice_section(results, format_type)
         lines.append(investment_advice)
 
-        # 3. 🔥 今日市场大盘分析 (新增)
-        market_overview = self._generate_market_overview_section(results, format_type)
+        # 3. 🔥 今日市场大盘分析 (新增) - 返回(文本, market_data)元组
+        market_overview, extracted_market_data = self._generate_market_overview_section(results, format_type)
         lines.append(market_overview)
 
         # 4. ========== 我的持仓分析 (放在市场大盘分析后面) ==========
@@ -278,10 +278,10 @@ class UnifiedAnalysisRunner:
                 position_generator = DailyPositionReportGenerator()
                 logger.info("持仓报告生成器初始化成功")
 
-                # 生成持仓分析部分
+                # 生成持仓分析部分 - 使用从市场大盘分析中提取的market_data
                 position_section = position_generator.generate_my_position_section(
                     positions=positions,
-                    market_data=market_data,
+                    market_data=extracted_market_data,
                     market_results=results
                 )
                 logger.info(f"持仓分析生成成功, 长度: {len(position_section)}")
@@ -770,7 +770,7 @@ class UnifiedAnalysisRunner:
             }
         }
 
-    def _generate_market_overview_section(self, results: dict, format_type: str) -> str:
+    def _generate_market_overview_section(self, results: dict, format_type: str) -> tuple:
         """
         生成今日市场大盘分析
 
@@ -779,9 +779,10 @@ class UnifiedAnalysisRunner:
             format_type: 报告格式
 
         Returns:
-            市场大盘分析文本
+            (市场大盘分析文本, 市场数据字典) 元组
         """
         lines = []
+        market_data = None  # 初始化返回值
 
         if format_type == 'markdown':
             lines.append("## 🔥 今日市场大盘分析")
@@ -923,7 +924,7 @@ class UnifiedAnalysisRunner:
                 lines.append("---")
                 lines.append("")
 
-        return '\n'.join(lines)
+        return '\n'.join(lines), market_data
 
     def _generate_investment_advice_section(self, results: dict, format_type: str) -> str:
         """
