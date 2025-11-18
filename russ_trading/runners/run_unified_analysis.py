@@ -1372,20 +1372,19 @@ def main():
         runner = UnifiedAnalysisRunner()
         results = runner.analyze_assets(asset_keys)
 
-        # 读取持仓数据 (如果存在)
+        # 读取持仓数据 (优先级: 环境变量 > 本地最新文件 > 示例文件)
         positions = None
         positions_dir = Path(__file__).parent.parent.parent / 'data'
 
-        # 尝试按日期查找持仓文件
+        # 优先读取环境变量 POSITIONS_DATA (用于GitHub workflow)
+        import os
         import glob
-        position_files = sorted(glob.glob(str(positions_dir / 'positions_*.json')), reverse=True)
 
-        if position_files:
-            # 使用最新的持仓文件
-            latest_position_file = position_files[0]
+        env_positions = os.getenv('POSITIONS_DATA')
+        if env_positions:
             try:
-                with open(latest_position_file, 'r', encoding='utf-8') as f:
-                    positions_raw = json.load(f)
+                positions_raw = json.loads(env_positions)
+                logger.info("✅ 从环境变量 POSITIONS_DATA 读取持仓数据")
 
                 # 转换字段名: position_ratio -> position_pct
                 positions = []
@@ -1399,9 +1398,41 @@ def main():
                     }
                     positions.append(position_data)
 
-                logger.info(f"成功读取 {len(positions)} 个持仓")
+                logger.info(f"成功读取 {len(positions)} 个持仓 (来源: 环境变量)")
             except Exception as e:
-                logger.warning(f"读取持仓数据失败: {e}")
+                logger.warning(f"解析环境变量 POSITIONS_DATA 失败: {e}, 降级到本地文件")
+
+        # 如果环境变量未配置,读取本地文件
+        if positions is None:
+            # 🔧 修复: 按修改时间排序而非字典序
+            position_files = sorted(
+                glob.glob(str(positions_dir / 'positions_*.json')),
+                key=os.path.getmtime,  # 按修改时间排序
+                reverse=True  # 最新的在前
+            )
+
+            if position_files:
+                # 使用最新的持仓文件
+                latest_position_file = position_files[0]
+                try:
+                    with open(latest_position_file, 'r', encoding='utf-8') as f:
+                        positions_raw = json.load(f)
+
+                    # 转换字段名: position_ratio -> position_pct
+                    positions = []
+                    for p in positions_raw:
+                        position_data = {
+                            'asset_name': p.get('asset_name'),
+                            'asset_code': p.get('asset_code'),
+                            'asset_key': p.get('asset_key'),
+                            'position_pct': p.get('position_ratio', 0),  # 转换字段名
+                            'current_value': p.get('current_value', 0)
+                        }
+                        positions.append(position_data)
+
+                    logger.info(f"成功读取 {len(positions)} 个持仓 (来源: {Path(latest_position_file).name})")
+                except Exception as e:
+                    logger.warning(f"读取持仓数据失败: {e}")
 
         # 格式化报告 (传入持仓数据)
         if positions:

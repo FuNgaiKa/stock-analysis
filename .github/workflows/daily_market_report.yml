@@ -33,6 +33,8 @@ jobs:
           SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
           SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
           RECIPIENT_EMAILS: ${{ secrets.RECIPIENT_EMAILS }}
+          # 持仓数据 (可选, JSON格式)
+          POSITIONS_DATA: ${{ secrets.POSITIONS_DATA }}
         run: |
           # 创建邮件配置目录
           mkdir -p russ_trading/config
