@@ -92,7 +92,11 @@ class UnifiedEmailNotifier:
         # 1. 找到详细分析的起始位置
         detail_start = None
         for i, line in enumerate(lines):
-            if "## 📈 详细资产分析" in line or line.strip() == "## 四大科技指数":
+            # 支持一级标题或二级标题
+            if ("综合资产分析报告" in line or
+                "## 📈 详细资产分析" in line or
+                line.strip() == "## 四大科技指数" or
+                "# 综合资产分析报告" in line):
                 detail_start = i
                 break
 
@@ -104,7 +108,9 @@ class UnifiedEmailNotifier:
         # 2. 找到详细分析的结束位置
         detail_end = None
         for i in range(detail_start, len(lines)):
-            if "## 📊 投资纪律" in lines[i] or lines[i].strip() == "## 投资纪律":
+            if ("## 📖 【投资纪律】" in lines[i] or
+                "## 📊 投资纪律" in lines[i] or
+                lines[i].strip() == "## 投资纪律"):
                 detail_end = i
                 break
 
@@ -121,14 +127,23 @@ class UnifiedEmailNotifier:
         current_target = None
 
         for i, line in enumerate(detail_lines):
-            # 检测标的章节 (### 标的名称)
-            if line.startswith("### ") and not any(x in line for x in [
+            # 检测标的章节 (## CATEGORY: 标的名称 或 ### 标的名称)
+            is_target_header = False
+            if line.startswith("## ") and ":" in line:
+                # ## CHEMICAL: A股化工 格式
+                is_target_header = True
+                target_name = line.split(":", 1)[1].strip() if ":" in line else line.replace("##", "").strip()
+            elif line.startswith("### ") and not any(x in line for x in [
                 "📈", "💰", "⚠️", "🎯", "📝", "📉", "💎", "📋",
                 "✅", "⚖️", "⚪", "🔴", "当前", "综合", "历史", "技术",
-                "资金", "风险", "成交"
+                "资金", "风险", "成交", "恐慌", "筹码"
             ]):
-                # 这是一个标的章节
+                # ### 标的名称 格式
+                is_target_header = True
                 target_name = line.replace("###", "").strip()
+
+            if is_target_header:
+                # 这是一个标的章节
                 target_base = target_name.split("(")[0].strip()
 
                 # 检查是否需要保留
@@ -144,19 +159,28 @@ class UnifiedEmailNotifier:
                     in_target_section = False
                     self.logger.info(f"  🗑️  删除: {target_name}")
 
-            # 检测二级章节 (##), 表示新的大章节
-            elif line.startswith("##"):
+            # 检测一级章节 (#), 表示新的大章节
+            elif line.startswith("# ") and not line.startswith("##"):
                 in_target_section = False
                 filtered_detail.append(line)
 
             # 如果在保留的标的章节中,保留所有内容
             elif in_target_section:
                 filtered_detail.append(line)
+            # 非标的章节的内容也保留(如分析说明、表格等)
+            elif not is_target_header:
+                filtered_detail.append(line)
 
         # 4. 修改章节标题
         for i, line in enumerate(filtered_detail):
-            if "详细资产分析" in line or line.strip() == "## 四大科技指数":
-                filtered_detail[i] = "## 📈 看多标的详细分析 (精简版)"
+            if ("详细资产分析" in line or
+                "综合资产分析报告" in line or
+                line.strip() == "## 四大科技指数"):
+                # 将一级标题改为二级标题
+                if line.startswith("# "):
+                    filtered_detail[i] = "## 📈 看多标的详细分析 (精简版)"
+                else:
+                    filtered_detail[i] = "## 📈 看多标的详细分析 (精简版)"
                 filtered_detail.insert(i+1, "")
                 filtered_detail.insert(i+2, "**说明**: 仅保留看多/强烈看多/中性偏多标的的详细分析,其他标的已省略。如需查看完整报告,请访问本地生成的Markdown文件。")
                 filtered_detail.insert(i+3, "")

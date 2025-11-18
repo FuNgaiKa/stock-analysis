@@ -93,8 +93,8 @@ data/*.xlsx
 reports/archive/
 reports/temp/
 
-# 忽略包含实际持仓数据的市场洞察报告
-russ_trading/reports/daily/*/市场洞察报告_*.md
+# 忽略包含实际持仓数据的市场洞察报告 (已关闭,允许提交)
+# russ_trading/reports/daily/*/市场洞察报告_*.md
 
 # 但允许示例报告
 !reports/README.md

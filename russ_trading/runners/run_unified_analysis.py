@@ -1437,8 +1437,8 @@ def main():
         if args.email:
             logger.info("准备发送邮件到配置的收件人列表...")
             try:
-                # 邮件发送使用Markdown格式报告
-                markdown_report = runner.format_report(results, 'markdown')
+                # 邮件发送使用Markdown格式报告(必须传递positions和market_data以生成持仓分析)
+                markdown_report = runner.format_report(results, 'markdown', positions=positions, market_data=results.get('market_state'))
                 notifier = UnifiedEmailNotifier()
                 success = notifier.send_unified_report(results, markdown_report)
                 if success:
