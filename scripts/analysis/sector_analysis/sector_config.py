@@ -212,6 +212,50 @@ SECTOR_DEFINITIONS = {
         'description': '证券投资软件龙头，主营炒股软件及金融信息服务'
     },
 
+    # A股通信板块
+    'CN_TELECOM': {
+        'name': 'A股通信',
+        'market': 'CN',
+        'type': 'etf',
+        'symbols': ['515880'],  # 通信ETF
+        'weights': None,
+        'category': 'tech',
+        'description': '跟踪中证800通信行业，覆盖中国移动、中国电信、中兴通讯等通信龙头'
+    },
+
+    # A股红利低波板块
+    'CN_DIVIDEND_LOW_VOL': {
+        'name': 'A股红利低波',
+        'market': 'CN',
+        'type': 'etf',
+        'symbols': ['512890'],  # 红利低波ETF
+        'weights': None,
+        'category': 'dividend',
+        'description': '跟踪中证红利低波动指数，覆盖高股息低波动股票，适合稳健配置'
+    },
+
+    # A股大数据板块
+    'CN_BIG_DATA': {
+        'name': 'A股大数据',
+        'market': 'CN',
+        'type': 'etf',
+        'symbols': ['516000'],  # 大数据ETF
+        'weights': None,
+        'category': 'tech',
+        'description': '跟踪中证大数据产业指数，覆盖数据存储、处理、应用等大数据产业链'
+    },
+
+    # 奇安信(个股)
+    'QIANXIN': {
+        'name': '奇安信',
+        'market': 'CN',
+        'type': 'stock',
+        'symbols': ['688561'],  # 奇安信股票代码
+        'weights': None,
+        'category': 'tech',
+        'description': '网络安全龙头企业，主营企业级网络安全产品和服务'
+    },
+
     # 以下为示例配置，可根据需要启用
 
     # A股半导体板块(示例，未来可扩展)
@@ -251,7 +295,8 @@ SECTOR_CATEGORIES = {
     'coal': '煤炭',
     'utilities': '电力公用',
     'manufacturing': '先进制造',
-    'materials': '有色金属材料'
+    'materials': '有色金属材料',
+    'dividend': '红利'
 }
 
 

@@ -1265,15 +1265,93 @@ class UnifiedAnalysisRunner:
 
             lines.append("")
 
-        # 7. 成交量分析
+        # 7. 量能分析 (增强版)
         volume = data.get('volume_analysis', {})
         if volume and 'error' not in volume:
-            lines.append("### 成交量分析")
+            lines.append("### 量能分析")
+
+            # 7.1 量价配合状态
+            vp_cooperation = volume.get('vp_cooperation', {})
+            if vp_cooperation:
+                status = vp_cooperation.get('overall_status', 'N/A')
+                cooperation_degree = vp_cooperation.get('cooperation_degree', 0)
+                quality = vp_cooperation.get('overall_quality', 'N/A')
+
+                # 根据状态选择emoji
+                if quality == '优秀':
+                    quality_emoji = '✅'
+                elif quality in ['偏强', '中性']:
+                    quality_emoji = '🟡'
+                else:
+                    quality_emoji = '⚠️'
+
+                lines.append(f"- **量价配合**: {quality_emoji} {status} (协同度: {cooperation_degree}/100)")
+
+            # 7.2 量价背离检测
+            vp_divergence = volume.get('vp_divergence', {})
+            if vp_divergence and vp_divergence.get('has_divergence'):
+                if vp_divergence.get('top_divergence'):
+                    lines.append(f"- **量价背离**: ⚠️ 顶背离，价格上涨但成交量萎缩")
+                if vp_divergence.get('bottom_divergence'):
+                    lines.append(f"- **量价背离**: ✅ 底背离，价格下跌但成交量未萎缩")
+            else:
+                lines.append(f"- **量价背离**: 无")
+
+            # 7.3 换手率和量比
+            turnover = volume.get('turnover', {})
+            if turnover:
+                turnover_rate = turnover.get('turnover_rate')
+                volume_ratio = turnover.get('volume_ratio', 1.0)
+                vr_level = turnover.get('volume_ratio_level', '正常')
+
+                # 量比emoji
+                if vr_level in ['巨量', '显著放量']:
+                    vr_emoji = '📈'
+                elif vr_level in ['缩量', '极度缩量']:
+                    vr_emoji = '📉'
+                else:
+                    vr_emoji = '➡️'
+
+                if turnover_rate is not None:
+                    turnover_level = turnover.get('turnover_level', 'N/A')
+                    lines.append(f"- **换手率**: {turnover_rate*100:.1f}% ({turnover_level})")
+
+                lines.append(f"- **量比**: {volume_ratio:.2f} {vr_emoji} ({vr_level})")
+
+            # 7.4 OBV趋势和背离
             obv = volume.get('obv_analysis', {})
+            obv_divergence = volume.get('obv_divergence', {})
+
             if obv:
                 obv_trend = obv.get('trend', 'N/A')
-                obv_emoji = '➡️' if obv_trend in ['上升', '下降', '平稳'] else ''
+                if obv_trend == '上升':
+                    obv_emoji = '📈'
+                elif obv_trend == '下降':
+                    obv_emoji = '📉'
+                else:
+                    obv_emoji = '➡️'
                 lines.append(f"- **OBV趋势**: {obv_trend} {obv_emoji}")
+
+            if obv_divergence and obv_divergence.get('has_divergence'):
+                if obv_divergence.get('top_divergence'):
+                    lines.append(f"- **OBV背离**: ⚠️ 顶背离看跌")
+                if obv_divergence.get('bottom_divergence'):
+                    lines.append(f"- **OBV背离**: ✅ 底背离看涨")
+
+            # 7.5 量能信号
+            vp_signal = volume.get('vp_signal', '')
+            vp_description = volume.get('vp_description', '')
+            if vp_signal:
+                if vp_signal in ['强烈买入', '买入']:
+                    signal_emoji = '✅'
+                elif vp_signal in ['减仓', '清仓']:
+                    signal_emoji = '🔴'
+                else:
+                    signal_emoji = '🟡'
+                lines.append(f"- **量能信号**: {signal_emoji} {vp_signal}")
+                if vp_description:
+                    lines.append(f"  - {vp_description}")
+
             lines.append("")
 
         # 8. 支撑压力位

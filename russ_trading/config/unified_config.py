@@ -267,6 +267,42 @@ UNIFIED_ASSETS = {
         'description': '跟踪科创芯片指数，覆盖科创板芯片设计、制造等半导体产业链龙头'
     },
 
+    # A股通信板块
+    'CN_TELECOM': {
+        'type': 'etf',
+        'analyzer_type': 'sector',
+        'market': 'CN',
+        'name': 'A股通信',
+        'symbols': ['515880'],
+        'weights': None,
+        'category': 'tech',
+        'description': '跟踪中证800通信行业，覆盖中国移动、中国电信、中兴通讯等通信龙头'
+    },
+
+    # A股红利低波板块
+    'CN_DIVIDEND_LOW_VOL': {
+        'type': 'etf',
+        'analyzer_type': 'sector',
+        'market': 'CN',
+        'name': 'A股红利低波',
+        'symbols': ['512890'],
+        'weights': None,
+        'category': 'dividend',
+        'description': '跟踪中证红利低波动指数，覆盖高股息低波动股票，适合稳健配置'
+    },
+
+    # A股大数据板块
+    'CN_BIG_DATA': {
+        'type': 'etf',
+        'analyzer_type': 'sector',
+        'market': 'CN',
+        'name': 'A股大数据',
+        'symbols': ['516000'],
+        'weights': None,
+        'category': 'tech',
+        'description': '跟踪中证大数据产业指数，覆盖数据存储、处理、应用等大数据产业链'
+    },
+
     # ==================== 个股类 ====================
     # 三花智控
     'SANHUA_A': {
@@ -304,6 +340,18 @@ UNIFIED_ASSETS = {
         'category': 'tech',
         'description': '证券投资软件龙头，主营炒股软件及金融信息服务'
     },
+
+    # 奇安信
+    'QIANXIN': {
+        'type': 'stock',
+        'analyzer_type': 'sector',
+        'market': 'CN',
+        'name': '奇安信',
+        'symbols': ['688561'],
+        'weights': None,
+        'category': 'tech',
+        'description': '网络安全龙头企业，主营企业级网络安全产品和服务'
+    },
 }
 
 
@@ -324,7 +372,8 @@ ASSET_CATEGORIES = {
     'coal': '煤炭',
     'utilities': '电力公用',
     'manufacturing': '先进制造',
-    'materials': '有色金属材料'
+    'materials': '有色金属材料',
+    'dividend': '红利'
 }
 
 

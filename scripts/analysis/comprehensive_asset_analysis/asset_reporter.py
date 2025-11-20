@@ -60,6 +60,9 @@ from strategies.position.analyzers.performance.relative_strength_analyzer import
 from strategies.position.analyzers.market_structure.chip_distribution_analyzer import ChipDistributionAnalyzer
 from strategies.position.analyzers.technical_analysis.enhanced_divergence_analyzer import EnhancedDivergenceAnalyzer
 
+# 量价关系增强分析器
+from russ_trading.analyzers.volume_price_analyzer import VolumePriceAnalyzer
+
 # 导入缓存管理器
 import sys
 from pathlib import Path
@@ -152,6 +155,7 @@ class ComprehensiveAssetReporter:
 
         # 新增分析器(维度8-11)
         self.volume_analyzer = VolumeAnalyzer()
+        self.vp_analyzer = VolumePriceAnalyzer()  # 量价关系增强分析器
         # SupportResistanceAnalyzer需要每个资产单独实例化
         self.market_breadth_analyzer = MarketBreadthAnalyzer()  # 仅A股
         self.vix_analyzer = VIXAnalyzer(self.us_source)  # 美股恐慌指数
@@ -603,7 +607,7 @@ class ComprehensiveAssetReporter:
             return {'error': str(e)}
 
     def _analyze_volume(self, market: str, code: str, asset_type: str, df: Optional[pd.DataFrame] = None) -> Dict:
-        """成交量分析(维度8) - 优化版:支持传入DataFrame"""
+        """成交量分析(维度8) - 增强版:支持传入DataFrame"""
         try:
             # 如果没有传入DataFrame,则获取数据(向后兼容)
             if df is None:
@@ -612,18 +616,34 @@ class ComprehensiveAssetReporter:
             if df.empty:
                 return {'error': '数据获取失败'}
 
-            # 调用VolumeAnalyzer (不需要symbol参数)
-            volume_result = self.volume_analyzer.analyze_volume(df)
+            # 1. 基础成交量分析 (OBV等)
+            basic_volume = self.volume_analyzer.analyze_volume(df)
 
-            if 'error' in volume_result:
-                return volume_result
+            if 'error' in basic_volume:
+                return basic_volume
 
-            # 提取关键数据
+            # 2. 量价配合分析
+            vp_analysis = self.vp_analyzer.analyze_volume_price_relationship(df, lookback=20)
+
+            # 3. 换手率和量比分析 (指数类资产暂不支持换手率)
+            turnover_analysis = self.vp_analyzer.analyze_turnover_and_volume_ratio(df, symbol=None)
+
+            # 4. OBV背离检测
+            obv_divergence = self.vp_analyzer.detect_obv_divergence(df, lookback=20)
+
+            # 合并结果
             return {
-                'obv': volume_result.get('obv', {}),
-                'volume_ratio': volume_result.get('volume_ratio', {}),
-                'price_volume_relation': volume_result.get('price_volume_relation', {}),
-                'anomaly': volume_result.get('anomaly_detection', {})
+                'obv_analysis': basic_volume.get('obv', {}),
+                'volume_ratio': basic_volume.get('volume_ratio', {}),
+                'price_volume_relation': basic_volume.get('price_volume_relation', {}),
+                'anomaly': basic_volume.get('anomaly_detection', {}),
+                'vp_cooperation': vp_analysis.get('cooperation', {}),
+                'vp_divergence': vp_analysis.get('divergence', {}),
+                'vp_score': vp_analysis.get('vp_score', 0),
+                'vp_signal': vp_analysis.get('signal', ''),
+                'vp_description': vp_analysis.get('description', ''),
+                'turnover': turnover_analysis,
+                'obv_divergence': obv_divergence
             }
 
         except Exception as e:

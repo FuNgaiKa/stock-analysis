@@ -29,11 +29,249 @@ class VolumePriceAnalyzer:
     2. 分析量价配合(价涨量增/价跌量缩等)
     3. 计算量价关系评分
     4. 生成量价关系操作建议
+    5. OBV背离检测
+    6. 换手率和量比分析
     """
 
     def __init__(self):
         """初始化量价关系分析器"""
         logger.info("量价关系增强分析器初始化完成")
+
+    def detect_obv_divergence(self, df: pd.DataFrame, lookback: int = 20) -> Dict:
+        """
+        检测OBV背离
+
+        OBV (On Balance Volume) 能量潮背离检测:
+        - 顶背离: 价格创新高,但OBV未创新高 → 看跌信号
+        - 底背离: 价格创新低,但OBV未创新低 → 看涨信号
+
+        Args:
+            df: OHLCV数据,必须包含 close, volume 列
+            lookback: 回溯周期
+
+        Returns:
+            OBV背离检测结果
+        """
+        if df.empty or len(df) < lookback + 5:
+            return {
+                'obv_trend': '数据不足',
+                'top_divergence': False,
+                'bottom_divergence': False,
+                'has_divergence': False,
+                'divergence_desc': '数据不足,无法检测OBV背离'
+            }
+
+        try:
+            recent_df = df.tail(lookback + 5).copy()
+
+            # 计算OBV
+            price_direction = recent_df['close'].diff()
+            obv = pd.Series(index=recent_df.index, dtype=float)
+            obv.iloc[0] = recent_df['volume'].iloc[0]
+
+            for i in range(1, len(recent_df)):
+                if price_direction.iloc[i] > 0:
+                    obv.iloc[i] = obv.iloc[i-1] + recent_df['volume'].iloc[i]
+                elif price_direction.iloc[i] < 0:
+                    obv.iloc[i] = obv.iloc[i-1] - recent_df['volume'].iloc[i]
+                else:
+                    obv.iloc[i] = obv.iloc[i-1]
+
+            # OBV趋势判断
+            obv_ma = obv.rolling(10).mean()
+            obv_latest = obv.iloc[-1]
+            obv_ma_latest = obv_ma.iloc[-1]
+
+            if obv_latest > obv_ma_latest * 1.05:
+                obv_trend = "上升"
+            elif obv_latest < obv_ma_latest * 0.95:
+                obv_trend = "下降"
+            else:
+                obv_trend = "平稳"
+
+            # 寻找价格和OBV的峰值/谷值
+            price_peaks = self._find_peaks(recent_df['close'].values)
+            price_troughs = self._find_troughs(recent_df['close'].values)
+            obv_peaks = self._find_peaks(obv.values)
+            obv_troughs = self._find_troughs(obv.values)
+
+            # 检测顶背离
+            top_divergence = False
+            if len(price_peaks) >= 2 and len(obv_peaks) >= 2:
+                last_price_peaks = sorted(price_peaks[-2:])
+                last_obv_peaks = sorted(obv_peaks[-2:])
+
+                # 价格创新高但OBV未创新高
+                if (recent_df['close'].iloc[last_price_peaks[-1]] >
+                    recent_df['close'].iloc[last_price_peaks[0]]):
+                    if obv.iloc[last_obv_peaks[-1]] < obv.iloc[last_obv_peaks[0]]:
+                        top_divergence = True
+
+            # 检测底背离
+            bottom_divergence = False
+            if len(price_troughs) >= 2 and len(obv_troughs) >= 2:
+                last_price_troughs = sorted(price_troughs[-2:])
+                last_obv_troughs = sorted(obv_troughs[-2:])
+
+                # 价格创新低但OBV未创新低
+                if (recent_df['close'].iloc[last_price_troughs[-1]] <
+                    recent_df['close'].iloc[last_price_troughs[0]]):
+                    if obv.iloc[last_obv_troughs[-1]] > obv.iloc[last_obv_troughs[0]]:
+                        bottom_divergence = True
+
+            # 生成描述
+            if top_divergence:
+                divergence_desc = "价格创新高但OBV未新高,顶背离看跌"
+            elif bottom_divergence:
+                divergence_desc = "价格创新低但OBV未新低,底背离看涨"
+            else:
+                divergence_desc = "无OBV背离"
+
+            return {
+                'obv_trend': obv_trend,
+                'obv_latest': float(obv_latest),
+                'top_divergence': top_divergence,
+                'bottom_divergence': bottom_divergence,
+                'has_divergence': top_divergence or bottom_divergence,
+                'divergence_desc': divergence_desc
+            }
+
+        except Exception as e:
+            logger.error(f"OBV背离检测失败: {str(e)}")
+            return {
+                'obv_trend': '分析失败',
+                'top_divergence': False,
+                'bottom_divergence': False,
+                'has_divergence': False,
+                'divergence_desc': f'分析失败: {str(e)}'
+            }
+
+    def get_turnover_rate(self, symbol: str) -> Optional[float]:
+        """
+        获取A股换手率
+
+        Args:
+            symbol: 股票代码 (如 '512880', '300803')
+
+        Returns:
+            换手率(小数形式,如0.025表示2.5%),非A股返回None
+        """
+        try:
+            import akshare as ak
+
+            # 清理代码格式
+            code = symbol.replace('.SS', '').replace('.SZ', '').replace('.HK', '')
+
+            # 只支持A股
+            if len(code) != 6 or not code.isdigit():
+                return None
+
+            # 获取实时行情
+            df = ak.stock_zh_a_spot_em()
+            row = df[df['代码'] == code]
+
+            if not row.empty:
+                turnover_rate = row['换手率'].values[0]
+                return float(turnover_rate) / 100  # 转为小数
+
+            return None
+
+        except Exception as e:
+            logger.debug(f"获取换手率失败 {symbol}: {str(e)}")
+            return None
+
+    def analyze_turnover_and_volume_ratio(
+        self,
+        df: pd.DataFrame,
+        symbol: str = None
+    ) -> Dict:
+        """
+        分析换手率和量比
+
+        Args:
+            df: OHLCV数据
+            symbol: 股票代码(用于获取实时换手率)
+
+        Returns:
+            换手率和量比分析结果
+        """
+        result = {
+            'turnover_rate': None,
+            'turnover_level': 'N/A',
+            'volume_ratio': 1.0,
+            'volume_ratio_level': '正常',
+            'signal': '中性',
+            'description': ''
+        }
+
+        try:
+            # 1. 获取换手率(仅A股)
+            if symbol:
+                turnover = self.get_turnover_rate(symbol)
+                if turnover is not None:
+                    result['turnover_rate'] = turnover
+
+                    # 换手率水平判断
+                    if turnover >= 0.10:
+                        result['turnover_level'] = '极高'
+                    elif turnover >= 0.05:
+                        result['turnover_level'] = '高'
+                    elif turnover >= 0.02:
+                        result['turnover_level'] = '中等'
+                    elif turnover >= 0.01:
+                        result['turnover_level'] = '偏低'
+                    else:
+                        result['turnover_level'] = '低'
+
+            # 2. 计算量比
+            if not df.empty and 'volume' in df.columns and len(df) >= 5:
+                latest_volume = df['volume'].iloc[-1]
+                avg_volume_5d = df['volume'].tail(5).mean()
+
+                if avg_volume_5d > 0:
+                    volume_ratio = latest_volume / avg_volume_5d
+                    result['volume_ratio'] = float(volume_ratio)
+
+                    # 量比水平判断
+                    if volume_ratio >= 3.0:
+                        result['volume_ratio_level'] = '巨量'
+                    elif volume_ratio >= 2.0:
+                        result['volume_ratio_level'] = '显著放量'
+                    elif volume_ratio >= 1.5:
+                        result['volume_ratio_level'] = '放量'
+                    elif volume_ratio >= 0.8:
+                        result['volume_ratio_level'] = '正常'
+                    elif volume_ratio >= 0.5:
+                        result['volume_ratio_level'] = '缩量'
+                    else:
+                        result['volume_ratio_level'] = '极度缩量'
+
+            # 3. 综合信号判断
+            turnover_level = result['turnover_level']
+            vr_level = result['volume_ratio_level']
+
+            if vr_level in ['巨量', '显著放量'] and turnover_level in ['极高', '高']:
+                result['signal'] = '异常活跃'
+                result['description'] = f"换手率{result['turnover_rate']*100:.1f}%,量比{result['volume_ratio']:.1f},交易异常活跃,关注变盘"
+            elif vr_level in ['巨量', '显著放量', '放量']:
+                result['signal'] = '放量'
+                result['description'] = f"量比{result['volume_ratio']:.1f},成交放量,关注价格方向"
+            elif vr_level in ['缩量', '极度缩量']:
+                result['signal'] = '缩量'
+                result['description'] = f"量比{result['volume_ratio']:.1f},成交缩量,观望为主"
+            else:
+                result['signal'] = '正常'
+                if result['turnover_rate']:
+                    result['description'] = f"换手率{result['turnover_rate']*100:.1f}%,量比{result['volume_ratio']:.1f},交易正常"
+                else:
+                    result['description'] = f"量比{result['volume_ratio']:.1f},交易正常"
+
+            return result
+
+        except Exception as e:
+            logger.error(f"换手率和量比分析失败: {str(e)}")
+            result['description'] = f'分析失败: {str(e)}'
+            return result
 
     def analyze_volume_price_relationship(
         self,

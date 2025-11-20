@@ -44,6 +44,7 @@ from strategies.position.analyzers.technical_analysis.volume_analyzer import Vol
 from strategies.position.analyzers.technical_analysis.support_resistance import SupportResistanceAnalyzer
 from strategies.position.analyzers.market_structure.market_breadth_analyzer import MarketBreadthAnalyzer
 from strategies.position.analyzers.valuation.index_valuation_analyzer import IndexValuationAnalyzer
+from russ_trading.analyzers.volume_price_analyzer import VolumePriceAnalyzer
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +66,7 @@ class SectorReporter:
         # 技术分析器
         self.divergence_analyzer = DivergenceAnalyzer()
         self.volume_analyzer = VolumeAnalyzer()
+        self.vp_analyzer = VolumePriceAnalyzer()
 
         # A股专项分析器
         self.cn_indicators = CNStockIndicators()
@@ -591,15 +593,39 @@ class SectorReporter:
             }
 
     def _analyze_volume(self, market: str, symbol: str, prefer_source: str = None) -> Dict:
-        """成交量分析"""
+        """成交量分析 - 增强版"""
         try:
             df = self.get_etf_data(symbol, period="1y", market=market, prefer_source=prefer_source)
             if df.empty:
                 return {'error': '数据获取失败'}
 
-            # VolumeAnalyzer的方法是analyze_volume
-            volume_result = self.volume_analyzer.analyze_volume(df, periods=20)
-            return volume_result
+            # 1. 基础成交量分析 (OBV等)
+            basic_volume = self.volume_analyzer.analyze_volume(df, periods=20)
+
+            # 2. 量价配合分析
+            vp_analysis = self.vp_analyzer.analyze_volume_price_relationship(df, lookback=20)
+
+            # 3. 换手率和量比分析
+            turnover_analysis = self.vp_analyzer.analyze_turnover_and_volume_ratio(df, symbol)
+
+            # 4. OBV背离检测
+            obv_divergence = self.vp_analyzer.detect_obv_divergence(df, lookback=20)
+
+            # 合并结果
+            result = {
+                'obv_analysis': basic_volume.get('obv', {}),
+                'price_volume_relation': basic_volume.get('price_volume_relation', {}),
+                'volume_status': basic_volume.get('volume_status', {}),
+                'vp_cooperation': vp_analysis.get('cooperation', {}),
+                'vp_divergence': vp_analysis.get('divergence', {}),
+                'vp_score': vp_analysis.get('vp_score', 0),
+                'vp_signal': vp_analysis.get('signal', ''),
+                'vp_description': vp_analysis.get('description', ''),
+                'turnover': turnover_analysis,
+                'obv_divergence': obv_divergence
+            }
+
+            return result
 
         except Exception as e:
             logger.error(f"成交量分析失败: {str(e)}")
