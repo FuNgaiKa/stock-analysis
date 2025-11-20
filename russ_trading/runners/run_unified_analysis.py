@@ -1238,9 +1238,14 @@ class UnifiedAnalysisRunner:
             lines.append("### 资金面分析")
             flow_type = '**北向资金(外资)**' if capital['type'] == 'northbound' else '**南向资金(内地)**'
             lines.append(f"{flow_type}:")
-            lines.append(f"- **近5日累计**: {capital.get('recent_5d_flow', 0):.2f} 亿元")
-            lines.append(f"- **流向状态**: {capital.get('status', 'N/A')}")
-            lines.append(f"- **情绪评分**: {capital.get('sentiment_score', 50)}/100")
+
+            # 检查数据是否可用
+            if capital.get('data_available', True):
+                lines.append(f"- **近5日累计**: {capital.get('recent_5d_flow', 0):.2f} 亿元")
+                lines.append(f"- **流向状态**: {capital.get('status', 'N/A')}")
+                lines.append(f"- **情绪评分**: {capital.get('sentiment_score', 50)}/100")
+            else:
+                lines.append(f"- ⚠️ {capital.get('data_note', '数据暂不可用')}")
             lines.append("")
 
         # 6. 风险评估

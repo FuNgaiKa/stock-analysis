@@ -842,11 +842,21 @@ class ComprehensiveAssetReporter:
                 margin_analyzer = MarginTradingAnalyzer(lookback_days=252)
                 margin_result = margin_analyzer.comprehensive_analysis(market='sse')  # 使用上交所数据
 
+                # 修复: 使用正确的数据路径 metrics.total_inflow_5d
+                north_metrics = north_flow.get('metrics', {})
+                north_sentiment = north_flow.get('sentiment_analysis', {})
+
+                # 检查北向资金数据是否可用（东方财富数据源可能返回0）
+                recent_5d_flow = north_metrics.get('total_inflow_5d', 0)
+                data_available = recent_5d_flow != 0 or north_metrics.get('latest_inflow', 0) != 0
+
                 result = {
                     'type': 'northbound',
-                    'recent_5d_flow': north_flow.get('flow_analysis', {}).get('recent_5d', 0),
-                    'status': north_flow.get('sentiment_analysis', {}).get('sentiment', '未知'),
-                    'sentiment_score': north_flow.get('sentiment_analysis', {}).get('sentiment_score', 50)
+                    'recent_5d_flow': recent_5d_flow,
+                    'status': north_sentiment.get('sentiment', '未知'),
+                    'sentiment_score': north_sentiment.get('sentiment_score', 50),
+                    'data_available': data_available,
+                    'data_note': '' if data_available else '北向资金数据暂不可用(数据源问题)'
                 }
 
                 # 添加融资融券数据
@@ -875,11 +885,14 @@ class ComprehensiveAssetReporter:
             elif market == 'HK':
                 # 南向资金
                 south_flow = self.hk_connect.comprehensive_analysis(direction='south')
+                # 修复: 使用正确的数据路径 metrics.total_inflow_5d
+                metrics = south_flow.get('metrics', {})
+                sentiment = south_flow.get('sentiment_analysis', {})
                 return {
                     'type': 'southbound',
-                    'recent_5d_flow': south_flow.get('flow_analysis', {}).get('recent_5d', 0),
-                    'status': south_flow.get('sentiment_analysis', {}).get('sentiment', '未知'),
-                    'sentiment_score': south_flow.get('sentiment_analysis', {}).get('sentiment_score', 50)
+                    'recent_5d_flow': metrics.get('total_inflow_5d', 0),
+                    'status': sentiment.get('sentiment', '未知'),
+                    'sentiment_score': sentiment.get('sentiment_score', 50)
                 }
             else:
                 return {'available': False}
@@ -1434,9 +1447,14 @@ class ComprehensiveAssetReporter:
                     lines.append(f"\n【资金面分析】")
                     flow_type = '北向资金(外资)' if capital['type'] == 'northbound' else '南向资金(内地)'
                     lines.append(f"  {flow_type}")
-                    lines.append(f"    近5日累计: {capital['recent_5d_flow']:.2f} 亿元")
-                    lines.append(f"    流向状态: {capital['status']}")
-                    lines.append(f"    情绪评分: {capital['sentiment_score']}/100")
+
+                    # 检查数据是否可用
+                    if capital.get('data_available', True):
+                        lines.append(f"    近5日累计: {capital['recent_5d_flow']:.2f} 亿元")
+                        lines.append(f"    流向状态: {capital['status']}")
+                        lines.append(f"    情绪评分: {capital['sentiment_score']}/100")
+                    else:
+                        lines.append(f"    ⚠️ {capital.get('data_note', '数据暂不可用')}")
 
                     # 融资融券数据(仅A股)
                     margin = capital.get('margin_trading', {})
@@ -1901,9 +1919,14 @@ class ComprehensiveAssetReporter:
                     lines.append("#### 资金面分析")
                     flow_type = '北向资金(外资)' if capital['type'] == 'northbound' else '南向资金(内地)'
                     lines.append(f"**{flow_type}**:")
-                    lines.append(f"- **近5日累计**: {capital['recent_5d_flow']:.2f} 亿元")
-                    lines.append(f"- **流向状态**: {capital['status']}")
-                    lines.append(f"- **情绪评分**: {capital['sentiment_score']}/100")
+
+                    # 检查数据是否可用
+                    if capital.get('data_available', True):
+                        lines.append(f"- **近5日累计**: {capital['recent_5d_flow']:.2f} 亿元")
+                        lines.append(f"- **流向状态**: {capital['status']}")
+                        lines.append(f"- **情绪评分**: {capital['sentiment_score']}/100")
+                    else:
+                        lines.append(f"- ⚠️ {capital.get('data_note', '数据暂不可用')}")
 
                     # 融资融券数据(仅A股)
                     margin = capital.get('margin_trading', {})

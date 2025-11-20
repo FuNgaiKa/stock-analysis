@@ -406,11 +406,22 @@ class SectorReporter:
 
             # 北向资金
             north_flow = self.hk_connect.comprehensive_analysis(direction='north')
+
+            # 修复: 使用正确的数据路径 metrics.total_inflow_5d
+            north_metrics = north_flow.get('metrics', {})
+            north_sentiment = north_flow.get('sentiment_analysis', {})
+
+            # 检查北向资金数据是否可用（东方财富数据源可能返回0）
+            recent_5d_flow = north_metrics.get('total_inflow_5d', 0)
+            data_available = recent_5d_flow != 0 or north_metrics.get('latest_inflow', 0) != 0
+
             return {
                 'type': 'northbound',
-                'recent_5d_flow': north_flow.get('flow_analysis', {}).get('recent_5d', 0),
-                'status': north_flow.get('sentiment_analysis', {}).get('sentiment', '未知'),
-                'sentiment_score': north_flow.get('sentiment_analysis', {}).get('sentiment_score', 50)
+                'recent_5d_flow': recent_5d_flow,
+                'status': north_sentiment.get('sentiment', '未知'),
+                'sentiment_score': north_sentiment.get('sentiment_score', 50),
+                'data_available': data_available,
+                'data_note': '' if data_available else '北向资金数据暂不可用(数据源问题)'
             }
 
         except Exception as e:
