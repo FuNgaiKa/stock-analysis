@@ -611,6 +611,9 @@ class SectorReporter:
             # 4. OBV背离检测
             obv_divergence = self.vp_analyzer.detect_obv_divergence(df, lookback=20)
 
+            # 5. 成交量突破确认分析
+            volume_breakout = self.vp_analyzer.analyze_volume_breakout(df, lookback=20)
+
             # 合并结果
             result = {
                 'obv_analysis': basic_volume.get('obv', {}),
@@ -622,7 +625,8 @@ class SectorReporter:
                 'vp_signal': vp_analysis.get('signal', ''),
                 'vp_description': vp_analysis.get('description', ''),
                 'turnover': turnover_analysis,
-                'obv_divergence': obv_divergence
+                'obv_divergence': obv_divergence,
+                'volume_breakout': volume_breakout
             }
 
             return result

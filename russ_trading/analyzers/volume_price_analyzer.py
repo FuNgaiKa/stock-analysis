@@ -273,6 +273,105 @@ class VolumePriceAnalyzer:
             result['description'] = f'分析失败: {str(e)}'
             return result
 
+    def analyze_volume_breakout(
+        self,
+        df: pd.DataFrame,
+        resistance_price: float = None,
+        lookback: int = 20
+    ) -> Dict:
+        """
+        成交量突破确认分析
+
+        核心逻辑：价格突破关键位时，验证成交量是否配合
+        - 有效突破：价格突破阻力位 + 成交量放大1.5倍以上
+        - 假突破：价格突破但量能不足 → 高概率回落
+
+        Args:
+            df: OHLCV数据，必须包含 close, high, volume 列
+            resistance_price: 阻力位价格，如果为None则自动计算
+            lookback: 回溯周期，默认20日
+
+        Returns:
+            成交量突破确认分析结果
+        """
+        if df.empty or len(df) < lookback:
+            return {
+                'status': '数据不足',
+                'is_breakout': False,
+                'volume_confirm': False,
+                'signal': '无法分析',
+                'description': '数据不足，无法进行突破分析'
+            }
+
+        try:
+            recent_df = df.tail(lookback + 5).copy()
+            latest = recent_df.iloc[-1]
+            current_price = latest['close']
+            current_volume = latest['volume']
+
+            # 1. 自动计算阻力位（如果未提供）
+            if resistance_price is None:
+                # 使用近期高点作为阻力位
+                high_prices = recent_df['high'].iloc[:-1]  # 排除最新一天
+                resistance_price = high_prices.max()
+
+            # 2. 计算5日均量
+            avg_volume_5d = recent_df['volume'].tail(6).iloc[:-1].mean()  # 前5日均量
+
+            # 3. 计算量比
+            volume_ratio = current_volume / avg_volume_5d if avg_volume_5d > 0 else 1.0
+
+            # 4. 判断是否突破阻力位
+            is_breakout = current_price > resistance_price
+
+            # 5. 判断成交量是否确认（>=1.5倍）
+            volume_confirm = volume_ratio >= 1.5
+
+            # 6. 生成信号和描述
+            if is_breakout and volume_confirm:
+                status = '有效突破'
+                signal = '买入信号'
+                description = f"放量突破阻力位{resistance_price:.2f}，量比{volume_ratio:.1f}，可跟进"
+            elif is_breakout and not volume_confirm:
+                status = '假突破风险'
+                signal = '观望'
+                description = f"突破阻力位{resistance_price:.2f}但量能不足(量比{volume_ratio:.1f})，警惕回落"
+            elif not is_breakout and volume_ratio >= 2.0:
+                status = '蓄势待发'
+                signal = '关注'
+                description = f"未突破阻力位{resistance_price:.2f}，但放量明显(量比{volume_ratio:.1f})，关注突破"
+            else:
+                status = '未突破'
+                signal = '观望'
+                description = f"未突破阻力位{resistance_price:.2f}，继续观察"
+
+            # 7. 计算距离阻力位的百分比
+            distance_pct = (current_price / resistance_price - 1) * 100 if resistance_price > 0 else 0
+
+            return {
+                'status': status,
+                'is_breakout': is_breakout,
+                'volume_confirm': volume_confirm,
+                'signal': signal,
+                'description': description,
+                'resistance_price': float(resistance_price),
+                'current_price': float(current_price),
+                'distance_pct': float(distance_pct),
+                'volume_ratio': float(volume_ratio),
+                'avg_volume_5d': float(avg_volume_5d),
+                'current_volume': float(current_volume)
+            }
+
+        except Exception as e:
+            logger.error(f"成交量突破确认分析失败: {str(e)}")
+            return {
+                'status': '分析失败',
+                'is_breakout': False,
+                'volume_confirm': False,
+                'signal': '无法分析',
+                'description': f'分析失败: {str(e)}'
+            }
+
     def analyze_volume_price_relationship(
         self,
         df: pd.DataFrame,

@@ -631,6 +631,9 @@ class ComprehensiveAssetReporter:
             # 4. OBV背离检测
             obv_divergence = self.vp_analyzer.detect_obv_divergence(df, lookback=20)
 
+            # 5. 成交量突破确认分析
+            volume_breakout = self.vp_analyzer.analyze_volume_breakout(df, lookback=20)
+
             # 合并结果
             return {
                 'obv_analysis': basic_volume.get('obv', {}),
@@ -643,7 +646,8 @@ class ComprehensiveAssetReporter:
                 'vp_signal': vp_analysis.get('signal', ''),
                 'vp_description': vp_analysis.get('description', ''),
                 'turnover': turnover_analysis,
-                'obv_divergence': obv_divergence
+                'obv_divergence': obv_divergence,
+                'volume_breakout': volume_breakout
             }
 
         except Exception as e:
@@ -1938,16 +1942,86 @@ class ComprehensiveAssetReporter:
                 if volume and 'error' not in volume:
                     lines.append("#### 成交量分析")
 
+                    # 5.1 量价配合状态
+                    vp_cooperation = volume.get('vp_cooperation', {})
+                    if vp_cooperation:
+                        status = vp_cooperation.get('overall_status', 'N/A')
+                        cooperation_degree = vp_cooperation.get('cooperation_degree', 0)
+                        quality = vp_cooperation.get('overall_quality', 'N/A')
+
+                        if quality == '优秀':
+                            quality_emoji = '✅'
+                        elif quality in ['偏强', '中性']:
+                            quality_emoji = '🟡'
+                        else:
+                            quality_emoji = '⚠️'
+
+                        lines.append(f"- **量价配合**: {quality_emoji} {status} (协同度: {cooperation_degree}/100)")
+
+                    # 5.2 量价背离检测
+                    vp_divergence = volume.get('vp_divergence', {})
+                    if vp_divergence and vp_divergence.get('has_divergence'):
+                        if vp_divergence.get('top_divergence'):
+                            lines.append(f"- **量价背离**: ⚠️ 顶背离，价格上涨但成交量萎缩")
+                        if vp_divergence.get('bottom_divergence'):
+                            lines.append(f"- **量价背离**: ✅ 底背离，价格下跌但成交量未萎缩")
+                    elif vp_divergence:
+                        lines.append(f"- **量价背离**: 无")
+
+                    # 5.3 换手率和量比
+                    turnover = volume.get('turnover', {})
+                    if turnover:
+                        turnover_rate = turnover.get('turnover_rate')
+                        volume_ratio_val = turnover.get('volume_ratio', 1.0)
+                        vr_level = turnover.get('volume_ratio_level', '正常')
+
+                        if vr_level in ['巨量', '显著放量']:
+                            vr_emoji = '📈'
+                        elif vr_level in ['缩量', '极度缩量']:
+                            vr_emoji = '📉'
+                        else:
+                            vr_emoji = '➡️'
+
+                        if turnover_rate is not None:
+                            turnover_level = turnover.get('turnover_level', 'N/A')
+                            lines.append(f"- **换手率**: {turnover_rate*100:.1f}% ({turnover_level})")
+
+                        lines.append(f"- **量比**: {volume_ratio_val:.2f} {vr_emoji} ({vr_level})")
+
+                    # 5.4 OBV趋势
                     obv = volume.get('obv', {})
                     if obv and 'trend' in obv:
                         trend_emoji = '📈' if obv['trend'] == 'uptrend' else ('📉' if obv['trend'] == 'downtrend' else '➡️')
                         lines.append(f"- **OBV趋势**: {obv['trend']} {trend_emoji}")
 
-                    volume_ratio = volume.get('volume_ratio', {})
-                    if volume_ratio and 'current' in volume_ratio:
-                        ratio = volume_ratio['current']
-                        ratio_emoji = '🔥' if ratio > 2 else ('📊' if ratio > 1 else '💤')
-                        lines.append(f"- **量比**: {ratio:.2f} {ratio_emoji}")
+                    # 5.5 成交量突破确认
+                    volume_breakout = volume.get('volume_breakout', {})
+                    if volume_breakout and volume_breakout.get('status') != '数据不足':
+                        status = volume_breakout.get('status', 'N/A')
+                        signal = volume_breakout.get('signal', 'N/A')
+                        resistance = volume_breakout.get('resistance_price', 0)
+                        vr = volume_breakout.get('volume_ratio', 1.0)
+
+                        if status == '有效突破':
+                            breakout_emoji = '✅'
+                        elif status == '假突破风险':
+                            breakout_emoji = '⚠️'
+                        elif status == '蓄势待发':
+                            breakout_emoji = '🔍'
+                        else:
+                            breakout_emoji = '➡️'
+
+                        lines.append(f"- **突破确认**: {breakout_emoji} {status}")
+                        lines.append(f"  - 阻力位: {resistance:.2f}, 量比: {vr:.1f}, 信号: {signal}")
+
+                    # 5.6 备用：原有的量比显示（如果turnover没有）
+                    if not turnover:
+                        volume_ratio = volume.get('volume_ratio', {})
+                        if volume_ratio and 'current' in volume_ratio:
+                            ratio = volume_ratio['current']
+                            ratio_emoji = '🔥' if ratio > 2 else ('📊' if ratio > 1 else '💤')
+                            lines.append(f"- **量比**: {ratio:.2f} {ratio_emoji}")
+
                     lines.append("")
 
                 # 6. 支撑压力位

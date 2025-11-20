@@ -1338,7 +1338,28 @@ class UnifiedAnalysisRunner:
                 if obv_divergence.get('bottom_divergence'):
                     lines.append(f"- **OBV背离**: ✅ 底背离看涨")
 
-            # 7.5 量能信号
+            # 7.5 成交量突破确认
+            volume_breakout = volume.get('volume_breakout', {})
+            if volume_breakout and volume_breakout.get('status') != '数据不足':
+                status = volume_breakout.get('status', 'N/A')
+                signal = volume_breakout.get('signal', 'N/A')
+                resistance = volume_breakout.get('resistance_price', 0)
+                vr = volume_breakout.get('volume_ratio', 1.0)
+
+                # 根据状态选择emoji
+                if status == '有效突破':
+                    breakout_emoji = '✅'
+                elif status == '假突破风险':
+                    breakout_emoji = '⚠️'
+                elif status == '蓄势待发':
+                    breakout_emoji = '🔍'
+                else:
+                    breakout_emoji = '➡️'
+
+                lines.append(f"- **突破确认**: {breakout_emoji} {status}")
+                lines.append(f"  - 阻力位: {resistance:.2f}, 量比: {vr:.1f}, 信号: {signal}")
+
+            # 7.6 量能信号
             vp_signal = volume.get('vp_signal', '')
             vp_description = volume.get('vp_description', '')
             if vp_signal:
