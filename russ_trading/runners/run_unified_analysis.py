@@ -1233,6 +1233,43 @@ class UnifiedAnalysisRunner:
                     lines.append(f"  - {strategy}")
                 lines.append("")
 
+            # 多因子评分表格(可选展示:强烈看多标的显示完整表格)
+            multi_factor = judgment.get('multi_factor_score', {})
+            if multi_factor and multi_factor.get('factors'):
+                # 判断是否需要展示完整表格
+                total_score = multi_factor.get('total_score', 50)
+                show_full_table = (direction == '强烈看多')  # 只有强烈看多才显示完整表格
+
+                if show_full_table:
+                    # 展示完整多因子评分表格
+                    lines.append("**多因子评分**:")
+                    lines.append("")
+                    lines.append("| 因子 | 评分 | 权重 | 加权分 | 关键指标 |")
+                    lines.append("|------|------|------|--------|----------|")
+
+                    factors = multi_factor['factors']
+                    factor_order = [
+                        ('hist', '历史点位'),
+                        ('tech', '技术面'),
+                        ('valuation', '估值面'),
+                        ('volume', '成交量'),
+                        ('capital', '资金面'),
+                        ('sentiment', '市场情绪')
+                    ]
+
+                    for factor_key, factor_name in factor_order:
+                        if factor_key in factors:
+                            f = factors[factor_key]
+                            score = f.get('score', 0)
+                            weight = f.get('weight', 0)
+                            weighted_score = score * weight
+                            detail = f.get('detail', '')
+                            lines.append(f"| {factor_name} | {score:.1f} | {weight*100:.0f}% | {weighted_score:.1f} | {detail} |")
+
+                    # 总分行
+                    lines.append(f"| **总分** | **{total_score:.1f}** | 100% | **{total_score:.1f}** | {direction}{direction_emoji} |")
+                    lines.append("")
+
         # 3. 历史点位分析
         if hist and '20d' in hist:
             lines.append("### 历史点位分析")
