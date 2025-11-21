@@ -1126,6 +1126,351 @@ class ComprehensiveAssetReporter:
                 'risk_factors': []
             }
 
+    def _calculate_multi_factor_score(self, result: Dict, config: Dict) -> Dict:
+        """
+        计算多因子综合评分
+
+        因子权重:
+        - 历史点位: 25%
+        - 技术面: 20%
+        - 基本面/估值: 15%
+        - 成交量: 15%
+        - 资金面: 15%
+        - 市场情绪: 10%
+        """
+        try:
+            # 1. 历史点位评分 (25%)
+            hist_score = self._calc_hist_factor_score(result)
+
+            # 2. 技术面评分 (20%)
+            tech_score = self._calc_tech_factor_score(result)
+
+            # 3. 估值面评分 (15%)
+            valuation_score = self._calc_valuation_factor_score(result)
+
+            # 4. 成交量评分 (15%)
+            volume_score = self._calc_volume_factor_score(result)
+
+            # 5. 资金面评分 (15%)
+            capital_score = self._calc_capital_factor_score(result, config)
+
+            # 6. 市场情绪评分 (10%)
+            sentiment_score = self._calc_sentiment_factor_score(result)
+
+            # 加权计算总分
+            weights = {
+                'hist': 0.25,
+                'tech': 0.20,
+                'valuation': 0.15,
+                'volume': 0.15,
+                'capital': 0.15,
+                'sentiment': 0.10
+            }
+
+            total_score = (
+                hist_score['score'] * weights['hist'] +
+                tech_score['score'] * weights['tech'] +
+                valuation_score['score'] * weights['valuation'] +
+                volume_score['score'] * weights['volume'] +
+                capital_score['score'] * weights['capital'] +
+                sentiment_score['score'] * weights['sentiment']
+            )
+
+            return {
+                'total_score': float(total_score),
+                'factors': {
+                    'hist': {'score': hist_score['score'], 'weight': weights['hist'], 'detail': hist_score['detail']},
+                    'tech': {'score': tech_score['score'], 'weight': weights['tech'], 'detail': tech_score['detail']},
+                    'valuation': {'score': valuation_score['score'], 'weight': weights['valuation'], 'detail': valuation_score['detail']},
+                    'volume': {'score': volume_score['score'], 'weight': weights['volume'], 'detail': volume_score['detail']},
+                    'capital': {'score': capital_score['score'], 'weight': weights['capital'], 'detail': capital_score['detail']},
+                    'sentiment': {'score': sentiment_score['score'], 'weight': weights['sentiment'], 'detail': sentiment_score['detail']}
+                }
+            }
+
+        except Exception as e:
+            logger.error(f"多因子评分计算失败: {str(e)}")
+            return {
+                'total_score': 50.0,
+                'factors': {}
+            }
+
+    def _calc_hist_factor_score(self, result: Dict) -> Dict:
+        """历史点位因子评分"""
+        hist = result.get('historical_analysis', {})
+        up_prob = hist.get('20d', {}).get('up_prob', 0.5)
+
+        # 直接转换为0-100分
+        score = up_prob * 100
+
+        return {
+            'score': float(score),
+            'detail': f"上涨概率{up_prob*100:.1f}%"
+        }
+
+    def _calc_tech_factor_score(self, result: Dict) -> Dict:
+        """技术面因子评分"""
+        tech = result.get('technical_analysis', {})
+        score = 50  # 基础分
+        details = []
+
+        # RSI评分
+        rsi = tech.get('rsi', {}).get('value', 50)
+        if rsi < 30:
+            score += 20
+            details.append('RSI超卖')
+        elif rsi < 40:
+            score += 10
+            details.append('RSI偏低')
+        elif rsi > 70:
+            score -= 20
+            details.append('RSI超买')
+        elif rsi > 60:
+            score -= 10
+            details.append('RSI偏高')
+
+        # MACD评分
+        macd_status = tech.get('macd', {}).get('status', '')
+        if macd_status == 'golden_cross':
+            score += 15
+            details.append('MACD金叉')
+        elif macd_status == 'death_cross':
+            score -= 10
+            details.append('MACD死叉')
+
+        # 布林带评分
+        boll = tech.get('bollinger', {})
+        if boll:
+            position = boll.get('position', 50)
+            if position < 20:
+                score += 10
+                details.append('布林下轨')
+            elif position > 80:
+                score -= 10
+                details.append('布林上轨')
+
+        # 背离评分
+        divergence = tech.get('divergence', [])
+        if isinstance(divergence, list):
+            for sig in divergence:
+                if isinstance(sig, dict):
+                    if '底背' in sig.get('direction', ''):
+                        score += 15
+                        details.append('底背离')
+                        break
+                    elif '顶背' in sig.get('direction', ''):
+                        score -= 15
+                        details.append('顶背离')
+                        break
+
+        # 限制在0-100
+        score = min(100, max(0, score))
+
+        return {
+            'score': float(score),
+            'detail': '+'.join(details) if details else '中性'
+        }
+
+    def _calc_valuation_factor_score(self, result: Dict) -> Dict:
+        """估值面因子评分"""
+        valuation = result.get('valuation_analysis', {})
+        score = 50  # 基础分
+        details = []
+
+        # PE分位数
+        pe_percentile = valuation.get('pe_percentile', 50)
+        if pe_percentile < 20:
+            score += 30
+            details.append(f'PE低估({pe_percentile:.0f}%)')
+        elif pe_percentile < 40:
+            score += 15
+            details.append(f'PE偏低({pe_percentile:.0f}%)')
+        elif pe_percentile > 80:
+            score -= 30
+            details.append(f'PE高估({pe_percentile:.0f}%)')
+        elif pe_percentile > 60:
+            score -= 15
+            details.append(f'PE偏高({pe_percentile:.0f}%)')
+
+        # PB分位数
+        pb_percentile = valuation.get('pb_percentile', 50)
+        if pb_percentile < 30:
+            score += 10
+            details.append('PB低估')
+        elif pb_percentile > 70:
+            score -= 10
+            details.append('PB高估')
+
+        # 限制在0-100
+        score = min(100, max(0, score))
+
+        return {
+            'score': float(score),
+            'detail': '+'.join(details) if details else '估值中性'
+        }
+
+    def _calc_volume_factor_score(self, result: Dict) -> Dict:
+        """成交量因子评分"""
+        volume = result.get('volume_analysis', {})
+        score = 50  # 基础分
+        details = []
+
+        # 量价配合
+        vp_sync = volume.get('volume_price_sync', {})
+        if vp_sync:
+            sync_type = vp_sync.get('type', '')
+            if sync_type == 'up_volume_up':
+                score += 25
+                details.append('放量上涨')
+            elif sync_type == 'down_volume_down':
+                score += 10
+                details.append('缩量下跌')
+            elif sync_type == 'down_volume_up':
+                score -= 20
+                details.append('放量下跌')
+            elif sync_type == 'up_volume_down':
+                score -= 5
+                details.append('缩量上涨')
+
+        # OBV趋势
+        obv = volume.get('obv', {})
+        if obv:
+            obv_trend = obv.get('trend', '')
+            if obv_trend == 'up':
+                score += 15
+                details.append('OBV上升')
+            elif obv_trend == 'down':
+                score -= 15
+                details.append('OBV下降')
+
+        # 量比
+        volume_ratio = volume.get('volume_ratio', {})
+        if volume_ratio:
+            ratio = volume_ratio.get('ratio', 1.0)
+            if ratio > 2.0:
+                score += 10
+                details.append(f'放量({ratio:.1f}x)')
+            elif ratio < 0.5:
+                score -= 5
+                details.append('极度缩量')
+
+        # 限制在0-100
+        score = min(100, max(0, score))
+
+        return {
+            'score': float(score),
+            'detail': '+'.join(details) if details else '量能中性'
+        }
+
+    def _calc_capital_factor_score(self, result: Dict, config: Dict) -> Dict:
+        """资金面因子评分"""
+        capital = result.get('capital_flow', {})
+        score = 50  # 基础分
+        details = []
+
+        market = config.get('market', 'CN')
+
+        if market == 'CN':
+            # A股: 北向资金 + 融资融券
+            north_flow = capital.get('north_flow_5d', 0)
+            if north_flow > 50:
+                score += 25
+                details.append(f'北向流入{north_flow:.0f}亿')
+            elif north_flow > 0:
+                score += 10
+                details.append(f'北向小幅流入')
+            elif north_flow < -50:
+                score -= 25
+                details.append(f'北向流出{abs(north_flow):.0f}亿')
+            elif north_flow < 0:
+                score -= 10
+                details.append('北向小幅流出')
+
+            # 融资融券
+            margin = capital.get('margin_sentiment', 50)
+            if margin > 60:
+                score += 10
+                details.append('融资增加')
+            elif margin < 40:
+                score -= 10
+                details.append('融资减少')
+
+        elif market == 'HK':
+            # 港股: 南向资金
+            south_flow = capital.get('south_flow_5d', 0)
+            if south_flow > 30:
+                score += 25
+                details.append(f'南向流入{south_flow:.0f}亿')
+            elif south_flow > 0:
+                score += 10
+                details.append('南向小幅流入')
+            elif south_flow < -30:
+                score -= 25
+                details.append(f'南向流出{abs(south_flow):.0f}亿')
+            elif south_flow < 0:
+                score -= 10
+                details.append('南向小幅流出')
+
+        else:
+            # 美股等其他市场，使用情绪评分
+            sentiment = capital.get('sentiment_score', 50)
+            if sentiment > 60:
+                score += 15
+                details.append('资金情绪偏多')
+            elif sentiment < 40:
+                score -= 15
+                details.append('资金情绪偏空')
+
+        # 限制在0-100
+        score = min(100, max(0, score))
+
+        return {
+            'score': float(score),
+            'detail': '+'.join(details) if details else '资金中性'
+        }
+
+    def _calc_sentiment_factor_score(self, result: Dict) -> Dict:
+        """市场情绪因子评分"""
+        sentiment = result.get('market_sentiment', {})
+        panic = result.get('panic_index', {})
+        score = 50  # 基础分
+        details = []
+
+        # 恐慌指数（反向指标：恐慌时是买入机会）
+        if panic and 'error' not in panic:
+            panic_type = panic.get('type', '')
+            if panic_type == 'VIX':
+                vix_value = panic.get('current_state', {}).get('vix_value', 20)
+            else:
+                vix_value = panic.get('index_value', 20)
+
+            if vix_value >= 30:
+                score += 30
+                details.append(f'极度恐慌({vix_value:.1f})')
+            elif vix_value >= 25:
+                score += 15
+                details.append(f'恐慌偏高({vix_value:.1f})')
+            elif vix_value < 15:
+                score -= 15
+                details.append(f'过度乐观({vix_value:.1f})')
+
+        # 综合情绪评分
+        sentiment_score = sentiment.get('sentiment_score', 50)
+        if sentiment_score < 30:
+            score += 10
+            details.append('情绪低迷')
+        elif sentiment_score > 70:
+            score -= 10
+            details.append('情绪亢奋')
+
+        # 限制在0-100
+        score = min(100, max(0, score))
+
+        return {
+            'score': float(score),
+            'detail': '+'.join(details) if details else '情绪中性'
+        }
+
     def _generate_judgment(self, result: Dict, config: Dict) -> Dict:
         """生成综合判断"""
         try:
@@ -1133,25 +1478,30 @@ class ComprehensiveAssetReporter:
             tech = result.get('technical_analysis', {})
             risk = result.get('risk_assessment', {})
 
-            up_prob_20d = hist.get('20d', {}).get('up_prob', 0)
-            risk_score = risk.get('risk_score', 0.5)
+            # 计算多因子综合评分
+            multi_factor = self._calculate_multi_factor_score(result, config)
+            total_score = multi_factor.get('total_score', 50)
 
-            # 判断方向
-            if up_prob_20d >= 0.7 and risk_score < 0.3:
+            # 基于多因子总分判断方向
+            if total_score >= 75:
                 direction = '强烈看多✅✅'
                 position = '70-80%'
-            elif up_prob_20d >= 0.6 and risk_score < 0.5:
+            elif total_score >= 60:
                 direction = '看多✅'
                 position = '60-70%'
-            elif up_prob_20d >= 0.5 and risk_score < 0.6:
+            elif total_score >= 50:
                 direction = '中性偏多⚖️'
                 position = '50-60%'
-            elif up_prob_20d < 0.4 or risk_score > 0.7:
-                direction = '看空🔴'
-                position = '20-30%'
-            else:
+            elif total_score >= 40:
                 direction = '中性⚖️'
                 position = '40-50%'
+            else:
+                direction = '看空🔴'
+                position = '20-30%'
+
+            # 保留原有变量供后续策略使用
+            up_prob_20d = hist.get('20d', {}).get('up_prob', 0)
+            risk_score = risk.get('risk_score', 0.5)
 
             # 操作策略
             strategies = []
@@ -1210,7 +1560,8 @@ class ComprehensiveAssetReporter:
                 'direction': direction,
                 'recommended_position': position,
                 'strategies': strategies,
-                'combo_strategy_match': strategy_match
+                'combo_strategy_match': strategy_match,
+                'multi_factor_score': multi_factor
             }
 
         except Exception as e:
@@ -1793,8 +2144,41 @@ class ComprehensiveAssetReporter:
                     lines.append(f"- **方向判断**: {judgment['direction']}")
                     lines.append(f"- **建议仓位**: {judgment['recommended_position']}")
 
-                    if judgment.get('strategies'):
+                    # 多因子评分表格
+                    multi_factor = judgment.get('multi_factor_score', {})
+                    if multi_factor and multi_factor.get('factors'):
+                        total_score = multi_factor.get('total_score', 50)
+                        factors = multi_factor.get('factors', {})
+
                         lines.append("")
+                        lines.append("**多因子评分**:")
+                        lines.append("")
+                        lines.append("| 因子 | 评分 | 权重 | 加权分 | 关键指标 |")
+                        lines.append("|------|------|------|--------|----------|")
+
+                        factor_names = {
+                            'hist': '历史点位',
+                            'tech': '技术面',
+                            'valuation': '估值面',
+                            'volume': '成交量',
+                            'capital': '资金面',
+                            'sentiment': '市场情绪'
+                        }
+
+                        for key in ['hist', 'tech', 'valuation', 'volume', 'capital', 'sentiment']:
+                            if key in factors:
+                                f = factors[key]
+                                name = factor_names.get(key, key)
+                                score = f.get('score', 50)
+                                weight = f.get('weight', 0) * 100
+                                weighted = score * f.get('weight', 0)
+                                detail = f.get('detail', '')
+                                lines.append(f"| {name} | {score:.1f} | {weight:.0f}% | {weighted:.1f} | {detail} |")
+
+                        lines.append(f"| **总分** | **{total_score:.1f}** | 100% | **{total_score:.1f}** | {judgment['direction']} |")
+                        lines.append("")
+
+                    if judgment.get('strategies'):
                         lines.append("**操作策略**:")
                         for strategy in judgment['strategies']:
                             lines.append(f"  - {strategy}")
