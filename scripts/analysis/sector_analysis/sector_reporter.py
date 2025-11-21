@@ -113,6 +113,11 @@ class SectorReporter:
             primary_symbol = config['symbols'][0]
             prefer_source = config.get('data_source', None)  # None表示自动选择，或指定'yfinance'等
 
+            # 智能数据源选择：A股标的强制用ashare（yfinance不支持A股ETF和个股）
+            if prefer_source is None and config['market'] == 'CN':
+                prefer_source = 'ashare'
+                logger.info(f"{primary_symbol} 是A股标的，强制使用ashare数据源")
+
             # 1. 历史点位分析
             result['historical_analysis'] = self._analyze_historical_position(
                 config['market'], primary_symbol, prefer_source
