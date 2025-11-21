@@ -69,6 +69,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from russ_trading.utils.data_cache_manager import get_cache_manager
 
+# 导入因子合成模块
+from russ_trading.core.factor_synthesis import FactorSynthesizer, DEFAULT_FACTOR_PRIORITY
+
 logger = logging.getLogger(__name__)
 
 
@@ -171,6 +174,9 @@ class ComprehensiveAssetReporter:
 
         # 初始化缓存管理器
         self.cache_manager = get_cache_manager(enable_file_cache=True)
+
+        # 初始化因子合成器(方案A: 等权+Schmidt正交)
+        self.factor_synthesizer = FactorSynthesizer()
 
         logger.info("综合资产分析系统初始化完成")
 
@@ -1157,34 +1163,68 @@ class ComprehensiveAssetReporter:
             # 6. 市场情绪评分 (10%)
             sentiment_score = self._calc_sentiment_factor_score(result)
 
-            # 加权计算总分
-            weights = {
-                'hist': 0.25,
-                'tech': 0.20,
-                'valuation': 0.15,
-                'volume': 0.15,
-                'capital': 0.15,
-                'sentiment': 0.10
+            # ========== 新增: Schmidt正交化 + 等权合成 ==========
+            # 构建因子字典(使用标准名称匹配DEFAULT_FACTOR_PRIORITY)
+            raw_factors = {
+                '估值面': valuation_score['score'],
+                '历史点位': hist_score['score'],
+                '技术面': tech_score['score'],
+                '资金面': capital_score['score'],
+                '成交量': volume_score['score'],
+                '市场情绪': sentiment_score['score']
             }
 
-            total_score = (
-                hist_score['score'] * weights['hist'] +
-                tech_score['score'] * weights['tech'] +
-                valuation_score['score'] * weights['valuation'] +
-                volume_score['score'] * weights['volume'] +
-                capital_score['score'] * weights['capital'] +
-                sentiment_score['score'] * weights['sentiment']
+            # 正交化并合成
+            factors_orth, total_score = self.factor_synthesizer.synthesize(
+                raw_factors,
+                priority_order=DEFAULT_FACTOR_PRIORITY,
+                method='equal_weight',
+                normalize=True
             )
+
+            # 等权权重(仅用于显示)
+            equal_weight = 1.0 / 6
 
             return {
                 'total_score': float(total_score),
+                'method': 'Schmidt正交化 + 等权合成',
                 'factors': {
-                    'hist': {'score': hist_score['score'], 'weight': weights['hist'], 'detail': hist_score['detail']},
-                    'tech': {'score': tech_score['score'], 'weight': weights['tech'], 'detail': tech_score['detail']},
-                    'valuation': {'score': valuation_score['score'], 'weight': weights['valuation'], 'detail': valuation_score['detail']},
-                    'volume': {'score': volume_score['score'], 'weight': weights['volume'], 'detail': volume_score['detail']},
-                    'capital': {'score': capital_score['score'], 'weight': weights['capital'], 'detail': capital_score['detail']},
-                    'sentiment': {'score': sentiment_score['score'], 'weight': weights['sentiment'], 'detail': sentiment_score['detail']}
+                    'hist': {
+                        'score': hist_score['score'],
+                        'orth_score': factors_orth.get('历史点位', hist_score['score']),
+                        'weight': equal_weight,
+                        'detail': hist_score['detail']
+                    },
+                    'tech': {
+                        'score': tech_score['score'],
+                        'orth_score': factors_orth.get('技术面', tech_score['score']),
+                        'weight': equal_weight,
+                        'detail': tech_score['detail']
+                    },
+                    'valuation': {
+                        'score': valuation_score['score'],
+                        'orth_score': factors_orth.get('估值面', valuation_score['score']),
+                        'weight': equal_weight,
+                        'detail': valuation_score['detail']
+                    },
+                    'volume': {
+                        'score': volume_score['score'],
+                        'orth_score': factors_orth.get('成交量', volume_score['score']),
+                        'weight': equal_weight,
+                        'detail': volume_score['detail']
+                    },
+                    'capital': {
+                        'score': capital_score['score'],
+                        'orth_score': factors_orth.get('资金面', capital_score['score']),
+                        'weight': equal_weight,
+                        'detail': capital_score['detail']
+                    },
+                    'sentiment': {
+                        'score': sentiment_score['score'],
+                        'orth_score': factors_orth.get('市场情绪', sentiment_score['score']),
+                        'weight': equal_weight,
+                        'detail': sentiment_score['detail']
+                    }
                 }
             }
 
@@ -2169,13 +2209,20 @@ class ComprehensiveAssetReporter:
                             if key in factors:
                                 f = factors[key]
                                 name = factor_names.get(key, key)
-                                score = f.get('score', 50)
+                                # 使用正交化后的分数(如果有),否则使用原始分数
+                                orth_score = f.get('orth_score', f.get('score', 50))
                                 weight = f.get('weight', 0) * 100
-                                weighted = score * f.get('weight', 0)
+                                weighted = orth_score * f.get('weight', 0)
                                 detail = f.get('detail', '')
-                                lines.append(f"| {name} | {score:.1f} | {weight:.0f}% | {weighted:.1f} | {detail} |")
+                                lines.append(f"| {name} | {orth_score:.1f} | {weight:.0f}% | {weighted:.1f} | {detail} |")
 
-                        lines.append(f"| **总分** | **{total_score:.1f}** | 100% | **{total_score:.1f}** | {judgment['direction']} |")
+                        # 显示合成方法(如果有)
+                        method = multi_factor.get('method', '')
+                        direction_with_method = f"{judgment['direction']}"
+                        if method:
+                            direction_with_method = f"{judgment['direction']}"  # 方法信息在文档中说明
+
+                        lines.append(f"| **总分** | **{total_score:.1f}** | 100% | **{total_score:.1f}** | {direction_with_method} |")
                         lines.append("")
 
                     if judgment.get('strategies'):
