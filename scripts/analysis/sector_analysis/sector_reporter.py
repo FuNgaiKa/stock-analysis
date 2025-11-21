@@ -560,8 +560,12 @@ class SectorReporter:
             # 6. 市场情绪评分
             sentiment_score = self._calc_sentiment_factor_score(result)
 
-            # ========== Schmidt正交化 + 等权合成 ==========
-            # 构建因子字典(使用标准名称匹配DEFAULT_FACTOR_PRIORITY)
+            # ========== 直接等权合成 (不使用正交化) ==========
+            # 原因: 当前数据源限制导致很多因子默认值相同(50分)
+            # Schmidt正交化会认为这些因子高度相关,过度修正导致所有标的得分趋同
+            # 直接等权平均更符合实际需求
+
+            # 构建因子字典
             raw_factors = {
                 '估值面': valuation_score['score'],
                 '历史点位': hist_score['score'],
@@ -571,20 +575,18 @@ class SectorReporter:
                 '市场情绪': sentiment_score['score']
             }
 
-            # 正交化并合成
-            factors_orth, total_score = self.factor_synthesizer.synthesize(
-                raw_factors,
-                priority_order=DEFAULT_FACTOR_PRIORITY,
-                method='equal_weight',
-                normalize=True
-            )
+            # 直接等权平均
+            total_score = sum(raw_factors.values()) / len(raw_factors)
 
             # 等权权重(仅用于显示)
             equal_weight = 1.0 / 6
 
+            # 正交化后的分数就是原始分数(因为不做正交化)
+            factors_orth = raw_factors.copy()
+
             return {
                 'total_score': float(total_score),
-                'method': 'Schmidt正交化 + 等权合成',
+                'method': '等权合成',
                 'factors': {
                     'hist': {
                         'score': hist_score['score'],
