@@ -796,7 +796,7 @@ class UnifiedAnalysisRunner:
         try:
             # 提取核心指数数据
             index_data = {}
-            for key in ['HS300', 'CYBZ', 'KECHUANG50', 'HKTECH']:
+            for key in ['HS300', 'CYBZ', 'KECHUANG50', 'HKTECH', 'NASDAQ']:
                 if key in results['assets'] and 'error' not in results['assets'][key]:
                     data = results['assets'][key]
                     hist = data.get('historical_analysis', {})
@@ -814,7 +814,7 @@ class UnifiedAnalysisRunner:
                 lines.append("| 指数 | 最新价格 | 涨跌幅 | 方向判断 |")
                 lines.append("|------|----------|--------|----------|")
 
-                for key in ['HS300', 'CYBZ', 'KECHUANG50', 'HKTECH']:
+                for key in ['HS300', 'CYBZ', 'KECHUANG50', 'HKTECH', 'NASDAQ']:
                     if key in index_data:
                         idx = index_data[key]
                         change_emoji = "🔴" if idx['change_pct'] >= 0 else "🟢"
@@ -829,6 +829,83 @@ class UnifiedAnalysisRunner:
                         lines.append(f"| {idx['name']} | {idx['price']:.2f} | {idx['change_pct']:+.2f}% {change_emoji} | {idx['direction']}{direction_emoji} |")
 
                 lines.append("")
+
+            # 新增: 三市场恐慌指数对比表
+            if format_type == 'markdown':
+                # 提取三个市场的恐慌指数
+                panic_indices = {}
+
+                # 美股VIX - 从纳斯达克获取
+                if 'NASDAQ' in results['assets']:
+                    panic_data = results['assets']['NASDAQ'].get('panic_index', {})
+                    if panic_data and 'error' not in panic_data:
+                        panic_indices['US'] = {
+                            'name': '美股',
+                            'type': panic_data.get('type', 'VIX'),
+                            'value': panic_data.get('current_state', {}).get('vix_value', 0),
+                            'status': panic_data.get('current_state', {}).get('status', ''),
+                            'action': panic_data.get('signal', {}).get('action', '')
+                        }
+
+                # 港股HKVI - 从恒生科技获取
+                if 'HKTECH' in results['assets']:
+                    panic_data = results['assets']['HKTECH'].get('panic_index', {})
+                    if panic_data and 'error' not in panic_data:
+                        panic_type = panic_data.get('type', 'HKVI')
+                        if panic_type in ['HKVI', 'VHSI']:
+                            panic_indices['HK'] = {
+                                'name': '港股',
+                                'type': panic_type,
+                                'value': panic_data.get('index_value', 0) if panic_type == 'HKVI' else panic_data.get('current_state', {}).get('vhsi_value', 0),
+                                'status': panic_data.get('status', ''),
+                                'action': panic_data.get('signal', {}).get('action', '')
+                            }
+
+                # A股CNVI - 从科创50获取
+                if 'KECHUANG50' in results['assets']:
+                    panic_data = results['assets']['KECHUANG50'].get('panic_index', {})
+                    if panic_data and 'error' not in panic_data:
+                        panic_indices['CN'] = {
+                            'name': 'A股',
+                            'type': panic_data.get('type', 'CNVI'),
+                            'value': panic_data.get('index_value', 0),
+                            'status': panic_data.get('status', ''),
+                            'action': panic_data.get('signal', {}).get('action', '')
+                        }
+
+                # 生成恐慌指数表格
+                if panic_indices:
+                    lines.append("### 😱 市场恐慌指数")
+                    lines.append("")
+                    lines.append("| 市场 | 指数 | 数值 | 状态 | 操作建议 |")
+                    lines.append("|------|------|------|------|----------|")
+
+                    # 按固定顺序显示: 美股、港股、A股
+                    for market_key in ['US', 'HK', 'CN']:
+                        if market_key in panic_indices:
+                            data = panic_indices[market_key]
+                            # 状态emoji
+                            status_emoji = '😱' if '极度' in data['status'] else '⚠️' if '恐慌' in data['status'] or '上升' in data['status'] else '😊' if '正常' in data['status'] else '😌'
+                            lines.append(f"| {data['name']} | {data['type']} | {data['value']:.2f} | {status_emoji} {data['status']} | {data['action']} |")
+
+                    lines.append("")
+
+                    # 综合判断
+                    values = [data['value'] for data in panic_indices.values()]
+                    avg_value = sum(values) / len(values) if values else 0
+                    max_market = max(panic_indices.items(), key=lambda x: x[1]['value'])[1]['name'] if panic_indices else ''
+
+                    if avg_value >= 30:
+                        summary = f"三市场均处于极度恐慌区间(≥30)，{max_market}情绪最差，可能是抄底良机"
+                    elif avg_value >= 25:
+                        summary = f"三市场均处于恐慌区间(25-30)，{max_market}情绪最差，建议控制仓位"
+                    elif avg_value >= 15:
+                        summary = "三市场情绪正常，可正常操作"
+                    else:
+                        summary = "三市场情绪偏乐观，警惕调整风险"
+
+                    lines.append(f"**综合判断**: {summary}")
+                    lines.append("")
 
             # 市场状态综合判断（增强版）
             if index_data:
