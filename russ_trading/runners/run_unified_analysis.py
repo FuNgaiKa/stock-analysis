@@ -542,9 +542,9 @@ class UnifiedAnalysisRunner:
         """生成所有标的汇总表格"""
         lines = []
 
-        # 表头 (添加持有建议列)
-        lines.append("| 标的名称 | 当前价格 | 涨跌幅 | 方向判断 | 建议仓位 | 20日上涨概率 | 风险等级 | 持有建议 |")
-        lines.append("|----------|----------|--------|----------|----------|--------------|----------|----------|")
+        # 表头 (添加多因子评分列)
+        lines.append("| 标的名称 | 当前价格 | 涨跌幅 | 方向判断 | 多因子评分 | 建议仓位 | 20日上涨概率 | 风险等级 | 持有建议 |")
+        lines.append("|----------|----------|--------|----------|------------|----------|--------------|----------|----------|")
 
         # 遍历所有资产
         for asset_key, data in results['assets'].items():
@@ -606,6 +606,11 @@ class UnifiedAnalysisRunner:
             }
             risk_with_emoji = f"{risk_emoji_map.get(risk_level, '')} {risk_level}"
 
+            # 多因子评分
+            multi_factor = judgment.get('multi_factor_score', {})
+            total_score = multi_factor.get('total_score', 0)
+            score_display = f"{total_score:.1f}" if total_score > 0 else "N/A"
+
             # 持有建议 - 从 strategies 中提取包含"持有"的建议
             strategies = judgment.get('strategies', [])
             hold_suggestion = '-'
@@ -615,10 +620,10 @@ class UnifiedAnalysisRunner:
                     hold_suggestion = strategy
                     break
 
-            # 生成表格行 (添加持有建议列)
+            # 生成表格行 (添加多因子评分列)
             lines.append(
                 f"| {asset_name} | {current_price:.2f} | "
-                f"{change_pct:+.2f}% {change_emoji} | {direction_with_emoji} | {position} | "
+                f"{change_pct:+.2f}% {change_emoji} | {direction_with_emoji} | {score_display} | {position} | "
                 f"{prob_display} | {risk_with_emoji} | {hold_suggestion} |"
             )
 
